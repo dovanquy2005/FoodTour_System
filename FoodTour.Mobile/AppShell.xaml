@@ -1,0 +1,24 @@
+<Shell xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+       xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+       xmlns:views="clr-namespace:FoodTour.Mobile.Views"
+       x:Class="FoodTour.Mobile.AppShell">
+
+	<ShellContent
+        Title="Loading"
+        ContentTemplate="{DataTemplate views:LoadingPage}"
+        Route="LoadingPage"
+        Shell.FlyoutBehavior="Disabled"
+        Shell.NavBarIsVisible="False"
+        Shell.TabBarIsVisible="False"/>
+
+	<TabBar Route="MainTabs">
+		<Tab Title="Bản đồ" Icon="dotnet_bot.png">
+			<ShellContent ContentTemplate="{DataTemplate views:MapPage}" />
+		</Tab>
+
+		<Tab Title="Cài đặt" Icon="dotnet_bot.png">
+			<ShellContent ContentTemplate="{DataTemplate views:SettingsPage}" />
+		</Tab>
+	</TabBar>
+
+</Shell>

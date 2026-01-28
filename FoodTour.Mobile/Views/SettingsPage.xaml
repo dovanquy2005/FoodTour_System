@@ -1,0 +1,24 @@
+﻿<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="FoodTour.Mobile.Views.SettingsPage"
+             Title="Cài đặt">
+    <TableView Intent="Settings">
+        <TableRoot>
+            <TableSection Title="Dữ liệu Offline">
+                <TextCell Text="Trạng thái" Detail="Đã tải (120MB)" DetailColor="Green"/>
+                <TextCell Text="Cập nhật dữ liệu mới" TextColor="#007AFF"/>
+                <TextCell Text="Xóa dữ liệu Offline" TextColor="Red"/>
+            </TableSection>
+
+            <TableSection Title="Cấu hình Tour">
+                <SwitchCell Text="Tự động phát khi đến gần" On="True"/>
+                <EntryCell Label="Bán kính (m)" Text="20" Keyboard="Numeric"/>
+            </TableSection>
+
+            <TableSection Title="Ứng dụng">
+                <TextCell Text="Ngôn ngữ" Detail="Tiếng Việt"/>
+                <TextCell Text="Phiên bản" Detail="1.0.0 (Beta)"/>
+            </TableSection>
+        </TableRoot>
+    </TableView>
+</ContentPage>

@@ -1,0 +1,36 @@
+﻿<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:maps="http://schemas.microsoft.com/dotnet/2021/maui/maps"
+             x:Class="FoodTour.Mobile.Views.MapPage"
+             Title="Bản Đồ FoodTour">
+
+	<Grid>
+		<maps:Map x:Name="TourMap"
+                  IsShowingUser="False"
+                  MapType="Street" />
+
+		<VerticalStackLayout VerticalOptions="Start" HorizontalOptions="End" Margin="20" Spacing="10">
+			<Button Text="QR" WidthRequest="50" HeightRequest="50" CornerRadius="25" BackgroundColor="White" TextColor="Black" FontAttributes="Bold" Shadow="{Shadow Radius=5}"/>
+			<Button Text="📍" WidthRequest="50" HeightRequest="50" CornerRadius="25" BackgroundColor="White" TextColor="Black" Shadow="{Shadow Radius=5}"/>
+		</VerticalStackLayout>
+
+		<Frame VerticalOptions="End" Margin="15,0,15,20" CornerRadius="15" BackgroundColor="#222" Padding="10" HasShadow="True">
+			<Grid ColumnDefinitions="50,*,40" ColumnSpacing="10">
+
+				<Image Source="dotnet_bot.png" Aspect="AspectFill" Grid.Column="0" HeightRequest="50" WidthRequest="50">
+					
+					<Image.Clip>
+						<EllipseGeometry Center="25,25" RadiusX="25" RadiusY="25"/>
+					</Image.Clip>
+				</Image>
+
+				<VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+					<Label Text="Đang phát: Ốc Oanh" TextColor="White" FontAttributes="Bold" LineBreakMode="TailTruncation"/>
+					<Label Text="Cách bạn 15m" TextColor="#AAA" FontSize="11"/>
+				</VerticalStackLayout>
+
+				<Button Text="⏸" Grid.Column="2" BackgroundColor="Transparent" TextColor="#FF5722" FontSize="20" Padding="0"/>
+			</Grid>
+		</Frame>
+	</Grid>
+</ContentPage>

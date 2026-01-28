@@ -1,0 +1,38 @@
+﻿<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="FoodTour.Mobile.Views.PoiDetailPage"
+             Title="Chi tiết địa điểm">
+    <ScrollView>
+        <VerticalStackLayout Spacing="15" Padding="0,0,0,20">
+            <Image Source="dotnet_bot.png" Aspect="AspectFill" HeightRequest="250"/>
+
+            <VerticalStackLayout Padding="20" Spacing="10">
+                <Label Text="Quán Ốc Oanh" FontSize="24" FontAttributes="Bold" TextColor="#333"/>
+                <Label Text="📍 534 Vĩnh Khánh, Q.4" FontSize="14" TextColor="#666"/>
+
+                <BoxView HeightRequest="1" Color="#EEE" Margin="0,10"/>
+
+                <Border Stroke="#FF5722" StrokeThickness="1" BackgroundColor="#FFF5F2" Padding="15" StrokeShape="RoundRectangle 10">
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="🎧 Audio Thuyết Minh" TextColor="#FF5722" FontAttributes="Bold"/>
+                        <Slider MinimumTrackColor="#FF5722" ThumbColor="#FF5722"/>
+                        <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="20">
+                            <Button Text="⏪" BackgroundColor="Transparent" TextColor="#333"/>
+                            <Button Text="▶" WidthRequest="60" HeightRequest="60" CornerRadius="30" BackgroundColor="#FF5722" TextColor="White" FontSize="20"/>
+                            <Button Text="⏩" BackgroundColor="Transparent" TextColor="#333"/>
+                        </Grid>
+                        <HorizontalStackLayout HorizontalOptions="Center" Spacing="10">
+                            <Label Text="Giọng Máy" VerticalOptions="Center"/>
+                            <Switch IsToggled="True" OnColor="#FF5722"/>
+                            <Label Text="Giọng Thật" VerticalOptions="Center" FontAttributes="Bold"/>
+                        </HorizontalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+
+                <Label Text="Giới thiệu:" FontAttributes="Bold" Margin="0,10,0,0"/>
+                <Label Text="Quán Ốc Oanh nổi tiếng với các món ốc hương rang muối ớt và càng ghẹ rang me. Được thành lập từ năm..." 
+                       LineHeight="1.2" TextColor="#444"/>
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
