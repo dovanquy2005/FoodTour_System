@@ -4,8 +4,9 @@
     "\\FoodTour.Mobile",
     "\\FoodTour.Mobile\\Platforms",
     "\\FoodTour.Mobile\\Platforms\\Android",
+    "\\FoodTour.Mobile\\ViewModels",
     "\\FoodTour.Mobile\\Views"
   ],
-  "SelectedNode": "\\FoodTour.Mobile\\FoodTour.Mobile.csproj",
+  "SelectedNode": "\\FoodTour.Mobile\\ViewModels\\MapViewModel.cs",
   "PreviewInSolutionExplorer": false
 }

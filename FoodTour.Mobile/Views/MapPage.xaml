@@ -5,32 +5,49 @@
              Title="Bản Đồ FoodTour">
 
 	<Grid>
-		<maps:Map x:Name="TourMap"
-                  IsShowingUser="False"
-                  MapType="Street" />
+		<maps:Map x:Name="TourMap" IsShowingUser="False" MapType="Street" ItemsSource="{Binding Pois}">
+			<maps:Map.ItemTemplate>
+				<DataTemplate>
+					<maps:Pin Label="{Binding Name}" Address="{Binding Address}" Type="Place" Location="{Binding Location}" />
+				</DataTemplate>
+			</maps:Map.ItemTemplate>
+		</maps:Map>
 
-		<VerticalStackLayout VerticalOptions="Start" HorizontalOptions="End" Margin="20" Spacing="10">
-			<Button Text="QR" WidthRequest="50" HeightRequest="50" CornerRadius="25" BackgroundColor="White" TextColor="Black" FontAttributes="Bold" Shadow="{Shadow Radius=5}"/>
-			<Button Text="📍" WidthRequest="50" HeightRequest="50" CornerRadius="25" BackgroundColor="White" TextColor="Black" Shadow="{Shadow Radius=5}"/>
-		</VerticalStackLayout>
+		<Grid VerticalOptions="End" Margin="15,0,15,30" IsVisible="{Binding IsPlayerVisible}">
 
-		<Frame VerticalOptions="End" Margin="15,0,15,20" CornerRadius="15" BackgroundColor="#222" Padding="10" HasShadow="True">
-			<Grid ColumnDefinitions="50,*,40" ColumnSpacing="10">
+			<Frame IsVisible="{Binding IsPlayerExpanded}"
+                   CornerRadius="15" BackgroundColor="#222" Padding="15,10" HasShadow="True">
 
-				<Image Source="dotnet_bot.png" Aspect="AspectFill" Grid.Column="0" HeightRequest="50" WidthRequest="50">
-					
-					<Image.Clip>
-						<EllipseGeometry Center="25,25" RadiusX="25" RadiusY="25"/>
-					</Image.Clip>
-				</Image>
+				<Grid ColumnDefinitions="*, 40, 40" ColumnSpacing="5">
+					<VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
+						<Label Text="{Binding CurrentShopName}" TextColor="White" FontAttributes="Bold" LineBreakMode="TailTruncation" FontSize="15"/>
+						<Label Text="{Binding PlayerStatus}" TextColor="#AAA" FontSize="12"/>
+					</VerticalStackLayout>
 
-				<VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
-					<Label Text="Đang phát: Ốc Oanh" TextColor="White" FontAttributes="Bold" LineBreakMode="TailTruncation"/>
-					<Label Text="Cách bạn 15m" TextColor="#AAA" FontSize="11"/>
-				</VerticalStackLayout>
+					<Button Grid.Column="1" Text="{Binding PlayIcon}" Command="{Binding PlayPauseCommand}"
+                            BackgroundColor="Transparent" TextColor="#FF5722" FontSize="24" Padding="0"/>
 
-				<Button Text="⏸" Grid.Column="2" BackgroundColor="Transparent" TextColor="#FF5722" FontSize="20" Padding="0"/>
-			</Grid>
-		</Frame>
+					<Button Grid.Column="2" Text="＜" Command="{Binding ToggleExpandCommand}"
+                            BackgroundColor="#333" TextColor="White"
+                            FontSize="20" FontAttributes="Bold"
+                            HeightRequest="30" WidthRequest="30" CornerRadius="15"
+                            VerticalOptions="Center" Padding="0"/>
+				</Grid>
+			</Frame>
+
+			<Frame IsVisible="{Binding IsPlayerCollapsed}"
+                   HorizontalOptions="Start" VerticalOptions="End"
+                   HeightRequest="60" WidthRequest="60" CornerRadius="30"
+                   BackgroundColor="#FF5722" Padding="0" HasShadow="True">
+
+				<Frame.GestureRecognizers>
+					<TapGestureRecognizer Command="{Binding ToggleExpandCommand}"/>
+				</Frame.GestureRecognizers>
+
+				<Label Text="🎵" TextColor="White" FontSize="24"
+                       HorizontalOptions="Center" VerticalOptions="Center"/>
+			</Frame>
+
+		</Grid>
 	</Grid>
 </ContentPage>
