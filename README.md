@@ -4,8 +4,10 @@ dotnet build -t:Run -f net9.0-android
 
 ----------------------------------------------------------------------------
 
-+) dotnet add package CommunityToolkit.Mvvm
-+) dotnet add package Microsoft.Maui.Controls.Maps
+dotnet add package CommunityToolkit.Mvvm
+dotnet add package Microsoft.Maui.Controls.Maps
+dotnet add package sqlite-net-pcl
+dotnet add package SQLitePCLRaw.bundle_green
 
 ----------------------------------------------------------------------------
 Bản đồ (Microsoft.Maui.Controls.Maps): Cần gói riêng vì nó nặng.
