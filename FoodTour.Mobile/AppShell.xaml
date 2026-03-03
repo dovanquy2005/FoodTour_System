@@ -1,23 +1,53 @@
-<Shell xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-       xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-       xmlns:views="clr-namespace:FoodTour.Mobile.Views"
-       x:Class="FoodTour.Mobile.AppShell">
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="FoodTour.Mobile.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:views="clr-namespace:FoodTour.Mobile.Views"
+    Shell.NavBarIsVisible="False"
+    Shell.FlyoutBehavior="Disabled">
+	<Shell.Resources>
+		<ResourceDictionary>
+			<Style x:Key="BaseStyle" TargetType="Element">
+				<Setter Property="Shell.BackgroundColor" Value="#120E0E" />
+				<Setter Property="Shell.ForegroundColor" Value="White" />
+				<Setter Property="Shell.TitleColor" Value="White" />
+				<Setter Property="Shell.DisabledColor" Value="#B4FFFFFF" />
 
-	<ShellContent
-        Title="Loading"
-        ContentTemplate="{DataTemplate views:LoadingPage}"
-        Route="LoadingPage"
-        Shell.FlyoutBehavior="Disabled"
-        Shell.NavBarIsVisible="False"
-        Shell.TabBarIsVisible="False"/>
+				<Setter Property="Shell.TabBarBackgroundColor" Value="#1A1A1A" />
+				<Setter Property="Shell.TabBarUnselectedColor" Value="#8A8A8A"/>
+				<Setter Property="Shell.TabBarTitleColor" Value="#FF6F00"/>
+			</Style>
+			<Style TargetType="TabBar" BasedOn="{StaticResource BaseStyle}" />
+		</ResourceDictionary>
+	</Shell.Resources>
+
+	<!-- Trang khởi động -->
+	<ShellContent 
+		Route="LoadingPage" 
+		ContentTemplate="{DataTemplate views:LoadingPage}" 
+		Shell.TabBarIsVisible="False" 
+		Shell.NavBarIsVisible="False" />
 
 	<TabBar Route="MainTabs">
-		<Tab Title="Bản đồ" Icon="dotnet_bot.png">
-			<ShellContent ContentTemplate="{DataTemplate views:MapPage}" />
+		<Tab Title="Khám phá" Icon="explore.png">
+			<ShellContent Route="ExplorePage" ContentTemplate="{DataTemplate views:ExplorePage}" />
 		</Tab>
 
-		<Tab Title="Cài đặt" Icon="dotnet_bot.png">
-			<ShellContent ContentTemplate="{DataTemplate views:SettingsPage}" />
+		<Tab Title="Bản đồ" Icon="map.png">
+			<ShellContent Route="MapPage" ContentTemplate="{DataTemplate views:MapPage}" />
+		</Tab>
+
+		<Tab Title="Quét mã" Icon="qr_code_scanner.png">
+			<ShellContent Route="ScanPage" ContentTemplate="{DataTemplate views:ScanPage}" />
+		</Tab>
+
+		<Tab Title="Thông báo" Icon="notifications.png">
+			<ShellContent Route="AlertsPage" ContentTemplate="{DataTemplate views:AlertsPage}" />
+		</Tab>
+
+		<Tab Title="Cài đặt" Icon="settings.png">
+			<ShellContent Route="SettingsPage" ContentTemplate="{DataTemplate views:SettingsPage}" />
 		</Tab>
 	</TabBar>
 

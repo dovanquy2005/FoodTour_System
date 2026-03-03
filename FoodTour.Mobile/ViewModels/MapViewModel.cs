@@ -3,56 +3,64 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FoodTour.Mobile.Models;
 using Microsoft.Maui.Media;
+using FoodTour.Mobile.Services; // ✅ Đã có namespace này
+using FoodTour.Mobile.Views;    // ✅ Thêm cái này để chuyển trang (PoiDetailPage)
 
 namespace FoodTour.Mobile.ViewModels;
 
 public partial class MapViewModel : BaseViewModel
 {
+    private readonly DatabaseService _dbService;
+    private CancellationTokenSource _cts = new CancellationTokenSource();
+    private PoiModel? _currentPoi;
+
     [ObservableProperty] ObservableCollection<PoiModel> pois;
 
-    // --- CÁC BIẾN QUẢN LÝ TRẠNG THÁI PLAYER ---
-
-    [ObservableProperty] bool isPlayerVisible = false; // Có hiện Player không? (Vào vùng đỏ mới hiện)
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsPlayerCollapsed))] // Khi Expanded thay đổi thì Collapsed cũng đổi theo
-    bool isPlayerExpanded = true; // Đang mở to hay thu nhỏ?
-
-    public bool IsPlayerCollapsed => !IsPlayerExpanded; // Biến phụ để Binding giao diện (Ngược lại của Expanded)
+    // --- CÁC BIẾN PLAYER ---
+    [ObservableProperty] bool isPlayerVisible = false;
+    [ObservableProperty][NotifyPropertyChangedFor(nameof(IsPlayerCollapsed))] bool isPlayerExpanded = true;
+    public bool IsPlayerCollapsed => !IsPlayerExpanded;
 
     [ObservableProperty] string currentShopName = "";
     [ObservableProperty] string playerStatus = "";
     [ObservableProperty] string playIcon = "⏸";
 
-    private PoiModel _currentPoi;
-    private CancellationTokenSource _cts;
-
-    public MapViewModel()
+    public MapViewModel(DatabaseService dbService)
     {
+        _dbService = dbService;
         Pois = new ObservableCollection<PoiModel>();
-        LoadData();
+
+        // Gọi hàm load dữ liệu async
+        Task.Run(async () => await LoadData());
     }
 
+    // 👇 1. HÀM CHUYỂN TRANG (Đã bổ sung lại)
+    [RelayCommand]
+    async Task GoToDetail(PoiModel poi)
+    {
+        if (poi == null) return;
+
+        // Chuyển sang trang Detail và gửi kèm dữ liệu
+        await Shell.Current.GoToAsync(nameof(PoiDetailPage), new Dictionary<string, object>
+        {
+            { "PoiData", poi }
+        });
+    }
+
+    // 👇 2. LOGIC PLAYER & GPS
     public async Task OnEnterShop(PoiModel shop)
     {
         if (_currentPoi == shop && IsPlayerVisible) return;
 
         _currentPoi = shop;
         IsPlayerVisible = true;
-
-        // 🔥 QUAN TRỌNG: Khi gặp quán mới thì luôn TỰ ĐỘNG BUNG TO ra để khách thấy
         IsPlayerExpanded = true;
-
         CurrentShopName = $"Đang phát: {shop.Name}";
         await StartReading();
     }
 
-    // 👇 HÀM MỚI: Bật/Tắt chế độ thu nhỏ
     [RelayCommand]
-    void ToggleExpand()
-    {
-        IsPlayerExpanded = !IsPlayerExpanded;
-    }
+    void ToggleExpand() => IsPlayerExpanded = !IsPlayerExpanded;
 
     [RelayCommand]
     async Task PlayPause()
@@ -82,7 +90,11 @@ public partial class MapViewModel : BaseViewModel
             var vnLocale = locales.FirstOrDefault(x => x.Language == "vi");
             var options = new SpeechOptions { Locale = vnLocale, Pitch = 1.0f, Volume = 1.0f };
 
-            string content = $"{_currentPoi.Name}. {_currentPoi.Description ?? "Mời bạn ghé thăm."}";
+            // Thêm check null cho an toàn
+            string name = _currentPoi?.Name ?? "";
+            string desc = _currentPoi?.Description ?? "Mời bạn ghé thăm.";
+            string content = $"{name}. {desc}";
+
             await TextToSpeech.Default.SpeakAsync(content, options, _cts.Token);
             PlayIcon = "▶";
             PlayerStatus = "Đã kết thúc";
@@ -90,11 +102,21 @@ public partial class MapViewModel : BaseViewModel
         catch (Exception) { PlayIcon = "▶"; }
     }
 
-    private void LoadData()
+    // 👇 3. LOGIC LOAD DATABASE
+    [RelayCommand] // Thêm Command này để có thể gọi lại từ UI nếu cần (ví dụ nút Refresh)
+    public async Task LoadData()
     {
-        // (Giữ nguyên dữ liệu cũ của bạn)
-        Pois.Add(new PoiModel { Name = "Phở Thìn Lò Đúc", Latitude = 21.0185, Longitude = 105.8550, Description = "Phở tái lăn trứ danh, thơm ngon đến từng giọt cuối cùng." });
-        Pois.Add(new PoiModel { Name = "Bún Chả Hương Liên", Latitude = 21.0180, Longitude = 105.8520, Description = "Quán Obama đã ăn." });
-        Pois.Add(new PoiModel { Name = "Cafe Giảng", Latitude = 21.0343, Longitude = 105.8519, Description = "Cafe trứng nổi tiếng." });
+        // Lấy dữ liệu thật từ SQLite
+        var data = await _dbService.GetPoisAsync();
+
+        // Cập nhật lên UI (MainThread)
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            Pois.Clear();
+            foreach (var item in data)
+            {
+                Pois.Add(item);
+            }
+        });
     }
 }

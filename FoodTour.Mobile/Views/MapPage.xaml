@@ -1,53 +1,84 @@
-﻿<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:maps="http://schemas.microsoft.com/dotnet/2021/maui/maps"
+             xmlns:maps="clr-namespace:Microsoft.Maui.Controls.Maps;assembly=Microsoft.Maui.Controls.Maps"
+             xmlns:models="clr-namespace:FoodTour.Mobile.Models"
              x:Class="FoodTour.Mobile.Views.MapPage"
-             Title="Bản Đồ FoodTour">
+             Shell.NavBarIsVisible="False"
+             Title="FoodTour Map">
 
 	<Grid>
-		<maps:Map x:Name="TourMap" IsShowingUser="False" MapType="Street" ItemsSource="{Binding Pois}">
-			<maps:Map.ItemTemplate>
-				<DataTemplate>
-					<maps:Pin Label="{Binding Name}" Address="{Binding Address}" Type="Place" Location="{Binding Location}" />
+		<maps:Map x:Name="MainMap" IsShowingUser="True" MapType="Street"/>
+
+		<Border Margin="20,50,20,0"
+                VerticalOptions="Start"
+                BackgroundColor="White"
+                StrokeShape="RoundRectangle 25"
+                StrokeThickness="0"
+                HeightRequest="50"
+                Shadow="{Shadow Radius=10, Opacity=0.2}">
+			<SearchBar Placeholder="Bạn muốn ăn gì hôm nay?"
+                       VerticalTextAlignment="Center"
+                       CancelButtonColor="{StaticResource Primary}"/>
+		</Border>
+
+		<CollectionView x:Name="PoiCollection"
+                        HeightRequest="260"
+                        VerticalOptions="End"
+                        Margin="0,0,0,20"
+                        SelectionMode="Single"
+                        SelectionChanged="OnPoiSelectionChanged">
+
+			<CollectionView.ItemsLayout>
+				<LinearItemsLayout Orientation="Horizontal" ItemSpacing="15" />
+			</CollectionView.ItemsLayout>
+
+			<CollectionView.Header>
+				<BoxView WidthRequest="10" Color="Transparent"/>
+			</CollectionView.Header>
+			<CollectionView.Footer>
+				<BoxView WidthRequest="10" Color="Transparent"/>
+			</CollectionView.Footer>
+
+			<CollectionView.ItemTemplate>
+				<DataTemplate x:DataType="models:PoiModel">
+					<Border StrokeShape="RoundRectangle 20"
+                            StrokeThickness="0"
+                            BackgroundColor="White"
+                            WidthRequest="280"
+                            HeightRequest="240"
+                            Margin="0,0,0,10"
+                            Padding="0">
+						<Border.Shadow>
+							<Shadow Brush="Black" Opacity="0.15" Radius="8" Offset="0,5"/>
+						</Border.Shadow>
+
+						<Grid RowDefinitions="150, Auto, Auto">
+							<Image Grid.Row="0"
+                                   Source="{Binding ImageUrl}"
+                                   Aspect="AspectFill" />
+
+							<Border Grid.Row="0" HorizontalOptions="End" VerticalOptions="Start"
+                                    Margin="10" BackgroundColor="White" StrokeShape="RoundRectangle 8" Padding="8,4">
+								<Label Text="{Binding Price, StringFormat='{0:N0}đ'}"
+                                       TextColor="{StaticResource Primary}" FontAttributes="Bold" FontSize="12"/>
+							</Border>
+
+							<VerticalStackLayout Grid.Row="1" Padding="15,10,15,5">
+								<Label Text="{Binding Name}"
+                                       Style="{StaticResource HeaderTitle}"
+                                       FontSize="18" LineBreakMode="TailTruncation"/>
+								<Label Text="{Binding Description}"
+                                       TextColor="{StaticResource TextSecondary}"
+                                       FontSize="13" LineBreakMode="TailTruncation" MaxLines="2"/>
+							</VerticalStackLayout>
+
+							<Label Grid.Row="2" Text="{Binding Rating, StringFormat='⭐ {0}'}"
+                                   Padding="15,0,0,10" TextColor="#FFC107" FontSize="12"/>
+						</Grid>
+					</Border>
 				</DataTemplate>
-			</maps:Map.ItemTemplate>
-		</maps:Map>
-
-		<Grid VerticalOptions="End" Margin="15,0,15,30" IsVisible="{Binding IsPlayerVisible}">
-
-			<Frame IsVisible="{Binding IsPlayerExpanded}"
-                   CornerRadius="15" BackgroundColor="#222" Padding="15,10" HasShadow="True">
-
-				<Grid ColumnDefinitions="*, 40, 40" ColumnSpacing="5">
-					<VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
-						<Label Text="{Binding CurrentShopName}" TextColor="White" FontAttributes="Bold" LineBreakMode="TailTruncation" FontSize="15"/>
-						<Label Text="{Binding PlayerStatus}" TextColor="#AAA" FontSize="12"/>
-					</VerticalStackLayout>
-
-					<Button Grid.Column="1" Text="{Binding PlayIcon}" Command="{Binding PlayPauseCommand}"
-                            BackgroundColor="Transparent" TextColor="#FF5722" FontSize="24" Padding="0"/>
-
-					<Button Grid.Column="2" Text="＜" Command="{Binding ToggleExpandCommand}"
-                            BackgroundColor="#333" TextColor="White"
-                            FontSize="20" FontAttributes="Bold"
-                            HeightRequest="30" WidthRequest="30" CornerRadius="15"
-                            VerticalOptions="Center" Padding="0"/>
-				</Grid>
-			</Frame>
-
-			<Frame IsVisible="{Binding IsPlayerCollapsed}"
-                   HorizontalOptions="Start" VerticalOptions="End"
-                   HeightRequest="60" WidthRequest="60" CornerRadius="30"
-                   BackgroundColor="#FF5722" Padding="0" HasShadow="True">
-
-				<Frame.GestureRecognizers>
-					<TapGestureRecognizer Command="{Binding ToggleExpandCommand}"/>
-				</Frame.GestureRecognizers>
-
-				<Label Text="🎵" TextColor="White" FontSize="24"
-                       HorizontalOptions="Center" VerticalOptions="Center"/>
-			</Frame>
-
-		</Grid>
+			</CollectionView.ItemTemplate>
+		</CollectionView>
 	</Grid>
 </ContentPage>

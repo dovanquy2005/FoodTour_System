@@ -4,9 +4,8 @@ using Microsoft.Maui.Controls.Maps;
 using Microsoft.Maui.Maps;
 using FoodTour.Mobile.Views;
 using FoodTour.Mobile.ViewModels;
-
+using FoodTour.Mobile.Services;
 namespace FoodTour.Mobile;
-
 public static class MauiProgram
 {
     public static MauiApp CreateMauiApp()
@@ -20,20 +19,27 @@ public static class MauiProgram
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
-
-        // Đăng ký View và ViewModel
-        builder.Services.AddSingleton<LoadingPage>();
-        builder.Services.AddSingleton<LoadingViewModel>();
-
+        // Đăng ký cho tab Explore (Khám phá)
+        builder.Services.AddSingleton<ExplorePage>();
+        builder.Services.AddSingleton<ExploreViewModel>();
+        // Đăng ký cho tab Map (Bản đồ) 
         builder.Services.AddSingleton<MapPage>();
         builder.Services.AddSingleton<MapViewModel>();
-
-        builder.Services.AddTransient<PoiDetailPage>();
-        builder.Services.AddTransient<PoiDetailViewModel>();
-
+        // Đăng ký cho tab Scan/QR (Quét mã)
+        builder.Services.AddTransient<ScanPage>();
+        builder.Services.AddTransient<ScanViewModel>();
+        // Đăng ký cho tab Alerts (Thông báo)
+        builder.Services.AddTransient<AlertsPage>();
+        builder.Services.AddTransient<AlertsViewModel>();
+        // Đăng ký cho tab Settings (Cài đặt) - (Đã có sẵn, giữ nguyên)
         builder.Services.AddSingleton<SettingsPage>();
         builder.Services.AddSingleton<SettingsViewModel>();
-
+        // Đăng ký View và ViewModel, DATABASE
+        builder.Services.AddSingleton<LoadingPage>();
+        builder.Services.AddSingleton<LoadingViewModel>();
+        builder.Services.AddTransient<PoiDetailPage>();
+        builder.Services.AddTransient<PoiDetailViewModel>();
+        builder.Services.AddSingleton<DatabaseService>();
         return builder.Build();
     }
 }

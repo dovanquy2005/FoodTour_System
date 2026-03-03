@@ -1,0 +1,80 @@
+﻿<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="FoodTour.Mobile.Views.ExplorePage"
+             BackgroundColor="#120E0E"
+             NavigationPage.HasNavigationBar="False">
+	<Grid RowDefinitions="Auto, Auto, *" Margin="20, 15, 20, 0">
+
+		<Grid Grid.Row="0" ColumnDefinitions="Auto, *, Auto" Margin="0,10,0,20" VerticalOptions="Center">
+			<Label Grid.Column="0" Text="☰" TextColor="White" FontSize="28" VerticalOptions="Center" />
+
+			<Label Grid.Column="1" Text="Vinh Khanh Street Eats" TextColor="White" FontSize="20" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center" />
+
+			<Label Grid.Column="2" Text="≡" TextColor="White" FontSize="28" VerticalOptions="Center" />
+		</Grid>
+
+		<Border Grid.Row="1" BackgroundColor="#2A2424" StrokeShape="RoundRectangle 25" StrokeThickness="0" HeightRequest="50" Margin="0,0,0,20">
+			<Grid ColumnDefinitions="Auto, *" Margin="15,0,15,0">
+				<Label Grid.Column="0" Text="🔍" TextColor="#A0A0A0" FontSize="24" VerticalOptions="Center" Margin="0,0,10,0"/>
+				<Entry Grid.Column="1" Placeholder="Find snails, seafood..." PlaceholderColor="#A0A0A0" TextColor="White" BackgroundColor="Transparent" VerticalOptions="Center" />
+			</Grid>
+		</Border>
+
+		<ScrollView Grid.Row="2" VerticalScrollBarVisibility="Never">
+			<VerticalStackLayout Spacing="20" Padding="0,0,0,100">
+				<Border BackgroundColor="#231C1C" StrokeShape="RoundRectangle 20" StrokeThickness="0" HeightRequest="280">
+					<Grid RowDefinitions="180, *">
+
+						<Image Grid.Row="0" Source="https://images.unsplash.com/photo-1599539268612-9b57b1cc16b2?q=80&amp;w=800&amp;auto=format&amp;fit=crop" Aspect="AspectFill" />
+
+						<Border Grid.Row="0" BackgroundColor="#B3000000" StrokeShape="RoundRectangle 15" StrokeThickness="0"
+                                HorizontalOptions="End" VerticalOptions="Start" Margin="15" Padding="8,4">
+							<HorizontalStackLayout Spacing="5" VerticalOptions="Center">
+								<Label Text="★" TextColor="#FF4B4B" FontSize="14" VerticalOptions="Center"/>
+								<Label Text="4.8" TextColor="White" FontSize="12" FontAttributes="Bold" VerticalOptions="Center"/>
+							</HorizontalStackLayout>
+						</Border>
+
+						<Grid Grid.Row="1" RowDefinitions="Auto, Auto" ColumnDefinitions="*, Auto" Margin="15, 12, 15, 15">
+							<Label Grid.Row="0" Grid.Column="0" Text="Ốc Oanh" TextColor="White" FontSize="20" FontAttributes="Bold" />
+							<Label Grid.Row="0" Grid.Column="1" Text="1.2km" TextColor="#A0A0A0" FontSize="12" VerticalOptions="Center" />
+
+							<HorizontalStackLayout Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Spacing="10" Margin="0,8,0,0" VerticalOptions="Center">
+								<Border BackgroundColor="#4A1E1E" StrokeShape="RoundRectangle 5" StrokeThickness="0" Padding="6,2">
+									<Label Text="SIGNATURE" TextColor="#FF4B4B" FontSize="10" FontAttributes="Bold" />
+								</Border>
+								<Label Text="Roasted Crab with Salt" TextColor="#D0D0D0" FontSize="14" VerticalOptions="Center" />
+							</HorizontalStackLayout>
+						</Grid>
+					</Grid>
+				</Border>
+
+				<Border BackgroundColor="#231C1C" StrokeShape="RoundRectangle 20" StrokeThickness="0" HeightRequest="280">
+					<Grid RowDefinitions="180, *">
+						<Image Grid.Row="0" Source="https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&amp;w=800&amp;auto=format&amp;fit=crop" Aspect="AspectFill" />
+
+						<Border Grid.Row="0" BackgroundColor="#B3000000" StrokeShape="RoundRectangle 15" StrokeThickness="0" HorizontalOptions="End" VerticalOptions="Start" Margin="15" Padding="8,4">
+							<HorizontalStackLayout Spacing="5" VerticalOptions="Center">
+								<Label Text="★" TextColor="#FF4B4B" FontSize="14" VerticalOptions="Center"/>
+								<Label Text="4.5" TextColor="White" FontSize="12" FontAttributes="Bold" VerticalOptions="Center"/>
+							</HorizontalStackLayout>
+						</Border>
+
+						<Grid Grid.Row="1" RowDefinitions="Auto, Auto" ColumnDefinitions="*, Auto" Margin="15, 12, 15, 15">
+							<Label Grid.Row="0" Grid.Column="0" Text="Fire BBQ" TextColor="White" FontSize="20" FontAttributes="Bold" />
+							<Label Grid.Row="0" Grid.Column="1" Text="0.5km" TextColor="#A0A0A0" FontSize="12" VerticalOptions="Center" />
+
+							<HorizontalStackLayout Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Spacing="10" Margin="0,8,0,0" VerticalOptions="Center">
+								<Border BackgroundColor="#4A1E1E" StrokeShape="RoundRectangle 5" StrokeThickness="0" Padding="6,2">
+									<Label Text="SIGNATURE" TextColor="#FF4B4B" FontSize="10" FontAttributes="Bold" />
+								</Border>
+								<Label Text="Spicy Beef Skewers" TextColor="#D0D0D0" FontSize="14" VerticalOptions="Center" />
+							</HorizontalStackLayout>
+						</Grid>
+					</Grid>
+				</Border>
+
+			</VerticalStackLayout>
+		</ScrollView>
+	</Grid>
+</ContentPage>

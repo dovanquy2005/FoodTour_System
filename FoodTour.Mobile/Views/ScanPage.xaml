@@ -1,0 +1,17 @@
+﻿<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="FoodTour.Mobile.Views.ScanPage"
+             BackgroundColor="#120E0E"
+             NavigationPage.HasNavigationBar="False">
+    <Grid RowDefinitions="Auto, *, Auto" Margin="20, 40, 20, 20">
+        <Label Grid.Row="0" Text="Quét mã QR" TextColor="White" FontSize="24" FontAttributes="Bold" HorizontalOptions="Center" />
+        <Grid Grid.Row="1" VerticalOptions="Center" HorizontalOptions="Center" HeightRequest="250" WidthRequest="250">
+            <Border BackgroundColor="#1A1A1A" Stroke="#FF6F00" StrokeThickness="2" StrokeShape="RoundRectangle 20">
+                <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="10">
+                    <Label Text="Đưa camera vào mã QR" TextColor="#8A8A8A" FontSize="14" />
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+        <Label Grid.Row="2" Text="Quét mã tại bàn để nghe thuyết minh khoa học." TextColor="#8A8A8A" FontSize="14" HorizontalTextAlignment="Center" />
+    </Grid>
+</ContentPage>

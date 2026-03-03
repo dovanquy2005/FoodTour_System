@@ -1,0 +1,24 @@
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="FoodTour.Mobile.Controls.CustomBottomNav">
+
+    <Grid HeightRequest="80" VerticalOptions="End">
+
+        <RoundRectangle CornerRadius="20,20,0,0" Fill="#1A1A1A" Margin="0,15,0,0"/>
+
+        <Grid ColumnDefinitions="*, *, *, *, *">
+
+            <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" HorizontalOptions="Center">
+                <Label Text="🍽️" TextColor="White" FontSize="24" HorizontalOptions="Center"/>
+                <Label Text="Explore" TextColor="White" FontSize="10" HorizontalOptions="Center"/>
+            </VerticalStackLayout>
+
+            <Border Grid.Column="2" WidthRequest="60" HeightRequest="60" StrokeShape="RoundRectangle 30" VerticalOptions="Start" TranslationY="-10" BackgroundColor="#FF6D00" StrokeThickness="0">
+                <VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center">
+                    <Label Text="📷" TextColor="White" FontSize="28" HorizontalOptions="Center" VerticalOptions="Center"/>
+                </VerticalStackLayout>
+            </Border>
+
+        </Grid>
+    </Grid>
+</ContentView>

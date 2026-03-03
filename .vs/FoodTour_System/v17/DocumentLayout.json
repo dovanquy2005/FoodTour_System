@@ -3,65 +3,104 @@
   "WorkspaceRootPath": "D:\\FoodTour_System\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\FoodTour_System\\FoodTour.Mobile\\Views\\MapPage.xaml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:FoodTour.Mobile\\Views\\MapPage.xaml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\FoodTour_System\\FoodTour.Mobile\\App.xaml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:FoodTour.Mobile\\App.xaml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\FoodTour_System\\FoodTour.Mobile\\Views\\MapPage.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:FoodTour.Mobile\\Views\\MapPage.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\FoodTour_System\\FoodTour.Mobile\\Controls\\CustomBottomNav.xaml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:FoodTour.Mobile\\Controls\\CustomBottomNav.xaml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\FoodTour_System\\FoodTour.Mobile\\ViewModels\\MapViewModel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:FoodTour.Mobile\\ViewModels\\MapViewModel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\FoodTour_System\\FoodTour.Mobile\\Views\\ExplorePage.xaml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:FoodTour.Mobile\\Views\\ExplorePage.xaml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\FoodTour_System\\FoodTour.Mobile\\AppShell.xaml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:FoodTour.Mobile\\AppShell.xaml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\FoodTour_System\\FoodTour.Mobile\\Views\\ExplorePage.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:FoodTour.Mobile\\Views\\ExplorePage.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
     {
       "Orientation": 0,
-      "VerticalTabListWidth": 256,
+      "VerticalTabListWidth": 100,
       "DocumentGroups": [
         {
           "DockedWidth": 200,
           "SelectedChildIndex": 2,
           "Children": [
             {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{1c4feeaa-4718-4aa9-859d-94ce25d182ba}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
+            },
+            {
               "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "MapViewModel.cs",
-              "DocumentMoniker": "D:\\FoodTour_System\\FoodTour.Mobile\\ViewModels\\MapViewModel.cs",
-              "RelativeDocumentMoniker": "FoodTour.Mobile\\ViewModels\\MapViewModel.cs",
-              "ToolTip": "D:\\FoodTour_System\\FoodTour.Mobile\\ViewModels\\MapViewModel.cs",
-              "RelativeToolTip": "FoodTour.Mobile\\ViewModels\\MapViewModel.cs",
-              "ViewState": "AgIAAC0AAAAAAAAAAAAAAGAAAABKAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-01-28T09:45:23.397Z",
+              "DocumentIndex": 0,
+              "Title": "App.xaml",
+              "DocumentMoniker": "D:\\FoodTour_System\\FoodTour.Mobile\\App.xaml",
+              "RelativeDocumentMoniker": "FoodTour.Mobile\\App.xaml",
+              "ToolTip": "D:\\FoodTour_System\\FoodTour.Mobile\\App.xaml",
+              "RelativeToolTip": "FoodTour.Mobile\\App.xaml",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAAOAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-03-03T18:59:55.807Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 1,
-              "Title": "MapPage.xaml.cs",
-              "DocumentMoniker": "D:\\FoodTour_System\\FoodTour.Mobile\\Views\\MapPage.xaml.cs",
-              "RelativeDocumentMoniker": "FoodTour.Mobile\\Views\\MapPage.xaml.cs",
-              "ToolTip": "D:\\FoodTour_System\\FoodTour.Mobile\\Views\\MapPage.xaml.cs",
-              "RelativeToolTip": "FoodTour.Mobile\\Views\\MapPage.xaml.cs",
-              "ViewState": "AgIAAFgAAAAAAAAAAAAAAGEAAAANAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-01-28T08:33:27.739Z",
+              "Title": "CustomBottomNav.xaml",
+              "DocumentMoniker": "D:\\FoodTour_System\\FoodTour.Mobile\\Controls\\CustomBottomNav.xaml",
+              "RelativeDocumentMoniker": "FoodTour.Mobile\\Controls\\CustomBottomNav.xaml",
+              "ToolTip": "D:\\FoodTour_System\\FoodTour.Mobile\\Controls\\CustomBottomNav.xaml",
+              "RelativeToolTip": "FoodTour.Mobile\\Controls\\CustomBottomNav.xaml",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABcAAAAOAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-03-03T15:40:26.487Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "MapPage.xaml",
-              "DocumentMoniker": "D:\\FoodTour_System\\FoodTour.Mobile\\Views\\MapPage.xaml",
-              "RelativeDocumentMoniker": "FoodTour.Mobile\\Views\\MapPage.xaml",
-              "ToolTip": "D:\\FoodTour_System\\FoodTour.Mobile\\Views\\MapPage.xaml",
-              "RelativeToolTip": "FoodTour.Mobile\\Views\\MapPage.xaml",
-              "ViewState": "AgIAABYAAAAAAAAAAAAuwCcAAABJAAAAAAAAAA==",
+              "DocumentIndex": 3,
+              "Title": "AppShell.xaml",
+              "DocumentMoniker": "D:\\FoodTour_System\\FoodTour.Mobile\\AppShell.xaml",
+              "RelativeDocumentMoniker": "FoodTour.Mobile\\AppShell.xaml",
+              "ToolTip": "D:\\FoodTour_System\\FoodTour.Mobile\\AppShell.xaml",
+              "RelativeToolTip": "FoodTour.Mobile\\AppShell.xaml",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
-              "WhenOpened": "2026-01-28T08:29:43.908Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-03T15:37:51.236Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "ExplorePage.xaml.cs",
+              "DocumentMoniker": "D:\\FoodTour_System\\FoodTour.Mobile\\Views\\ExplorePage.xaml.cs",
+              "RelativeDocumentMoniker": "FoodTour.Mobile\\Views\\ExplorePage.xaml.cs",
+              "ToolTip": "D:\\FoodTour_System\\FoodTour.Mobile\\Views\\ExplorePage.xaml.cs",
+              "RelativeToolTip": "FoodTour.Mobile\\Views\\ExplorePage.xaml.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-03T15:35:50.562Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "ExplorePage.xaml",
+              "DocumentMoniker": "D:\\FoodTour_System\\FoodTour.Mobile\\Views\\ExplorePage.xaml",
+              "RelativeDocumentMoniker": "FoodTour.Mobile\\Views\\ExplorePage.xaml",
+              "ToolTip": "D:\\FoodTour_System\\FoodTour.Mobile\\Views\\ExplorePage.xaml",
+              "RelativeToolTip": "FoodTour.Mobile\\Views\\ExplorePage.xaml",
+              "ViewState": "AgIAADYAAAAAAAAAAAAIwEcAAAAwAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-03-03T15:34:36.942Z"
             }
           ]
         }

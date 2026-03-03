@@ -2,11 +2,8 @@
   "ExpandedNodes": [
     "",
     "\\FoodTour.Mobile",
-    "\\FoodTour.Mobile\\Platforms",
-    "\\FoodTour.Mobile\\Platforms\\Android",
-    "\\FoodTour.Mobile\\ViewModels",
-    "\\FoodTour.Mobile\\Views"
+    "\\FoodTour.Mobile\\Controls"
   ],
-  "SelectedNode": "\\FoodTour.Mobile\\ViewModels\\MapViewModel.cs",
+  "SelectedNode": "\\FoodTour.Mobile\\App.xaml",
   "PreviewInSolutionExplorer": false
 }
