@@ -13,18 +13,18 @@ public static class MauiProgram
         var builder = MauiApp.CreateBuilder();
         builder
             .UseMauiApp<App>()
-            .UseMauiMaps() // <--- QUAN TRỌNG: Để hiển thị bản đồ
+            .UseMauiMaps()
             .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
         // Đăng ký cho tab Explore (Khám phá)
-        builder.Services.AddSingleton<ExplorePage>();
-        builder.Services.AddSingleton<ExploreViewModel>();
+        builder.Services.AddTransient<ExplorePage>();
+        builder.Services.AddTransient<ExploreViewModel>();
         // Đăng ký cho tab Map (Bản đồ) 
-        builder.Services.AddSingleton<MapPage>();
-        builder.Services.AddSingleton<MapViewModel>();
+        builder.Services.AddTransient<MapPage>();
+        builder.Services.AddTransient<MapViewModel>();
         // Đăng ký cho tab Scan/QR (Quét mã)
         builder.Services.AddTransient<ScanPage>();
         builder.Services.AddTransient<ScanViewModel>();
@@ -37,8 +37,8 @@ public static class MauiProgram
         // Đăng ký View và ViewModel, DATABASE
         builder.Services.AddSingleton<LoadingPage>();
         builder.Services.AddSingleton<LoadingViewModel>();
-        builder.Services.AddTransient<PoiDetailPage>();
-        builder.Services.AddTransient<PoiDetailViewModel>();
+        builder.Services.AddTransient<ShopDetailPage>();
+        builder.Services.AddTransient<ShopDetailViewModel>();
         builder.Services.AddSingleton<DatabaseService>();
         return builder.Build();
     }

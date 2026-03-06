@@ -8,7 +8,7 @@ public partial class AppShell : Shell
     {
         InitializeComponent();
 
-        // Đăng ký route cho trang chi tiết để có thể gọi: GoToAsync("PoiDetail")
-        Routing.RegisterRoute(nameof(PoiDetailPage), typeof(PoiDetailPage));
+        // Đăng ký route cho trang chi tiết để có thể gọi: GoToAsync("ShopDetail")
+        Routing.RegisterRoute(nameof(ShopDetailPage), typeof(ShopDetailPage));
     }
 }

@@ -9,61 +9,151 @@ namespace FoodTour.Mobile.Views;
 public partial class MapPage : ContentPage
 {
     private MapViewModel _viewModel;
+    private string _lastEnteredShopName = string.Empty; // Lưu tên quán vừa ghé để tránh lặp lại thuyết minh
 
     public MapPage(MapViewModel vm)
     {
-        InitializeComponent();
+        try
+        {
+            InitializeComponent();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"MapPage InitializeComponent error: {ex.Message}");
+            // Hiển thị thông báo thay vì crash ứng dụng nếu lỗi Google Play Services
+            Content = new Grid
+            {
+                Children = {
+                    new Label {
+                        Text = "Không thể tải bản đồ. Vui lòng kiểm tra Google Play Services.",
+                        HorizontalOptions = LayoutOptions.Center,
+                        VerticalOptions = LayoutOptions.Center,
+                        FontSize = 16
+                    }
+                }
+            };
+            BindingContext = vm;
+            _viewModel = vm;
+            return; // Thoát sớm — MainMap là null khi InitializeComponent thất bại
+        }
         BindingContext = vm;
         _viewModel = vm;
+        MainMap.Loaded += MainMap_Loaded;
     }
 
     protected override async void OnAppearing()
     {
         base.OnAppearing();
 
-        var hanoiLocation = new Location(21.028511, 105.854444);
-        // Đã đổi TourMap thành MainMap
-        MainMap.MoveToRegion(MapSpan.FromCenterAndRadius(hanoiLocation, Distance.FromKilometers(2)));
-
-        _viewModel.Pois.CollectionChanged += Pois_CollectionChanged;
-
-        DrawRadiusCircles();
-
-        await SetupGps();
+        try
+        {
+            // Chúng ta không thực hiện vẽ map hay MoveToRegion ở đây nữa, 
+            // vì Google Map View bên dưới Android có thể chưa khởi tạo xong và gây lỗi NullReferenceException (Văng app).
+            // Logic liên quan đến UI của bản đồ đã được chuyển sang MainMap_Loaded
+            
+            // Khởi động hệ thống GPS
+            await SetupGps();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"MapPage OnAppearing error: {ex.Message}");
+        }
     }
 
     protected override void OnDisappearing()
     {
         base.OnDisappearing();
-        _viewModel.Pois.CollectionChanged -= Pois_CollectionChanged;
-        // Dọn dẹp GPS khi thoát trang Map
-        Geolocation.Default.LocationChanged -= OnUserLocationChanged;
+        try
+        {
+            // Đã hủy đăng ký sự kiện CollectionChanged
+
+
+            Geolocation.Default.LocationChanged -= OnUserLocationChanged;
+
+            // QUAN TRỌNG: Dừng hẳn việc lắng nghe GPS khi người dùng thoát tab Map để tiết kiệm PIN
+            if (Geolocation.Default.IsListeningForeground)
+            {
+                Geolocation.Default.StopListeningForeground();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"MapPage OnDisappearing error: {ex.Message}");
+        }
     }
 
-    private void Pois_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    private async void MainMap_Loaded(object? sender, EventArgs e)
     {
-        DrawRadiusCircles();
+        try
+        {
+            // Chờ handler sẵn sàng một chút
+            if (MainMap != null && MainMap.Handler == null)
+            {
+                await Task.Delay(200);
+            }
+
+            // Tọa độ trung tâm đường Vĩnh Khánh (khoảng Ốc Oanh)
+            var location = new Location(10.759247, 106.703473);
+            MainMap.MoveToRegion(MapSpan.FromCenterAndRadius(location, Distance.FromKilometers(1.0)));
+
+            // Load dữ liệu từ Database nếu danh sách đang trống
+            if (_viewModel.Shops == null || _viewModel.Shops.Count == 0)
+            {
+                await _viewModel.LoadData();
+            }
+
+            // Vẽ vòng bán kính xung quanh các quán ăn
+            DrawRadiusCircles();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"MainMap_Loaded error: {ex.Message}");
+        }
     }
 
     private void DrawRadiusCircles()
     {
-        // Đã đổi TourMap thành MainMap
+        if (MainMap == null) return;
+
         MainMap.MapElements.Clear();
+        MainMap.Pins.Clear();
 
-        if (_viewModel.Pois == null || _viewModel.Pois.Count == 0) return;
+        if (_viewModel.Shops == null || _viewModel.Shops.Count == 0) return;
 
-        foreach (var shop in _viewModel.Pois)
+        foreach (var shop in _viewModel.Shops)
         {
-            var circle = new Circle
+            try
             {
-                Center = shop.Location,
-                Radius = Distance.FromMeters(100),
-                StrokeColor = Colors.Red,
-                StrokeWidth = 2,
-                FillColor = Color.FromRgba(255, 0, 0, 60)
-            };
-            // Đã đổi TourMap thành MainMap
-            MainMap.MapElements.Add(circle);
+                // Vẽ vòng tròn bán kính 100m
+                var circle = new Circle
+                {
+                    Center = shop.Location,
+                    Radius = Distance.FromMeters(100), // Bán kính nhận diện 100m
+                    StrokeColor = Colors.Red,
+                    StrokeWidth = 2,
+                    FillColor = Colors.Red.WithAlpha(0.25f)
+                };
+                MainMap.MapElements.Add(circle);
+
+                // Thêm cọc (Pin) ở giữa tâm
+                var pin = new Pin
+                {
+                    Label = shop.Name,
+                    Address = shop.Address,
+                    Type = PinType.Place,
+                    Location = shop.Location,
+                    BindingContext = shop // Gắn dữ liệu shop vào Pin để xử lý khi click
+                };
+                
+                // Gắn sự kiện click vào Pin
+                pin.MarkerClicked += OnPinClicked;
+                
+                MainMap.Pins.Add(pin);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"DrawCircle error: {ex.Message}");
+            }
         }
     }
 
@@ -71,15 +161,22 @@ public partial class MapPage : ContentPage
     {
         try
         {
+            // Kiểm tra quyền truy cập vị trí
             var status = await Permissions.CheckStatusAsync<Permissions.LocationWhenInUse>();
             if (status != PermissionStatus.Granted)
                 status = await Permissions.RequestAsync<Permissions.LocationWhenInUse>();
 
             if (status == PermissionStatus.Granted)
             {
-                // Đã đổi TourMap thành MainMap
-                MainMap.IsShowingUser = true;
+                // Hiển thị chấm xanh vị trí người dùng (Đảm bảo chạy trên luồng chính)
+                MainThread.BeginInvokeOnMainThread(() => {
+                    if (MainMap != null) MainMap.IsShowingUser = true;
+                });
+
+                // Đăng ký nhận thông tin vị trí mới
+                Geolocation.Default.LocationChanged -= OnUserLocationChanged;
                 Geolocation.Default.LocationChanged += OnUserLocationChanged;
+
                 var request = new GeolocationListeningRequest(GeolocationAccuracy.Best, TimeSpan.FromSeconds(3));
                 await Geolocation.Default.StartListeningForegroundAsync(request);
             }
@@ -92,45 +189,81 @@ public partial class MapPage : ContentPage
 
     private void OnUserLocationChanged(object? sender, GeolocationLocationChangedEventArgs e)
     {
-        var userLoc = e.Location;
-        if (userLoc == null) return;
-
-        foreach (var shop in _viewModel.Pois)
+        try
         {
-            double distanceKm = Location.CalculateDistance(userLoc, shop.Location, DistanceUnits.Kilometers);
+            var userLoc = e.Location;
+            if (userLoc == null || _viewModel.Shops == null) return;
 
-            if (distanceKm < 0.1)
+            foreach (var shop in _viewModel.Shops)
             {
-                MainThread.BeginInvokeOnMainThread(async () =>
+                // Tính khoảng cách từ người dùng đến quán
+                double distanceKm = Location.CalculateDistance(userLoc, shop.Location, DistanceUnits.Kilometers);
+
+                // Nếu người dùng vào trong bán kính 100m (0.1km)
+                if (distanceKm < 0.1)
                 {
-                    HapticFeedback.Default.Perform(HapticFeedbackType.LongPress);
-                    await _viewModel.OnEnterShop(shop);
-                });
+                    // KIỂM TRA: Chỉ gọi thuyết minh nếu đây là quán mới (tránh đọc lặp lại khi đang đứng yên)
+                    if (_lastEnteredShopName != shop.Name) 
+                    {
+                        _lastEnteredShopName = shop.Name;
+                        
+                        MainThread.BeginInvokeOnMainThread(async () =>
+                        {
+                            try
+                            {
+                                HapticFeedback.Default.Perform(HapticFeedbackType.LongPress);
+                                await _viewModel.OnEnterShop(shop);
+                            }
+                            catch { }
+                        });
+                    }
+                    return; // Đã tìm thấy quán gần nhất, không cần kiểm tra các quán khác nữa
+                }
+            }
+
+            // Nếu đi ra khỏi vùng 100m của tất cả các quán, có thể reset để khi quay lại quán cũ sẽ đọc lại
+            // _lastEnteredShopName = string.Empty; 
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Location change error: {ex.Message}");
+        }
+    }
+
+    private async void OnPinClicked(object? sender, PinClickedEventArgs e)
+    {
+        try
+        {
+            e.HideInfoWindow = false;
+            var pin = sender as Pin;
+
+            if (pin?.BindingContext is Models.ShopModel selectedPoi)
+            {
+                await _viewModel.GoToDetailCommand.ExecuteAsync(selectedPoi);
             }
         }
-    }
-
-    private async void OnPinClicked(object sender, PinClickedEventArgs e)
-    {
-        e.HideInfoWindow = false;
-        var pin = sender as Pin;
-
-        if (pin?.BindingContext is Models.PoiModel selectedPoi)
+        catch (Exception ex)
         {
-            await _viewModel.GoToDetailCommand.ExecuteAsync(selectedPoi);
+            Console.WriteLine($"Pin click error: {ex.Message}");
         }
     }
 
-    // Đã thêm hàm này để tránh lỗi khi click vào quán ăn trong danh sách (CollectionView)
     private void OnPoiSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (e.CurrentSelection.FirstOrDefault() is Models.PoiModel selectedPoi)
+        try
         {
-            // Focus bản đồ vào quán ăn vừa chọn
-            MainMap.MoveToRegion(MapSpan.FromCenterAndRadius(selectedPoi.Location, Distance.FromMeters(300)));
+            if (e.CurrentSelection.FirstOrDefault() is Models.ShopModel selectedPoi)
+            {
+                if (MainMap != null)
+                    MainMap.MoveToRegion(MapSpan.FromCenterAndRadius(selectedPoi.Location, Distance.FromMeters(300)));
 
-            // Xóa selection để có thể click lại lần sau
-            ((CollectionView)sender).SelectedItem = null;
+                // Reset Selection để có thể bấm lại vào chính quán đó sau này
+                ((CollectionView)sender).SelectedItem = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Selection error: {ex.Message}");
         }
     }
 }

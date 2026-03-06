@@ -3,8 +3,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FoodTour.Mobile.Models;
 using Microsoft.Maui.Media;
-using FoodTour.Mobile.Services; // ✅ Đã có namespace này
-using FoodTour.Mobile.Views;    // ✅ Thêm cái này để chuyển trang (PoiDetailPage)
+using FoodTour.Mobile.Services;
+using FoodTour.Mobile.Views;
 
 namespace FoodTour.Mobile.ViewModels;
 
@@ -12,55 +12,46 @@ public partial class MapViewModel : BaseViewModel
 {
     private readonly DatabaseService _dbService;
     private CancellationTokenSource _cts = new CancellationTokenSource();
-    private PoiModel? _currentPoi;
+    private ShopModel? _currentShop;
 
-    [ObservableProperty] ObservableCollection<PoiModel> pois;
+    [ObservableProperty] ObservableCollection<ShopModel> shops;
 
     // --- CÁC BIẾN PLAYER ---
     [ObservableProperty] bool isPlayerVisible = false;
-    [ObservableProperty][NotifyPropertyChangedFor(nameof(IsPlayerCollapsed))] bool isPlayerExpanded = true;
-    public bool IsPlayerCollapsed => !IsPlayerExpanded;
-
     [ObservableProperty] string currentShopName = "";
+    [ObservableProperty] string currentShopImage = "";
     [ObservableProperty] string playerStatus = "";
     [ObservableProperty] string playIcon = "⏸";
 
     public MapViewModel(DatabaseService dbService)
     {
         _dbService = dbService;
-        Pois = new ObservableCollection<PoiModel>();
-
-        // Gọi hàm load dữ liệu async
-        Task.Run(async () => await LoadData());
+        Shops = new ObservableCollection<ShopModel>();
     }
 
-    // 👇 1. HÀM CHUYỂN TRANG (Đã bổ sung lại)
+    // 👇 1. HÀM CHUYỂN TRANG
     [RelayCommand]
-    async Task GoToDetail(PoiModel poi)
+    async Task GoToDetail(ShopModel shop)
     {
-        if (poi == null) return;
-
-        // Chuyển sang trang Detail và gửi kèm dữ liệu
-        await Shell.Current.GoToAsync(nameof(PoiDetailPage), new Dictionary<string, object>
+        if (shop == null) return;
+        await Shell.Current.GoToAsync(nameof(ShopDetailPage), new Dictionary<string, object>
         {
-            { "PoiData", poi }
+            { "ShopData", shop }
         });
     }
 
     // 👇 2. LOGIC PLAYER & GPS
-    public async Task OnEnterShop(PoiModel shop)
+    public async Task OnEnterShop(ShopModel shop)
     {
-        if (_currentPoi == shop && IsPlayerVisible) return;
+        if (_currentShop == shop && IsPlayerVisible) return;
 
-        _currentPoi = shop;
+        _currentShop = shop;
         IsPlayerVisible = true;
-        IsPlayerExpanded = true;
-        CurrentShopName = $"Đang phát: {shop.Name}";
+        CurrentShopName = shop.Name;
+        CurrentShopImage = shop.ImageUrl ?? "";
+        PlayerStatus = "Đang thuyết minh...";
         await StartReading();
     }
-
-    [RelayCommand]
-    void ToggleExpand() => IsPlayerExpanded = !IsPlayerExpanded;
 
     [RelayCommand]
     async Task PlayPause()
@@ -77,6 +68,24 @@ public partial class MapViewModel : BaseViewModel
         }
     }
 
+    [RelayCommand]
+    void SkipNext()
+    {
+        if (Shops == null || Shops.Count == 0 || _currentShop == null) return;
+        int idx = Shops.IndexOf(_currentShop);
+        int nextIdx = (idx + 1) % Shops.Count;
+        _ = OnEnterShop(Shops[nextIdx]);
+    }
+
+    [RelayCommand]
+    void SkipPrevious()
+    {
+        if (Shops == null || Shops.Count == 0 || _currentShop == null) return;
+        int idx = Shops.IndexOf(_currentShop);
+        int prevIdx = (idx - 1 + Shops.Count) % Shops.Count;
+        _ = OnEnterShop(Shops[prevIdx]);
+    }
+
     private async Task StartReading()
     {
         PlayIcon = "⏸";
@@ -90,9 +99,8 @@ public partial class MapViewModel : BaseViewModel
             var vnLocale = locales.FirstOrDefault(x => x.Language == "vi");
             var options = new SpeechOptions { Locale = vnLocale, Pitch = 1.0f, Volume = 1.0f };
 
-            // Thêm check null cho an toàn
-            string name = _currentPoi?.Name ?? "";
-            string desc = _currentPoi?.Description ?? "Mời bạn ghé thăm.";
+            string name = _currentShop?.Name ?? "";
+            string desc = _currentShop?.Description ?? "Mời bạn ghé thăm.";
             string content = $"{name}. {desc}";
 
             await TextToSpeech.Default.SpeakAsync(content, options, _cts.Token);
@@ -103,19 +111,16 @@ public partial class MapViewModel : BaseViewModel
     }
 
     // 👇 3. LOGIC LOAD DATABASE
-    [RelayCommand] // Thêm Command này để có thể gọi lại từ UI nếu cần (ví dụ nút Refresh)
+    [RelayCommand]
     public async Task LoadData()
     {
-        // Lấy dữ liệu thật từ SQLite
-        var data = await _dbService.GetPoisAsync();
-
-        // Cập nhật lên UI (MainThread)
-        MainThread.BeginInvokeOnMainThread(() =>
+        var data = await _dbService.GetShopsAsync();
+        await MainThread.InvokeOnMainThreadAsync(() =>
         {
-            Pois.Clear();
+            Shops.Clear();
             foreach (var item in data)
             {
-                Pois.Add(item);
+                Shops.Add(item);
             }
         });
     }

@@ -8,6 +8,12 @@
 .externalNativeBuild/
 .cxx/
 *.apk
+.vs/
+bin/
+obj/
+*.user
+*.suo
+*.cache
 
 # --- C# .NET (Backend) ---
 [Bb]in/

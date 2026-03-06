@@ -1,22 +1,65 @@
 ﻿<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="FoodTour.Mobile.Views.AlertsPage"
-             BackgroundColor="#120E0E"
+             BackgroundColor="{StaticResource Background}"
              NavigationPage.HasNavigationBar="False">
-    <Grid RowDefinitions="Auto, *" Margin="20, 25, 20, 0">
-        <Label Grid.Row="0" Text="Thông báo" TextColor="White" FontSize="24" FontAttributes="Bold" Margin="0,0,0,20" />
-        <ScrollView Grid.Row="1" VerticalScrollBarVisibility="Never">
-            <VerticalStackLayout Spacing="15">
-                <Border BackgroundColor="#1A1A1A" StrokeShape="RoundRectangle 15" StrokeThickness="0" Padding="15">
-                    <Grid ColumnDefinitions="Auto, *">
-                        <BoxView Grid.Column="0" Color="#FF6F00" WidthRequest="10" HeightRequest="10" CornerRadius="5" VerticalOptions="Start" Margin="0,5,15,0"/>
-                        <VerticalStackLayout Grid.Column="1" Spacing="5">
-                            <Label Text="Dữ liệu tuyến phố đã cập nhật" TextColor="White" FontSize="16" FontAttributes="Bold" />
-                            <Label Text="Đã thêm file audio cho các quán ốc Quận 4." TextColor="#8A8A8A" FontSize="14" />
-                        </VerticalStackLayout>
-                    </Grid>
-                </Border>
-            </VerticalStackLayout>
-        </ScrollView>
-    </Grid>
+
+	<Grid RowDefinitions="Auto, *" Margin="20, 25, 20, 0">
+
+		<!-- Header -->
+		<Label Grid.Row="0"
+		       Text="Thông báo"
+		       TextColor="{StaticResource TextPrimary}"
+		       FontSize="24"
+		       FontAttributes="Bold"
+		       Margin="0,8,0,18"/>
+
+		<ScrollView Grid.Row="1" VerticalScrollBarVisibility="Never">
+			<VerticalStackLayout Spacing="12">
+
+				<!-- Notification card -->
+				<Border BackgroundColor="{StaticResource Surface}"
+				        StrokeShape="RoundRectangle 14"
+				        Stroke="{StaticResource CardBorder}"
+				        StrokeThickness="1"
+				        Padding="14"
+				        Shadow="{Shadow Radius=6, Opacity=0.05, Offset='0,2'}">
+					<Grid ColumnDefinitions="Auto, *" ColumnSpacing="14">
+						<!-- Orange dot -->
+						<Border Grid.Column="0"
+						        BackgroundColor="{StaticResource Primary}"
+						        StrokeThickness="0"
+						        WidthRequest="10" HeightRequest="10"
+						        StrokeShape="RoundRectangle 5"
+						        VerticalOptions="Start"
+						        Margin="0,6,0,0"/>
+						<VerticalStackLayout Grid.Column="1" Spacing="4">
+							<Label Text="Dữ liệu tuyến phố đã cập nhật"
+							       TextColor="{StaticResource TextPrimary}"
+							       FontSize="15"
+							       FontAttributes="Bold"/>
+							<Label Text="Đã thêm file audio cho các quán ốc Quận 4."
+							       TextColor="{StaticResource TextSecondary}"
+							       FontSize="13"
+							       LineHeight="1.2"/>
+							<Label Text="Hôm nay"
+							       TextColor="{StaticResource TextTertiary}"
+							       FontSize="12"
+							       Margin="0,2,0,0"/>
+						</VerticalStackLayout>
+					</Grid>
+				</Border>
+
+				<!-- Empty state placeholder -->
+				<VerticalStackLayout Margin="0,30,0,0" HorizontalOptions="Center" Spacing="8">
+					<Label Text="🔔" FontSize="36" HorizontalOptions="Center" Opacity="0.4"/>
+					<Label Text="Không có thông báo mới"
+					       TextColor="{StaticResource TextTertiary}"
+					       FontSize="14"
+					       HorizontalOptions="Center"/>
+				</VerticalStackLayout>
+
+			</VerticalStackLayout>
+		</ScrollView>
+	</Grid>
 </ContentPage>

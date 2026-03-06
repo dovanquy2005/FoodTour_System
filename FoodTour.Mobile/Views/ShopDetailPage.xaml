@@ -1,0 +1,108 @@
+﻿<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:FoodTour.Mobile.Models"
+             xmlns:viewmodels="clr-namespace:FoodTour.Mobile.ViewModels"
+             x:Class="FoodTour.Mobile.Views.ShopDetailPage"
+             x:DataType="viewmodels:ShopDetailViewModel"
+             Title="Chi tiết địa điểm"
+             BackgroundColor="{StaticResource Background}"
+             Shell.NavBarIsVisible="False">
+
+	<ScrollView>
+		<VerticalStackLayout Spacing="0" Padding="0,0,0,24">
+
+			<!-- Hero image + Back button -->
+			<Grid>
+				<Image Source="{Binding Shop.ImageUrl}" Aspect="AspectFill" HeightRequest="260"/>
+
+				<!-- Gradient overlay at top for status bar readability -->
+				<BoxView BackgroundColor="#40000000" HeightRequest="100" VerticalOptions="Start"/>
+
+				<Button Text="← Quay lại" Command="{Binding GoBackCommand}"
+				        HorizontalOptions="Start" VerticalOptions="Start"
+				        Margin="16,44,0,0"
+				        BackgroundColor="#B0FFFFFF" TextColor="{StaticResource TextPrimary}"
+				        CornerRadius="20" FontAttributes="Bold" FontSize="13"
+				        HeightRequest="38" Padding="14,0"/>
+			</Grid>
+
+			<!-- Content area -->
+			<VerticalStackLayout Padding="20,16" Spacing="10">
+
+				<!-- Shop name -->
+				<Label Text="{Binding Shop.Name}"
+				       FontSize="24" FontAttributes="Bold"
+				       TextColor="{StaticResource TextPrimary}"/>
+
+				<!-- Address with icon -->
+				<HorizontalStackLayout Spacing="6">
+					<Label Text="📍" FontSize="14"/>
+					<Label Text="{Binding Shop.Address}"
+					       FontSize="14"
+					       TextColor="{StaticResource TextSecondary}"/>
+				</HorizontalStackLayout>
+
+				<!-- Divider -->
+				<BoxView HeightRequest="1" Color="{StaticResource Gray100}" Margin="0,8"/>
+
+				<!-- Description section -->
+				<Label Text="Giới thiệu"
+				       FontSize="16" FontAttributes="Bold"
+				       TextColor="{StaticResource TextPrimary}"
+				       Margin="0,4,0,4"/>
+				<Label Text="{Binding Shop.Description}"
+				       LineHeight="1.4"
+				       TextColor="{StaticResource TextSecondary}"
+				       FontSize="14"/>
+
+				<!-- Divider -->
+				<BoxView HeightRequest="1" Color="{StaticResource Gray100}" Margin="0,8"/>
+
+				<!-- Menu section -->
+				<Label Text="Thực đơn món ăn"
+				       FontSize="18" FontAttributes="Bold"
+				       TextColor="{StaticResource TextPrimary}"
+				       Margin="0,4,0,8"/>
+
+				<CollectionView ItemsSource="{Binding Dishes}">
+					<CollectionView.ItemTemplate>
+						<DataTemplate x:DataType="models:DishModel">
+							<Border BackgroundColor="{StaticResource Surface}"
+							        StrokeShape="RoundRectangle 14"
+							        Stroke="{StaticResource CardBorder}"
+							        StrokeThickness="1"
+							        Margin="0,0,0,10"
+							        Padding="10"
+							        Shadow="{Shadow Radius=4, Opacity=0.04, Offset='0,2'}">
+								<Grid ColumnDefinitions="75, *, Auto" ColumnSpacing="14">
+									<Border Grid.Column="0"
+									        StrokeThickness="0"
+									        StrokeShape="RoundRectangle 10"
+									        WidthRequest="75" HeightRequest="75"
+									        BackgroundColor="{StaticResource Gray100}">
+										<Image Source="{Binding ImageUrl}"
+										       Aspect="AspectFill"
+										       WidthRequest="75" HeightRequest="75"/>
+									</Border>
+
+									<VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+										<Label Text="{Binding Name}"
+										       FontSize="15" FontAttributes="Bold"
+										       TextColor="{StaticResource TextPrimary}"/>
+									</VerticalStackLayout>
+
+									<Label Grid.Column="2"
+									       Text="{Binding Price, StringFormat='{0:N0}đ'}"
+									       FontSize="15" FontAttributes="Bold"
+									       TextColor="{StaticResource Primary}"
+									       VerticalOptions="Center"/>
+								</Grid>
+							</Border>
+						</DataTemplate>
+					</CollectionView.ItemTemplate>
+				</CollectionView>
+
+			</VerticalStackLayout>
+		</VerticalStackLayout>
+	</ScrollView>
+</ContentPage>

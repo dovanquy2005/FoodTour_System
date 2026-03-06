@@ -1,17 +1,54 @@
 ﻿<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="FoodTour.Mobile.Views.ScanPage"
-             BackgroundColor="#120E0E"
+             BackgroundColor="{StaticResource Background}"
              NavigationPage.HasNavigationBar="False">
-    <Grid RowDefinitions="Auto, *, Auto" Margin="20, 40, 20, 20">
-        <Label Grid.Row="0" Text="Quét mã QR" TextColor="White" FontSize="24" FontAttributes="Bold" HorizontalOptions="Center" />
-        <Grid Grid.Row="1" VerticalOptions="Center" HorizontalOptions="Center" HeightRequest="250" WidthRequest="250">
-            <Border BackgroundColor="#1A1A1A" Stroke="#FF6F00" StrokeThickness="2" StrokeShape="RoundRectangle 20">
-                <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="10">
-                    <Label Text="Đưa camera vào mã QR" TextColor="#8A8A8A" FontSize="14" />
-                </VerticalStackLayout>
-            </Border>
-        </Grid>
-        <Label Grid.Row="2" Text="Quét mã tại bàn để nghe thuyết minh khoa học." TextColor="#8A8A8A" FontSize="14" HorizontalTextAlignment="Center" />
-    </Grid>
+
+	<Grid RowDefinitions="Auto, *, Auto" Margin="20, 40, 20, 30">
+
+		<!-- Header -->
+		<VerticalStackLayout Grid.Row="0" HorizontalOptions="Center" Spacing="4">
+			<Label Text="Quét mã QR"
+			       TextColor="{StaticResource TextPrimary}"
+			       FontSize="24"
+			       FontAttributes="Bold"
+			       HorizontalOptions="Center"/>
+			<Label Text="Quét mã tại bàn để bắt đầu"
+			       TextColor="{StaticResource TextSecondary}"
+			       FontSize="13"
+			       HorizontalOptions="Center"/>
+		</VerticalStackLayout>
+
+		<!-- QR Scanner Area -->
+		<Grid Grid.Row="1" VerticalOptions="Center" HorizontalOptions="Center"
+		      HeightRequest="260" WidthRequest="260">
+			<Border BackgroundColor="{StaticResource Surface}"
+			        Stroke="{StaticResource Primary}"
+			        StrokeThickness="2.5"
+			        StrokeShape="RoundRectangle 24"
+			        StrokeDashArray="8,6"
+			        Shadow="{Shadow Radius=12, Opacity=0.08, Offset='0,4'}">
+				<VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="12">
+					<Label Text="📷" FontSize="40" HorizontalOptions="Center"/>
+					<Label Text="Đưa camera vào mã QR"
+					       TextColor="{StaticResource TextSecondary}"
+					       FontSize="14"
+					       HorizontalOptions="Center"/>
+				</VerticalStackLayout>
+			</Border>
+		</Grid>
+
+		<!-- Footer instruction -->
+		<Border Grid.Row="2"
+		        BackgroundColor="{StaticResource SurfaceWarm}"
+		        StrokeShape="RoundRectangle 14"
+		        StrokeThickness="0"
+		        Padding="16,12">
+			<Label Text="Hướng camera điện thoại vào mã QR trên bàn để nghe thuyết minh khoa học về món ăn."
+			       TextColor="{StaticResource TextSecondary}"
+			       FontSize="13"
+			       HorizontalTextAlignment="Center"
+			       LineHeight="1.3"/>
+		</Border>
+	</Grid>
 </ContentPage>

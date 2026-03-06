@@ -13,7 +13,7 @@
         private async void CheckAndLoadData()
         {
             // Khởi tạo Database và Seed dữ liệu mẫu
-            await _dbService.GetPoisAsync();
+            await _dbService.GetShopsAsync();
             await Task.Delay(1500); // Thêm một chút delay để user kịp nhìn màn hình splash
 
             await Shell.Current.GoToAsync("//MainTabs");

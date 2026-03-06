@@ -9,7 +9,7 @@ public partial class App : Application
 
     protected override Window CreateWindow(IActivationState? activationState)
     {
-        // Cách khởi tạo chuẩn: Trả về một Window chứa AppShell
-        return new Window(new AppShell());
+        // Khởi tạo với SplashPage, sau đó chuyển sang AppShell
+        return new Window(new Views.SplashPage());
     }
 }

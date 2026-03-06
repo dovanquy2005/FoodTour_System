@@ -1,24 +1,181 @@
 ﻿<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:FoodTour.Mobile.ViewModels"
              x:Class="FoodTour.Mobile.Views.SettingsPage"
-             Title="Cài đặt">
-    <TableView Intent="Settings">
-        <TableRoot>
-            <TableSection Title="Dữ liệu Offline">
-                <TextCell Text="Trạng thái" Detail="Đã tải (120MB)" DetailColor="Green"/>
-                <TextCell Text="Cập nhật dữ liệu mới" TextColor="#007AFF"/>
-                <TextCell Text="Xóa dữ liệu Offline" TextColor="Red"/>
-            </TableSection>
+             x:DataType="viewmodels:SettingsViewModel"
+             BackgroundColor="{StaticResource Background}"
+             NavigationPage.HasNavigationBar="False">
 
-            <TableSection Title="Cấu hình Tour">
-                <SwitchCell Text="Tự động phát khi đến gần" On="True"/>
-                <EntryCell Label="Bán kính (m)" Text="20" Keyboard="Numeric"/>
-            </TableSection>
+	<ScrollView>
+		<VerticalStackLayout Margin="20, 20, 20, 40" Spacing="22">
 
-            <TableSection Title="Ứng dụng">
-                <TextCell Text="Ngôn ngữ" Detail="Tiếng Việt"/>
-                <TextCell Text="Phiên bản" Detail="1.0.0 (Beta)"/>
-            </TableSection>
-        </TableRoot>
-    </TableView>
+			<!-- Page Header -->
+			<Label Text="Cài đặt"
+			       TextColor="{StaticResource TextPrimary}"
+			       FontSize="28"
+			       FontAttributes="Bold"
+			       Margin="0, 8, 0, 4"/>
+
+			<!-- ═══════ CẤU HÌNH TOUR ═══════ -->
+			<VerticalStackLayout Spacing="8">
+				<Label Text="CẤU HÌNH TOUR"
+				       TextColor="{StaticResource TextSecondary}"
+				       FontSize="12"
+				       FontAttributes="Bold"
+				       Margin="4,0"
+				       CharacterSpacing="1"/>
+
+				<Border BackgroundColor="{StaticResource Surface}"
+				        StrokeShape="RoundRectangle 16"
+				        Stroke="{StaticResource CardBorder}"
+				        StrokeThickness="1"
+				        Padding="16,4"
+				        Shadow="{Shadow Radius=6, Opacity=0.05, Offset='0,2'}">
+					<Grid RowDefinitions="Auto, 1, Auto">
+
+						<!-- Toggle Auto Play -->
+						<Grid Grid.Row="0" ColumnDefinitions="Auto, *, Auto" Padding="0,14">
+							<Label Grid.Column="0" Text="🎙️" FontSize="20" VerticalOptions="Center"/>
+							<Label Grid.Column="1" Text="Tự động phát khi đến gần"
+							       TextColor="{StaticResource TextPrimary}" FontSize="15"
+							       VerticalOptions="Center" Margin="14,0"/>
+							<Switch Grid.Column="2" IsToggled="{Binding IsAutoPlay}"
+							        OnColor="{StaticResource Primary}" ThumbColor="White"
+							        VerticalOptions="Center"/>
+						</Grid>
+
+						<BoxView Grid.Row="1" Color="{StaticResource Gray100}" HeightRequest="1" HorizontalOptions="Fill"/>
+
+						<!-- Set Radius -->
+						<Grid Grid.Row="2" ColumnDefinitions="Auto, *, Auto" Padding="0,14">
+							<Label Grid.Column="0" Text="📍" FontSize="20" VerticalOptions="Center"/>
+							<Label Grid.Column="1" Text="Bán kính nhận diện (m)"
+							       TextColor="{StaticResource TextPrimary}" FontSize="15"
+							       VerticalOptions="Center" Margin="14,0"/>
+							<Entry Grid.Column="2" Text="{Binding Radius}" Keyboard="Numeric"
+							       TextColor="{StaticResource Primary}" BackgroundColor="Transparent"
+							       HorizontalTextAlignment="End" WidthRequest="60"
+							       FontSize="16" FontAttributes="Bold"/>
+						</Grid>
+					</Grid>
+				</Border>
+			</VerticalStackLayout>
+
+			<!-- ═══════ DỮ LIỆU OFFLINE ═══════ -->
+			<VerticalStackLayout Spacing="8">
+				<Label Text="DỮ LIỆU OFFLINE"
+				       TextColor="{StaticResource TextSecondary}"
+				       FontSize="12"
+				       FontAttributes="Bold"
+				       Margin="4,0"
+				       CharacterSpacing="1"/>
+
+				<Border BackgroundColor="{StaticResource Surface}"
+				        StrokeShape="RoundRectangle 16"
+				        Stroke="{StaticResource CardBorder}"
+				        StrokeThickness="1"
+				        Padding="16,4"
+				        Shadow="{Shadow Radius=6, Opacity=0.05, Offset='0,2'}">
+					<Grid RowDefinitions="Auto, 1, Auto, 1, Auto">
+
+						<!-- Trạng thái -->
+						<Grid Grid.Row="0" ColumnDefinitions="Auto, *, Auto" Padding="0,14">
+							<Label Grid.Column="0" Text="💾" FontSize="20" VerticalOptions="Center"/>
+							<Label Grid.Column="1" Text="Trạng thái"
+							       TextColor="{StaticResource TextPrimary}" FontSize="15"
+							       VerticalOptions="Center" Margin="14,0"/>
+							<Label Grid.Column="2" Text="{Binding OfflineStatus}"
+							       TextColor="{StaticResource Success}" FontSize="14"
+							       VerticalOptions="Center"/>
+						</Grid>
+
+						<BoxView Grid.Row="1" Color="{StaticResource Gray100}" HeightRequest="1" HorizontalOptions="Fill"/>
+
+						<!-- Cập nhật dữ liệu -->
+						<Grid Grid.Row="2" ColumnDefinitions="Auto, *, Auto" Padding="0,14">
+							<Grid.GestureRecognizers>
+								<TapGestureRecognizer Command="{Binding UpdateDataCommand}"/>
+							</Grid.GestureRecognizers>
+							<Label Grid.Column="0" Text="🔄" FontSize="20" VerticalOptions="Center"/>
+							<Label Grid.Column="1" Text="Cập nhật dữ liệu mới"
+							       TextColor="{StaticResource Info}" FontSize="15"
+							       VerticalOptions="Center" Margin="14,0"/>
+							<Label Grid.Column="2" Text="❯" TextColor="{StaticResource TextTertiary}"
+							       FontSize="14" VerticalOptions="Center"/>
+						</Grid>
+
+						<BoxView Grid.Row="3" Color="{StaticResource Gray100}" HeightRequest="1" HorizontalOptions="Fill"/>
+
+						<!-- Xóa dữ liệu -->
+						<Grid Grid.Row="4" ColumnDefinitions="Auto, *, Auto" Padding="0,14">
+							<Grid.GestureRecognizers>
+								<TapGestureRecognizer Command="{Binding ClearDataCommand}"/>
+							</Grid.GestureRecognizers>
+							<Label Grid.Column="0" Text="🗑️" FontSize="20" VerticalOptions="Center"/>
+							<Label Grid.Column="1" Text="Xóa dữ liệu Offline"
+							       TextColor="{StaticResource Error}" FontSize="15"
+							       VerticalOptions="Center" Margin="14,0"/>
+							<Label Grid.Column="2" Text="❯" TextColor="{StaticResource TextTertiary}"
+							       FontSize="14" VerticalOptions="Center"/>
+						</Grid>
+					</Grid>
+				</Border>
+			</VerticalStackLayout>
+
+			<!-- ═══════ ỨNG DỤNG ═══════ -->
+			<VerticalStackLayout Spacing="8">
+				<Label Text="ỨNG DỤNG"
+				       TextColor="{StaticResource TextSecondary}"
+				       FontSize="12"
+				       FontAttributes="Bold"
+				       Margin="4,0"
+				       CharacterSpacing="1"/>
+
+				<Border BackgroundColor="{StaticResource Surface}"
+				        StrokeShape="RoundRectangle 16"
+				        Stroke="{StaticResource CardBorder}"
+				        StrokeThickness="1"
+				        Padding="16,4"
+				        Shadow="{Shadow Radius=6, Opacity=0.05, Offset='0,2'}">
+					<Grid RowDefinitions="Auto, 1, Auto">
+
+						<!-- Ngôn ngữ -->
+						<Grid Grid.Row="0" ColumnDefinitions="Auto, *, Auto" Padding="0,14">
+							<Label Grid.Column="0" Text="🌐" FontSize="20" VerticalOptions="Center"/>
+							<Label Grid.Column="1" Text="Ngôn ngữ"
+							       TextColor="{StaticResource TextPrimary}" FontSize="15"
+							       VerticalOptions="Center" Margin="14,0"/>
+							<Label Grid.Column="2" Text="Tiếng Việt"
+							       TextColor="{StaticResource TextSecondary}" FontSize="14"
+							       VerticalOptions="Center"/>
+						</Grid>
+
+						<BoxView Grid.Row="1" Color="{StaticResource Gray100}" HeightRequest="1" HorizontalOptions="Fill"/>
+
+						<!-- Phiên bản -->
+						<Grid Grid.Row="2" ColumnDefinitions="Auto, *, Auto" Padding="0,14">
+							<Label Grid.Column="0" Text="📱" FontSize="20" VerticalOptions="Center"/>
+							<Label Grid.Column="1" Text="Phiên bản"
+							       TextColor="{StaticResource TextPrimary}" FontSize="15"
+							       VerticalOptions="Center" Margin="14,0"/>
+							<Label Grid.Column="2" Text="{Binding AppVersion}"
+							       TextColor="{StaticResource TextSecondary}" FontSize="14"
+							       VerticalOptions="Center"/>
+						</Grid>
+					</Grid>
+				</Border>
+			</VerticalStackLayout>
+
+			<!-- Logout Button -->
+			<Button Text="Đăng xuất"
+			        BackgroundColor="{StaticResource Gray100}"
+			        TextColor="{StaticResource Error}"
+			        FontAttributes="Bold"
+			        CornerRadius="14"
+			        HeightRequest="52"
+			        Margin="0, 8, 0, 0"
+			        BorderWidth="0"/>
+
+		</VerticalStackLayout>
+	</ScrollView>
 </ContentPage>
