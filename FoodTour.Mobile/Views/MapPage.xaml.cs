@@ -10,6 +10,8 @@ public partial class MapPage : ContentPage
 {
     private MapViewModel _viewModel;
     private string _lastEnteredShopName = string.Empty; // Lưu tên quán vừa ghé để tránh lặp lại thuyết minh
+    private Location _userLocation = new Location(10.762636086391392, 106.70256329960525); // Vị trí người dùng
+    private bool _firstGpsFix = false;
 
     public MapPage(MapViewModel vm)
     {
@@ -50,7 +52,7 @@ public partial class MapPage : ContentPage
             // Chúng ta không thực hiện vẽ map hay MoveToRegion ở đây nữa, 
             // vì Google Map View bên dưới Android có thể chưa khởi tạo xong và gây lỗi NullReferenceException (Văng app).
             // Logic liên quan đến UI của bản đồ đã được chuyển sang MainMap_Loaded
-            
+
             // Khởi động hệ thống GPS
             await SetupGps();
         }
@@ -92,10 +94,6 @@ public partial class MapPage : ContentPage
                 await Task.Delay(200);
             }
 
-            // Tọa độ trung tâm đường Vĩnh Khánh (khoảng Ốc Oanh)
-            var location = new Location(10.759247, 106.703473);
-            MainMap.MoveToRegion(MapSpan.FromCenterAndRadius(location, Distance.FromKilometers(1.0)));
-
             // Load dữ liệu từ Database nếu danh sách đang trống
             if (_viewModel.Shops == null || _viewModel.Shops.Count == 0)
             {
@@ -104,6 +102,10 @@ public partial class MapPage : ContentPage
 
             // Vẽ vòng bán kính xung quanh các quán ăn
             DrawRadiusCircles();
+
+            // Tọa độ trung tâm đường Vĩnh Khánh (khoảng Ốc Oanh)
+            var location = _userLocation;
+            MainMap.MoveToRegion(MapSpan.FromCenterAndRadius(location, Distance.FromKilometers(1.0)));
         }
         catch (Exception ex)
         {
@@ -144,10 +146,10 @@ public partial class MapPage : ContentPage
                     Location = shop.Location,
                     BindingContext = shop // Gắn dữ liệu shop vào Pin để xử lý khi click
                 };
-                
+
                 // Gắn sự kiện click vào Pin
                 pin.MarkerClicked += OnPinClicked;
-                
+
                 MainMap.Pins.Add(pin);
             }
             catch (Exception ex)
@@ -168,8 +170,28 @@ public partial class MapPage : ContentPage
 
             if (status == PermissionStatus.Granted)
             {
+#if DEBUG
+                Geolocation.Default.StopListeningForeground();
+
+                var fakeLocation = new Location(10.762636086391392, 106.70256329960525);
+
+                _userLocation = fakeLocation;
+
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    if (MainMap != null)
+                    {
+                        MainMap.MoveToRegion(
+                            MapSpan.FromCenterAndRadius(
+                                fakeLocation,
+                                Distance.FromMeters(300)));
+                    }
+                });
+#endif
+
                 // Hiển thị chấm xanh vị trí người dùng (Đảm bảo chạy trên luồng chính)
-                MainThread.BeginInvokeOnMainThread(() => {
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
                     if (MainMap != null) MainMap.IsShowingUser = true;
                 });
 
@@ -192,7 +214,29 @@ public partial class MapPage : ContentPage
         try
         {
             var userLoc = e.Location;
+            _userLocation = userLoc;
             if (userLoc == null || _viewModel.Shops == null) return;
+
+            // Hiển thị vị trí người dùng trên map
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                if (MainMap == null) return;
+
+                var position = new Location(userLoc.Latitude, userLoc.Longitude);
+
+                // if (!_firstGpsFix)
+                // {
+                //     MainMap.MoveToRegion(
+                //         MapSpan.FromCenterAndRadius(
+                //             position,
+                //             Distance.FromMeters(300)));
+
+                //     _firstGpsFix = true;
+                // }
+
+                MainMap.MoveToRegion(
+                    MapSpan.FromCenterAndRadius(position, Distance.FromMeters(300)));
+            });
 
             foreach (var shop in _viewModel.Shops)
             {
@@ -203,10 +247,10 @@ public partial class MapPage : ContentPage
                 if (distanceKm < 0.1)
                 {
                     // KIỂM TRA: Chỉ gọi thuyết minh nếu đây là quán mới (tránh đọc lặp lại khi đang đứng yên)
-                    if (_lastEnteredShopName != shop.Name) 
+                    if (_lastEnteredShopName != shop.Name)
                     {
                         _lastEnteredShopName = shop.Name;
-                        
+
                         MainThread.BeginInvokeOnMainThread(async () =>
                         {
                             try
@@ -221,8 +265,8 @@ public partial class MapPage : ContentPage
                 }
             }
 
-            // Nếu đi ra khỏi vùng 100m của tất cả các quán, có thể reset để khi quay lại quán cũ sẽ đọc lại
-            // _lastEnteredShopName = string.Empty; 
+            // Nếu người dùng không còn ở gần quán nào thì reset
+            _lastEnteredShopName = string.Empty;
         }
         catch (Exception ex)
         {

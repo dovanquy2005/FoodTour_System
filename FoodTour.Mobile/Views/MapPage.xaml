@@ -1,89 +1,111 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:maps="clr-namespace:Microsoft.Maui.Controls.Maps;assembly=Microsoft.Maui.Controls.Maps"
-             xmlns:viewmodels="clr-namespace:FoodTour.Mobile.ViewModels"
-             x:Class="FoodTour.Mobile.Views.MapPage"
-             x:DataType="viewmodels:MapViewModel"
-             Shell.NavBarIsVisible="False"
-             Title="FoodTour Map">
+			 xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+			 xmlns:maps="clr-namespace:Microsoft.Maui.Controls.Maps;assembly=Microsoft.Maui.Controls.Maps"
+			 xmlns:viewmodels="clr-namespace:FoodTour.Mobile.ViewModels"
+			 x:Class="FoodTour.Mobile.Views.MapPage"
+			 x:DataType="viewmodels:MapViewModel"
+			 Shell.NavBarIsVisible="False"
+			 Title="FoodTour Map">
 
 	<Grid>
 		<!-- Bản đồ chính -->
-		<maps:Map x:Name="MainMap" MapType="Street"/>
+		<maps:Map x:Name="MainMap"
+				  MapType="Street"/>
 
 		<!-- ═══════ FLOATING AUDIO PLAYER ═══════ -->
 		<Border x:Name="PlayerBar"
-		        IsVisible="{Binding IsPlayerVisible}"
-		        VerticalOptions="End"
-		        Margin="14,0,14,25"
-		        Padding="12,10"
-		        BackgroundColor="{StaticResource Surface}"
-		        StrokeShape="RoundRectangle 18"
-		        Stroke="{StaticResource CardBorder}"
-		        StrokeThickness="1"
-		        Shadow="{Shadow Radius=16, Opacity=0.12, Offset='0,4'}">
+				IsVisible="{Binding IsPlayerVisible}"
+				VerticalOptions="End"
+				Margin="14,0,14,25"
+				Padding="12,10"
+				BackgroundColor="{StaticResource Surface}"
+				StrokeShape="RoundRectangle 18"
+				Stroke="{StaticResource CardBorder}"
+				StrokeThickness="1"
+				Shadow="{Shadow Radius=16, Opacity=0.12, Offset='0,4'}">
 
-			<Grid ColumnDefinitions="50, *, Auto" ColumnSpacing="12">
+			<Grid ColumnDefinitions="50, *, Auto"
+				  ColumnSpacing="12">
 
 				<!-- Ảnh thumbnail quán (bo tròn) -->
 				<Border Grid.Column="0"
-				        StrokeShape="RoundRectangle 12"
-				        StrokeThickness="0"
-				        WidthRequest="50" HeightRequest="50"
-				        BackgroundColor="{StaticResource Gray100}">
+						StrokeShape="RoundRectangle 12"
+						StrokeThickness="0"
+						WidthRequest="50"
+						HeightRequest="50"
+						BackgroundColor="{StaticResource Gray100}">
 					<Image Source="{Binding CurrentShopImage}"
-					       Aspect="AspectFill"
-					       WidthRequest="50" HeightRequest="50"/>
+						   Aspect="AspectFill"
+						   WidthRequest="50"
+						   HeightRequest="50"/>
 				</Border>
 
 				<!-- Tên quán + trạng thái -->
-				<VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+				<VerticalStackLayout Grid.Column="1"
+									 VerticalOptions="Center"
+									 Spacing="2">
 					<Label Text="{Binding CurrentShopName}"
-					       TextColor="{StaticResource TextPrimary}"
-					       FontSize="14"
-					       FontAttributes="Bold"
-					       LineBreakMode="TailTruncation"
-					       MaxLines="1"/>
+						   TextColor="{StaticResource TextPrimary}"
+						   FontSize="14"
+						   FontAttributes="Bold"
+						   LineBreakMode="TailTruncation"
+						   MaxLines="1"/>
 					<Label Text="{Binding PlayerStatus}"
-					       TextColor="{StaticResource TextSecondary}"
-					       FontSize="12"
-					       LineBreakMode="TailTruncation"
-					       MaxLines="1"/>
+						   TextColor="{StaticResource TextSecondary}"
+						   FontSize="12"
+						   LineBreakMode="TailTruncation"
+						   MaxLines="1"/>
 				</VerticalStackLayout>
 
 				<!-- Nút điều khiển -->
-				<HorizontalStackLayout Grid.Column="2" Spacing="4" VerticalOptions="Center">
+				<HorizontalStackLayout Grid.Column="2"
+									   Spacing="4"
+									   VerticalOptions="Center">
 					<!-- Nút Previous -->
-					<Border StrokeThickness="0" BackgroundColor="Transparent"
-					        WidthRequest="36" HeightRequest="36">
+					<Border StrokeThickness="0"
+							BackgroundColor="Transparent"
+							WidthRequest="36"
+							HeightRequest="36">
 						<Border.GestureRecognizers>
 							<TapGestureRecognizer Command="{Binding SkipPreviousCommand}"/>
 						</Border.GestureRecognizers>
-						<Label Text="◀" TextColor="{StaticResource TextSecondary}" FontSize="18"
-						       HorizontalOptions="Center" VerticalOptions="Center"/>
+						<Label Text="◀"
+							   TextColor="{StaticResource TextSecondary}"
+							   FontSize="18"
+							   HorizontalOptions="Center"
+							   VerticalOptions="Center"/>
 					</Border>
 
 					<!-- Nút Play/Pause -->
 					<Border StrokeThickness="0"
-					        BackgroundColor="{StaticResource Primary}"
-					        StrokeShape="RoundRectangle 20"
-					        WidthRequest="42" HeightRequest="42">
+							BackgroundColor="{StaticResource Primary}"
+							StrokeShape="RoundRectangle 20"
+							WidthRequest="42"
+							HeightRequest="42">
 						<Border.GestureRecognizers>
 							<TapGestureRecognizer Command="{Binding PlayPauseCommand}"/>
 						</Border.GestureRecognizers>
-						<Label Text="{Binding PlayIcon}" TextColor="White" FontSize="20"
-						       HorizontalOptions="Center" VerticalOptions="Center"/>
+						<Label Text="{Binding PlayIcon}"
+							   TextColor="White"
+							   FontSize="20"
+							   HorizontalOptions="Center"
+							   VerticalOptions="Center"/>
 					</Border>
 
 					<!-- Nút Next -->
-					<Border StrokeThickness="0" BackgroundColor="Transparent"
-					        WidthRequest="36" HeightRequest="36">
+					<Border StrokeThickness="0"
+							BackgroundColor="Transparent"
+							WidthRequest="36"
+							HeightRequest="36">
 						<Border.GestureRecognizers>
 							<TapGestureRecognizer Command="{Binding SkipNextCommand}"/>
 						</Border.GestureRecognizers>
-						<Label Text="▶" TextColor="{StaticResource TextSecondary}" FontSize="18"
-						       HorizontalOptions="Center" VerticalOptions="Center"/>
+						<Label Text="▶"
+							   TextColor="{StaticResource TextSecondary}"
+							   FontSize="18"
+							   HorizontalOptions="Center"
+							   VerticalOptions="Center"/>
 					</Border>
 				</HorizontalStackLayout>
 
