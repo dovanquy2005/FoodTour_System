@@ -124,7 +124,7 @@ public partial class MapPage : ContentPage
 
             // Tọa độ trung tâm đường Vĩnh Khánh (khoảng Ốc Oanh)
             var location = _userLocation;
-            MainMap?.MoveToRegion(MapSpan.FromCenterAndRadius(location, Distance.FromKilometers(1.0)));
+            MainMap?.MoveToRegion(MapSpan.FromCenterAndRadius(location, Distance.FromMeters(250)));
         }
         catch (Exception ex)
         {

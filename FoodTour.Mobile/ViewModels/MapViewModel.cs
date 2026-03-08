@@ -90,25 +90,70 @@ public partial class MapViewModel : BaseViewModel
     {
         PlayIcon = "⏸";
         PlayerStatus = "Đang thuyết minh...";
-        if (_cts != null) _cts.Cancel();
+
+        if (_cts != null)
+            _cts.Cancel();
+
         _cts = new CancellationTokenSource();
 
         try
         {
             var locales = await TextToSpeech.Default.GetLocalesAsync();
-            var vnLocale = locales.FirstOrDefault(x => x.Language == "vi");
-            var options = new SpeechOptions { Locale = vnLocale, Pitch = 1.0f, Volume = 1.0f };
+
+            var vnLocale = locales.FirstOrDefault(l =>
+                l.Language == "vi" && l.Country == "VN");
+
+            if (vnLocale == null)
+                vnLocale = locales.FirstOrDefault(l => l.Language == "vi");
+
+            var options = new SpeechOptions
+            {
+                Locale = vnLocale,
+                Pitch = 0.9f,
+                Volume = 1.0f
+            };
 
             string name = _currentShop?.Name ?? "";
             string desc = _currentShop?.Description ?? "Mời bạn ghé thăm.";
-            string content = $"{name}. {desc}";
+
+            string content = $"{name}. {desc}"
+                .Replace("\n", ". ")
+                .Replace("  ", " ");
 
             await TextToSpeech.Default.SpeakAsync(content, options, _cts.Token);
+
             PlayIcon = "▶";
             PlayerStatus = "Đã kết thúc";
         }
-        catch (Exception) { PlayIcon = "▶"; }
+        catch
+        {
+            PlayIcon = "▶";
+        }
     }
+
+    // private async Task StartReading()
+    // {
+    //     PlayIcon = "⏸";
+    //     PlayerStatus = "Đang thuyết minh...";
+    //     if (_cts != null) _cts.Cancel();
+    //     _cts = new CancellationTokenSource();
+
+    //     try
+    //     {
+    //         var locales = await TextToSpeech.Default.GetLocalesAsync();
+    //         var vnLocale = locales.FirstOrDefault(x => x.Language == "vi");
+    //         var options = new SpeechOptions { Locale = vnLocale, Pitch = 1.0f, Volume = 1.0f };
+
+    //         string name = _currentShop?.Name ?? "";
+    //         string desc = _currentShop?.Description ?? "Mời bạn ghé thăm.";
+    //         string content = $"{name}. {desc}";
+
+    //         await TextToSpeech.Default.SpeakAsync(content, options, _cts.Token);
+    //         PlayIcon = "▶";
+    //         PlayerStatus = "Đã kết thúc";
+    //     }
+    //     catch (Exception) { PlayIcon = "▶"; }
+    // }
 
     // 👇 3. LOGIC LOAD DATABASE
     [RelayCommand]
