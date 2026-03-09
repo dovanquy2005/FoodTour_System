@@ -1,0 +1,219 @@
+@page "/"
+@inject AppDbContext Db
+
+<PageTitle>Dashboard — FoodTour Admin</PageTitle>
+
+<MudStack Spacing="6">
+    <!-- ═══════ PAGE HEADER ═══════ -->
+    <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+        <MudStack Spacing="0">
+            <MudText Typo="Typo.h5" Style="font-weight: 800; color: #2D1F14;">
+                🍜 Dashboard
+            </MudText>
+            <MudText Typo="Typo.body2" Style="color: #8C7B6B;">
+                Tổng quan hệ thống — Phố ẩm thực Vĩnh Khánh
+            </MudText>
+        </MudStack>
+        <MudChip T="string" Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small"
+                 Icon="@Icons.Material.Filled.CalendarToday">
+            @DateTime.Now.ToString("dd/MM/yyyy")
+        </MudChip>
+    </MudStack>
+
+    <!-- ═══════ STAT CARDS ═══════ -->
+    <MudGrid Spacing="4">
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="stat-card" Elevation="0" Style="padding: 24px; border-radius: 16px; border: 1px solid #F0E8E0; background: linear-gradient(135deg, #FFFFFF, #FFF8F2);">
+                <MudStack Spacing="2">
+                    <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                        <MudAvatar Size="Size.Medium" Style="background: linear-gradient(135deg, #E8672A, #F4A574);">
+                            <MudIcon Icon="@Icons.Material.Filled.Storefront" Style="color: white;" />
+                        </MudAvatar>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text">+12%</MudChip>
+                    </MudStack>
+                    <MudText Typo="Typo.h4" Style="font-weight: 800; color: #2D1F14;">@_totalShops</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #8C7B6B;">Tổng quán ăn</MudText>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="stat-card" Elevation="0" Style="padding: 24px; border-radius: 16px; border: 1px solid #F0E8E0; background: linear-gradient(135deg, #FFFFFF, #F0F8FF);">
+                <MudStack Spacing="2">
+                    <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                        <MudAvatar Size="Size.Medium" Style="background: linear-gradient(135deg, #5B8FD4, #7BAAF0);">
+                            <MudIcon Icon="@Icons.Material.Filled.RestaurantMenu" Style="color: white;" />
+                        </MudAvatar>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text">+8%</MudChip>
+                    </MudStack>
+                    <MudText Typo="Typo.h4" Style="font-weight: 800; color: #2D1F14;">@_totalDishes</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #8C7B6B;">Tổng món ăn</MudText>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="stat-card" Elevation="0" Style="padding: 24px; border-radius: 16px; border: 1px solid #F0E8E0; background: linear-gradient(135deg, #FFFFFF, #F0FFF4);">
+                <MudStack Spacing="2">
+                    <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                        <MudAvatar Size="Size.Medium" Style="background: linear-gradient(135deg, #5DAA68, #7BC87F);">
+                            <MudIcon Icon="@Icons.Material.Filled.People" Style="color: white;" />
+                        </MudAvatar>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text">+24%</MudChip>
+                    </MudStack>
+                    <MudText Typo="Typo.h4" Style="font-weight: 800; color: #2D1F14;">1,284</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #8C7B6B;">Người dùng hôm nay</MudText>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="stat-card" Elevation="0" Style="padding: 24px; border-radius: 16px; border: 1px solid #F0E8E0; background: linear-gradient(135deg, #FFFFFF, #FFFBF0);">
+                <MudStack Spacing="2">
+                    <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                        <MudAvatar Size="Size.Medium" Style="background: linear-gradient(135deg, #E8A838, #F0C060);">
+                            <MudIcon Icon="@Icons.Material.Filled.Star" Style="color: white;" />
+                        </MudAvatar>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text">+0.2</MudChip>
+                    </MudStack>
+                    <MudText Typo="Typo.h4" Style="font-weight: 800; color: #2D1F14;">@_avgRating</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #8C7B6B;">Đánh giá trung bình</MudText>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <!-- ═══════ CHARTS ROW ═══════ -->
+    <MudGrid Spacing="4">
+        <MudItem xs="12" md="8">
+            <MudPaper Elevation="0" Style="padding: 24px; border-radius: 16px; border: 1px solid #F0E8E0;">
+                <MudStack Spacing="3">
+                    <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.h6" Style="font-weight: 700;">📊 Lượt truy cập 7 ngày</MudText>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">Tuần này</MudChip>
+                    </MudStack>
+                    <!-- Weekly stats bars -->
+                    <MudSimpleTable Dense="true" Hover="true" Style="border-radius: 8px; overflow: hidden;">
+                        <thead>
+                            <tr>
+                                <th style="font-weight: 700; color: #8C7B6B;">Ngày</th>
+                                <th style="font-weight: 700; color: #8C7B6B;">Lượt truy cập</th>
+                                <th style="font-weight: 700; color: #8C7B6B;">Tiến triển</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var (day, visits) in _weeklyData)
+                            {
+                                <tr>
+                                    <td style="font-weight: 600;">@day</td>
+                                    <td>@visits</td>
+                                    <td style="width: 50%;">
+                                        <div style="background: #F0E8E0; border-radius: 6px; height: 12px; overflow: hidden;">
+                                            <div style="background: linear-gradient(90deg, #E8672A, #F4A574); height: 100%; border-radius: 6px; width: @((int)(visits / 7.5))%; transition: width 0.5s ease;"></div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="4">
+            <MudPaper Elevation="0" Style="padding: 24px; border-radius: 16px; border: 1px solid #F0E8E0; height: 100%;">
+                <MudStack Spacing="3">
+                    <MudText Typo="Typo.h6" Style="font-weight: 700;">🏆 Top quán ăn</MudText>
+                    @if (_topShops is not null)
+                    {
+                        @foreach (var shop in _topShops)
+                        {
+                            <MudStack Row AlignItems="AlignItems.Center" Spacing="3" Style="padding: 8px 0; border-bottom: 1px solid #F0E8E0;">
+                                <MudAvatar Size="Size.Small" Style="background: #FFF0E6; color: #E8672A; font-weight: 700; font-size: 0.75rem;">
+                                    @shop.Rating.ToString("0.0")
+                                </MudAvatar>
+                                <MudStack Spacing="0" Style="flex: 1;">
+                                    <MudText Typo="Typo.body2" Style="font-weight: 600; color: #2D1F14;">@shop.Name</MudText>
+                                    <MudText Typo="Typo.caption" Style="color: #8C7B6B;">@shop.Address</MudText>
+                                </MudStack>
+                                <MudRating ReadOnly="true" SelectedValue="@((int)Math.Round(shop.Rating))" Size="Size.Small"
+                                           FullIcon="@Icons.Material.Filled.Star" EmptyIcon="@Icons.Material.Filled.StarBorder" />
+                            </MudStack>
+                        }
+                    }
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <!-- ═══════ RECENT SHOPS TABLE ═══════ -->
+    <MudPaper Elevation="0" Style="padding: 24px; border-radius: 16px; border: 1px solid #F0E8E0;">
+        <MudStack Spacing="3">
+            <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                <MudText Typo="Typo.h6" Style="font-weight: 700;">🍽️ Quán ăn gần đây</MudText>
+                <MudButton Href="/shops" Variant="Variant.Text" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ArrowForward">
+                    Xem tất cả
+                </MudButton>
+            </MudStack>
+
+            <MudTable Items="_recentShops" Hover="true" Striped="true" Breakpoint="Breakpoint.Sm"
+                      Style="border-radius: 12px; overflow: hidden;">
+                <HeaderContent>
+                    <MudTh Style="font-weight: 700;">Tên quán</MudTh>
+                    <MudTh Style="font-weight: 700;">Địa chỉ</MudTh>
+                    <MudTh Style="font-weight: 700;">Đánh giá</MudTh>
+                    <MudTh Style="font-weight: 700;">Món ăn</MudTh>
+                    <MudTh Style="font-weight: 700; text-align: right;">Trạng thái</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>
+                        <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                            <MudAvatar Size="Size.Small" Style="background: #FFF0E6; color: #E8672A;">
+                                <MudIcon Icon="@Icons.Material.Filled.Store" Size="Size.Small" />
+                            </MudAvatar>
+                            <MudText Style="font-weight: 600;">@context.Name</MudText>
+                        </MudStack>
+                    </MudTd>
+                    <MudTd><MudText Typo="Typo.body2" Style="color: #8C7B6B;">@context.Address</MudText></MudTd>
+                    <MudTd>
+                        <MudChip T="string" Size="Size.Small" Style="background: #FFF0E6; color: #E8672A; font-weight: 600;">
+                            ★ @context.Rating.ToString("0.0")
+                        </MudChip>
+                    </MudTd>
+                    <MudTd>
+                        <MudText Typo="Typo.body2">@context.Dishes.Count món</MudText>
+                    </MudTd>
+                    <MudTd Style="text-align: right;">
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">Hoạt động</MudChip>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudStack>
+    </MudPaper>
+</MudStack>
+
+@code {
+    private int _totalShops;
+    private int _totalDishes;
+    private string _avgRating = "0";
+    private List<Shop>? _topShops;
+    private List<Shop>? _recentShops;
+
+    // Weekly mock data
+    private (string Day, int Visits)[] _weeklyData =
+    [
+        ("Thứ 2", 320), ("Thứ 3", 450), ("Thứ 4", 380),
+        ("Thứ 5", 510), ("Thứ 6", 620), ("Thứ 7", 580), ("CN", 720)
+    ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        _totalShops = await Db.Shops.CountAsync();
+        _totalDishes = await Db.Dishes.CountAsync();
+        var avg = _totalShops > 0 ? await Db.Shops.AverageAsync(s => s.Rating) : 0;
+        _avgRating = avg.ToString("0.0");
+
+        _topShops = await Db.Shops.OrderByDescending(s => s.Rating).Take(5).ToListAsync();
+        _recentShops = await Db.Shops.Include(s => s.Dishes).OrderByDescending(s => s.CreatedAt).Take(5).ToListAsync();
+    }
+}

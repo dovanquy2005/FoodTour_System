@@ -1,0 +1,276 @@
+@page "/dishes"
+@inject AppDbContext Db
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject IWebHostEnvironment Env
+
+<PageTitle>Món ăn — FoodTour Admin</PageTitle>
+
+<MudStack Spacing="4">
+    <!-- ═══════ HEADER ═══════ -->
+    <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Style="flex-wrap: wrap; gap: 12px;">
+        <MudStack Spacing="0">
+            <MudText Typo="Typo.h5" Style="font-weight: 800; color: #2D1F14;">🍲 Quản lý Món ăn</MudText>
+            <MudText Typo="Typo.body2" Style="color: #8C7B6B;">Quản lý thực đơn của các quán trên phố Vĩnh Khánh</MudText>
+        </MudStack>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                   Style="border-radius: 12px; text-transform: none; font-weight: 600; padding: 10px 24px;"
+                   OnClick="OpenCreateDialog">
+            Thêm món mới
+        </MudButton>
+    </MudStack>
+
+    <!-- ═══════ FILTERS ═══════ -->
+    <MudPaper Elevation="0" Style="padding: 16px; border-radius: 16px; border: 1px solid #F0E8E0;">
+        <MudGrid Spacing="3">
+            <MudItem xs="12" sm="6" md="4">
+                <MudTextField @bind-Value="_searchString" Placeholder="Tìm kiếm món ăn..."
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4">
+                <MudSelect @bind-Value="_selectedShopId" Label="Lọc theo quán" Variant="Variant.Outlined" Margin="Margin.Dense"
+                           Clearable="true">
+                    @foreach (var shop in _shops)
+                    {
+                        <MudSelectItem T="string" Value="@shop.Id">@shop.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="12" md="4" Style="display: flex; align-items: center; gap: 8px;">
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                    @_filteredDishes.Count() kết quả
+                </MudChip>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <!-- ═══════ DATA TABLE ═══════ -->
+    <MudPaper Elevation="0" Style="border-radius: 16px; border: 1px solid #F0E8E0; overflow: hidden;">
+        <MudTable Items="_filteredDishes" Hover="true" Striped="true" Breakpoint="Breakpoint.Sm"
+                  Loading="_loading" LoadingProgressColor="Color.Primary">
+            <HeaderContent>
+                <MudTh Style="font-weight: 700; background: #FBF7F2;">Món ăn</MudTh>
+                <MudTh Style="font-weight: 700; background: #FBF7F2;">Quán</MudTh>
+                <MudTh Style="font-weight: 700; background: #FBF7F2;">Giá</MudTh>
+                <MudTh Style="font-weight: 700; background: #FBF7F2; text-align: center;">Hành động</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>
+                    <MudStack Row AlignItems="AlignItems.Center" Spacing="3">
+                        <MudAvatar Size="Size.Medium"
+                                   Style="background: #FFF0E6; color: #E8672A; border-radius: 8px;">
+                            <MudIcon Icon="@Icons.Material.Filled.LunchDining" />
+                        </MudAvatar>
+                        <MudStack Spacing="0">
+                            <MudText Style="font-weight: 600; color: #2D1F14;">@context.Name</MudText>
+                            <MudText Typo="Typo.caption" Style="color: #B5A899;">@(context.Id.Length > 8 ? context.Id[..8] + "..." : context.Id)</MudText>
+                        </MudStack>
+                    </MudStack>
+                </MudTd>
+                <MudTd>
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">
+                        @(_shopNames.TryGetValue(context.ShopId, out var name) ? name : (context.ShopId.Length > 8 ? context.ShopId[..8] : context.ShopId))
+                    </MudChip>
+                </MudTd>
+                <MudTd>
+                    <MudText Style="font-weight: 700; color: #E8672A;">
+                        @context.Price.ToString("N0")đ
+                    </MudText>
+                </MudTd>
+                <MudTd Style="text-align: center;">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small"
+                                   OnClick="@(() => OpenEditDialog(context))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                                   OnClick="@(() => ConfirmDelete(context))" />
+                </MudTd>
+            </RowTemplate>
+            <PagerContent>
+                <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+            </PagerContent>
+        </MudTable>
+    </MudPaper>
+</MudStack>
+
+<!-- ═══════ CREATE / EDIT DIALOG ═══════ -->
+<MudDialog @bind-Visible="_dialogVisible" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
+    <TitleContent>
+        <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@(_isEdit ? Icons.Material.Filled.Edit : Icons.Material.Filled.AddCircle)"
+                     Color="Color.Primary" />
+            <MudText Typo="Typo.h6" Style="font-weight: 700;">
+                @(_isEdit ? "Chỉnh sửa món ăn" : "Thêm món ăn mới")
+            </MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" @bind-IsValid="_formValid">
+            <MudStack Spacing="3" Style="padding-top: 8px;">
+                <MudTextField @bind-Value="_editDish.Name" Label="Tên món *" Variant="Variant.Outlined"
+                              Required="true" RequiredError="Vui lòng nhập tên món" Immediate="true" />
+                <MudSelect @bind-Value="_editDish.ShopId" Label="Quán ăn *" Variant="Variant.Outlined"
+                           Required="true" RequiredError="Vui lòng chọn quán">
+                    @foreach (var shop in _shops)
+                    {
+                        <MudSelectItem T="string" Value="@shop.Id">@shop.Name</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudNumericField @bind-Value="_editDish.Price" Label="Giá (VNĐ) *" Variant="Variant.Outlined"
+                                 Min="0.0" Step="1000.0" Format="N0"
+                                 Adornment="Adornment.End" AdornmentText="đ" />
+                <div style="border: 1px dashed #C85520; border-radius: 12px; padding: 16px; text-align: center; background: #FFF0E6;">
+                    <MudText Typo="Typo.body2" Style="color: #E8672A; font-weight: 600; margin-bottom: 8px;">📸 Tải ảnh lên</MudText>
+                    <InputFile OnChange="UploadImage" accept=".jpg,.jpeg,.png,.webp" class="form-control" style="font-size: 0.85rem;" />
+                    @if (!string.IsNullOrEmpty(_editDish.ImageUrl))
+                    {
+                        <div style="margin-top: 12px;">
+                            <img src="@_editDish.ImageUrl" style="height: 100px; border-radius: 8px; object-fit: cover;" />
+                        </div>
+                    }
+                </div>
+            </MudStack>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _dialogVisible = false)" Variant="Variant.Text" Color="Color.Default"
+                   Style="text-transform: none;">Hủy</MudButton>
+        <MudButton OnClick="SaveDish" Variant="Variant.Filled" Color="Color.Primary"
+                   Disabled="@(!_formValid)"
+                   Style="text-transform: none; border-radius: 10px; font-weight: 600;">
+            @(_isEdit ? "Cập nhật" : "Tạo mới")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private List<Dish> _dishes = new();
+    private List<Shop> _shops = new();
+    private Dictionary<string, string> _shopNames = new();
+    private bool _loading = true;
+    private string _searchString = "";
+    private string? _selectedShopId;
+
+    // Dialog state
+    private bool _dialogVisible;
+    private bool _isEdit;
+    private Dish _editDish = new();
+    private MudForm? _form;
+    private bool _formValid;
+
+    private IEnumerable<Dish> _filteredDishes => _dishes.Where(d =>
+    {
+        if (!string.IsNullOrEmpty(_searchString) &&
+            !d.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return false;
+        if (!string.IsNullOrEmpty(_selectedShopId) && d.ShopId != _selectedShopId)
+            return false;
+        return true;
+    });
+
+    protected override async Task OnInitializedAsync()
+    {
+        _shops = await Db.Shops.OrderBy(s => s.Name).ToListAsync();
+        _shopNames = _shops.ToDictionary(s => s.Id, s => s.Name);
+        await LoadDishes();
+    }
+
+    private async Task LoadDishes()
+    {
+        _loading = true;
+        _dishes = await Db.Dishes.OrderBy(d => d.ShopId).ThenBy(d => d.Name).ToListAsync();
+        _loading = false;
+    }
+
+    private void OpenCreateDialog()
+    {
+        _isEdit = false;
+        _editDish = new Dish();
+        _dialogVisible = true;
+    }
+
+    private void OpenEditDialog(Dish dish)
+    {
+        _isEdit = true;
+        _editDish = new Dish
+        {
+            Id = dish.Id,
+            ShopId = dish.ShopId,
+            Name = dish.Name,
+            Price = dish.Price,
+            ImageUrl = dish.ImageUrl,
+        };
+        _dialogVisible = true;
+    }
+
+    private async Task SaveDish()
+    {
+        if (_isEdit)
+        {
+            var existing = await Db.Dishes.FindAsync(_editDish.Id);
+            if (existing is not null)
+            {
+                existing.ShopId = _editDish.ShopId;
+                existing.Name = _editDish.Name;
+                existing.Price = _editDish.Price;
+                existing.ImageUrl = _editDish.ImageUrl;
+                await Db.SaveChangesAsync();
+                Snackbar.Add($"Đã cập nhật món \"{existing.Name}\"!", Severity.Success);
+            }
+        }
+        else
+        {
+            _editDish.Id = Guid.NewGuid().ToString();
+            Db.Dishes.Add(_editDish);
+            await Db.SaveChangesAsync();
+            Snackbar.Add($"Đã thêm món \"{_editDish.Name}\" thành công!", Severity.Success);
+        }
+
+        _dialogVisible = false;
+        await LoadDishes();
+    }
+
+    private async Task ConfirmDelete(Dish dish)
+    {
+        var result = await DialogService.ShowMessageBoxAsync(
+            "Xác nhận xóa",
+            $"Bạn có chắc muốn xóa món \"{dish.Name}\"?",
+            yesText: "Xóa", cancelText: "Hủy");
+
+        if (result == true)
+        {
+            Db.Dishes.Remove(dish);
+            await Db.SaveChangesAsync();
+            Snackbar.Add($"Đã xóa món \"{dish.Name}\"!", Severity.Warning);
+            await LoadDishes();
+        }
+    }
+
+    private async Task UploadImage(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file == null) return;
+
+        try
+        {
+            var webRootPath = Env.WebRootPath ?? Path.Combine(Env.ContentRootPath, "wwwroot");
+            var uploadPath = Path.Combine(webRootPath, "uploads", "dishes");
+            if (!Directory.Exists(uploadPath))
+                Directory.CreateDirectory(uploadPath);
+
+            var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.Name)}";
+            var filePath = Path.Combine(uploadPath, fileName);
+
+            using var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024); // 5MB limit
+            using var fs = new FileStream(filePath, FileMode.Create);
+            await stream.CopyToAsync(fs);
+
+            _editDish.ImageUrl = $"/uploads/dishes/{fileName}";
+            StateHasChanged();
+            Snackbar.Add("Đã tải ảnh lên thành công!", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Lỗi khi tải ảnh: {ex.Message}", Severity.Error);
+        }
+    }
+}

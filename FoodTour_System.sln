@@ -1,19 +1,46 @@
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FoodTour.Mobile", "FoodTour.Mobile\FoodTour.Mobile.csproj", "{76639DD1-44D4-7A63-CCBF-A115B74F91A2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FoodTour_WebAdmin.Api", "FoodTour_WebAdmin.Api\FoodTour_WebAdmin.Api.csproj", "{C5D2128C-BBC9-457B-9B7B-630C8C5A4CD6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
 		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{76639DD1-44D4-7A63-CCBF-A115B74F91A2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{76639DD1-44D4-7A63-CCBF-A115B74F91A2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{76639DD1-44D4-7A63-CCBF-A115B74F91A2}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{76639DD1-44D4-7A63-CCBF-A115B74F91A2}.Debug|x64.Build.0 = Debug|Any CPU
+		{76639DD1-44D4-7A63-CCBF-A115B74F91A2}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{76639DD1-44D4-7A63-CCBF-A115B74F91A2}.Debug|x86.Build.0 = Debug|Any CPU
 		{76639DD1-44D4-7A63-CCBF-A115B74F91A2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{76639DD1-44D4-7A63-CCBF-A115B74F91A2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{76639DD1-44D4-7A63-CCBF-A115B74F91A2}.Release|x64.ActiveCfg = Release|Any CPU
+		{76639DD1-44D4-7A63-CCBF-A115B74F91A2}.Release|x64.Build.0 = Release|Any CPU
+		{76639DD1-44D4-7A63-CCBF-A115B74F91A2}.Release|x86.ActiveCfg = Release|Any CPU
+		{76639DD1-44D4-7A63-CCBF-A115B74F91A2}.Release|x86.Build.0 = Release|Any CPU
+		{C5D2128C-BBC9-457B-9B7B-630C8C5A4CD6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C5D2128C-BBC9-457B-9B7B-630C8C5A4CD6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C5D2128C-BBC9-457B-9B7B-630C8C5A4CD6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C5D2128C-BBC9-457B-9B7B-630C8C5A4CD6}.Debug|x64.Build.0 = Debug|Any CPU
+		{C5D2128C-BBC9-457B-9B7B-630C8C5A4CD6}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{C5D2128C-BBC9-457B-9B7B-630C8C5A4CD6}.Debug|x86.Build.0 = Debug|Any CPU
+		{C5D2128C-BBC9-457B-9B7B-630C8C5A4CD6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C5D2128C-BBC9-457B-9B7B-630C8C5A4CD6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C5D2128C-BBC9-457B-9B7B-630C8C5A4CD6}.Release|x64.ActiveCfg = Release|Any CPU
+		{C5D2128C-BBC9-457B-9B7B-630C8C5A4CD6}.Release|x64.Build.0 = Release|Any CPU
+		{C5D2128C-BBC9-457B-9B7B-630C8C5A4CD6}.Release|x86.ActiveCfg = Release|Any CPU
+		{C5D2128C-BBC9-457B-9B7B-630C8C5A4CD6}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

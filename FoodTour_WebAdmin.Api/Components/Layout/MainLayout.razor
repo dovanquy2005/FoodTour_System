@@ -1,0 +1,88 @@
+@inherits LayoutComponentBase
+
+<MudThemeProvider Theme="_foodTourTheme" IsDarkMode="false" />
+<MudPopoverProvider />
+<MudDialogProvider FullWidth="true" MaxWidth="MaxWidth.Small"
+                   CloseButton="true"
+                   BackdropClick="false"
+                   Position="DialogPosition.Center" />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <!-- ═══════ APP BAR ═══════ -->
+    <MudAppBar Elevation="0" Style="background: linear-gradient(135deg, #E8672A, #C85520); border-bottom: 1px solid rgba(255,255,255,0.1);">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
+                       OnClick="@ToggleDrawer" />
+        <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.Fastfood" Size="Size.Large" />
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6" Style="font-weight: 700; letter-spacing: -0.5px; line-height: 1.2;">
+                    FoodTour Admin
+                </MudText>
+                <MudText Typo="Typo.caption" Style="opacity: 0.8; font-size: 0.7rem;">
+                    Vinh Khanh Street Eats
+                </MudText>
+            </MudStack>
+        </MudStack>
+        <MudSpacer />
+        <MudChip T="string" Color="Color.Warning" Size="Size.Small" Icon="@Icons.Material.Filled.Circle"
+                 Style="color: white; font-size: 0.75rem;">
+            Online
+        </MudChip>
+        <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Inherit" />
+        <MudAvatar Size="Size.Small" Style="background: rgba(255,255,255,0.2); margin-left: 8px;">
+            <MudIcon Icon="@Icons.Material.Filled.Person" />
+        </MudAvatar>
+    </MudAppBar>
+
+    <!-- ═══════ SIDE DRAWER ═══════ -->
+    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2"
+               Style="background: #FFFFFF; border-right: 1px solid #F0E8E0;">
+        <NavMenu />
+    </MudDrawer>
+
+    <!-- ═══════ MAIN CONTENT ═══════ -->
+    <MudMainContent Style="background: #FBF7F2; min-height: 100vh;">
+        <div style="padding: 24px;">
+            @Body
+        </div>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private bool _drawerOpen = true;
+
+    private MudTheme _foodTourTheme = new()
+    {
+        PaletteLight = new PaletteLight
+        {
+            Primary = "#E8672A",
+            PrimaryDarken = "#C85520",
+            PrimaryLighten = "#F4A574",
+            Secondary = "#FFF0E6",
+            Tertiary = "#D4A574",
+            Background = "#FBF7F2",
+            Surface = "#FFFFFF",
+            AppbarBackground = "#E8672A",
+            AppbarText = "#FFFFFF",
+            DrawerBackground = "#FFFFFF",
+            DrawerText = "#2D1F14",
+            TextPrimary = "#2D1F14",
+            TextSecondary = "#8C7B6B",
+            Success = "#5DAA68",
+            Error = "#D94F4F",
+            Warning = "#E8A838",
+            Info = "#5B8FD4",
+            Divider = "#F0E8E0",
+            TableStriped = "#FBF7F2",
+            ActionDefault = "#8C7B6B",
+            ActionDisabled = "#B5A899",
+        },
+        LayoutProperties = new LayoutProperties
+        {
+            DefaultBorderRadius = "12px",
+        },
+    };
+
+    private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+}

@@ -1,0 +1,300 @@
+@page "/shops"
+@inject AppDbContext Db
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject IWebHostEnvironment Env
+
+<PageTitle>Quán ăn — FoodTour Admin</PageTitle>
+
+<MudStack Spacing="4">
+    <!-- ═══════ HEADER ═══════ -->
+    <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Style="flex-wrap: wrap; gap: 12px;">
+        <MudStack Spacing="0">
+            <MudText Typo="Typo.h5" Style="font-weight: 800; color: #2D1F14;">🏪 Quản lý Quán ăn</MudText>
+            <MudText Typo="Typo.body2" Style="color: #8C7B6B;">Quản lý danh sách quán ăn trên phố Vĩnh Khánh</MudText>
+        </MudStack>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                   Style="border-radius: 12px; text-transform: none; font-weight: 600; padding: 10px 24px;"
+                   OnClick="OpenCreateDialog">
+            Thêm quán mới
+        </MudButton>
+    </MudStack>
+
+    <!-- ═══════ SEARCH & FILTERS ═══════ -->
+    <MudPaper Elevation="0" Style="padding: 16px; border-radius: 16px; border: 1px solid #F0E8E0;">
+        <MudGrid Spacing="3">
+            <MudItem xs="12" sm="6" md="4">
+                <MudTextField @bind-Value="_searchString" Placeholder="Tìm kiếm quán ăn..."
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Style="border-radius: 12px;"
+                              Immediate="true" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4">
+                <MudSelect @bind-Value="_ratingFilter" Label="Lọc theo đánh giá" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    <MudSelectItem T="string" Value="@("")">Tất cả</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("4+")">4+ sao</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("3+")">3+ sao</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="12" md="4" Style="display: flex; align-items: center; gap: 8px;">
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                    @_filteredShops.Count() kết quả
+                </MudChip>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <!-- ═══════ DATA TABLE ═══════ -->
+    <MudPaper Elevation="0" Style="border-radius: 16px; border: 1px solid #F0E8E0; overflow: hidden;">
+        <MudTable Items="_filteredShops" Hover="true" Striped="true" Breakpoint="Breakpoint.Sm"
+                  Loading="_loading" LoadingProgressColor="Color.Primary"
+                  Style="border-radius: 16px;">
+            <HeaderContent>
+                <MudTh Style="font-weight: 700; background: #FBF7F2;">Quán ăn</MudTh>
+                <MudTh Style="font-weight: 700; background: #FBF7F2;">Địa chỉ</MudTh>
+                <MudTh Style="font-weight: 700; background: #FBF7F2;">Đánh giá</MudTh>
+                <MudTh Style="font-weight: 700; background: #FBF7F2;">Tọa độ</MudTh>
+                <MudTh Style="font-weight: 700; background: #FBF7F2; text-align: center;">Hành động</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>
+                    <MudStack Row AlignItems="AlignItems.Center" Spacing="3">
+                        <MudAvatar Size="Size.Medium" Style="background: linear-gradient(135deg, #E8672A, #F4A574); font-weight: 700; color: white;">
+                            @context.Name[0]
+                        </MudAvatar>
+                        <MudStack Spacing="0">
+                            <MudText Style="font-weight: 600; color: #2D1F14;">@context.Name</MudText>
+                            <MudText Typo="Typo.caption" Style="color: #B5A899;">@(context.Id.Length > 8 ? context.Id[..8] + "..." : context.Id)</MudText>
+                        </MudStack>
+                    </MudStack>
+                </MudTd>
+                <MudTd>
+                    <MudText Typo="Typo.body2" Style="color: #8C7B6B; max-width: 280px;" Class="d-inline-block text-truncate">
+                        📍 @context.Address
+                    </MudText>
+                </MudTd>
+                <MudTd>
+                    <MudChip T="string" Size="Size.Small"
+                             Style="@($"background: {(context.Rating >= 4.5 ? "#FFF0E6" : context.Rating >= 4 ? "#F0FFF4" : "#FBF7F2")}; color: {(context.Rating >= 4.5 ? "#E8672A" : context.Rating >= 4 ? "#5DAA68" : "#8C7B6B")}; font-weight: 700;")">
+                        ★ @context.Rating.ToString("0.0")
+                    </MudChip>
+                </MudTd>
+                <MudTd>
+                    <MudText Typo="Typo.caption" Style="color: #B5A899; font-family: monospace !important;">
+                        @context.Latitude.ToString("F5"), @context.Longitude.ToString("F5")
+                    </MudText>
+                </MudTd>
+                <MudTd Style="text-align: center;">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small"
+                                   OnClick="@(() => OpenEditDialog(context))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                                   OnClick="@(() => ConfirmDelete(context))" />
+                </MudTd>
+            </RowTemplate>
+            <PagerContent>
+                <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+            </PagerContent>
+        </MudTable>
+    </MudPaper>
+</MudStack>
+
+<!-- ═══════ CREATE / EDIT DIALOG ═══════ -->
+<MudDialog @bind-Visible="_dialogVisible" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
+    <TitleContent>
+        <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@(_isEdit ? Icons.Material.Filled.Edit : Icons.Material.Filled.AddBusiness)"
+                     Color="Color.Primary" />
+            <MudText Typo="Typo.h6" Style="font-weight: 700;">
+                @(_isEdit ? "Chỉnh sửa quán ăn" : "Thêm quán ăn mới")
+            </MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" @bind-IsValid="_formValid">
+            <MudStack Spacing="3" Style="padding-top: 8px;">
+                <MudTextField @bind-Value="_editShop.Name" Label="Tên quán *" Variant="Variant.Outlined"
+                              Required="true" RequiredError="Vui lòng nhập tên quán"
+                              Immediate="true" />
+                <MudTextField @bind-Value="_editShop.Address" Label="Địa chỉ *" Variant="Variant.Outlined"
+                              Required="true" RequiredError="Vui lòng nhập địa chỉ"
+                              Immediate="true" />
+                <MudTextField @bind-Value="_editShop.Description" Label="Mô tả" Variant="Variant.Outlined"
+                              Lines="3" />
+                <div style="border: 1px dashed #C85520; border-radius: 12px; padding: 16px; text-align: center; background: #FFF0E6;">
+                    <MudText Typo="Typo.body2" Style="color: #E8672A; font-weight: 600; margin-bottom: 8px;">📸 Tải ảnh lên</MudText>
+                    <InputFile OnChange="UploadImage" accept=".jpg,.jpeg,.png,.webp" class="form-control" style="font-size: 0.85rem;" />
+                    @if (!string.IsNullOrEmpty(_editShop.ImageUrl))
+                    {
+                        <div style="margin-top: 12px;">
+                            <img src="@_editShop.ImageUrl" style="height: 100px; border-radius: 8px; object-fit: cover;" />
+                        </div>
+                    }
+                </div>
+                <MudGrid Spacing="2">
+                    <MudItem xs="6">
+                        <MudNumericField @bind-Value="_editShop.Latitude" Label="Vĩ độ (Latitude)" Variant="Variant.Outlined"
+                                         Format="F6" Step="0.0001" />
+                    </MudItem>
+                    <MudItem xs="6">
+                        <MudNumericField @bind-Value="_editShop.Longitude" Label="Kinh độ (Longitude)" Variant="Variant.Outlined"
+                                         Format="F6" Step="0.0001" />
+                    </MudItem>
+                </MudGrid>
+                <MudNumericField @bind-Value="_editShop.Rating" Label="Đánh giá (0-5)" Variant="Variant.Outlined"
+                                 Min="0.0" Max="5.0" Step="0.1" />
+                <MudSwitch @bind-Value="_editShop.IsVisited" Label="Đã ghé thăm" Color="Color.Primary" />
+            </MudStack>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _dialogVisible = false)" Variant="Variant.Text" Color="Color.Default"
+                   Style="text-transform: none;">Hủy</MudButton>
+        <MudButton OnClick="SaveShop" Variant="Variant.Filled" Color="Color.Primary"
+                   Disabled="@(!_formValid)"
+                   Style="text-transform: none; border-radius: 10px; font-weight: 600;">
+            @(_isEdit ? "Cập nhật" : "Tạo mới")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private List<Shop> _shops = new();
+    private bool _loading = true;
+    private string _searchString = "";
+    private string _ratingFilter = "";
+
+    // Dialog state
+    private bool _dialogVisible;
+    private bool _isEdit;
+    private Shop _editShop = new();
+    private MudForm? _form;
+    private bool _formValid;
+
+    private IEnumerable<Shop> _filteredShops => _shops.Where(s =>
+    {
+        if (!string.IsNullOrEmpty(_searchString) &&
+            !s.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase) &&
+            !s.Address.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return false;
+        if (_ratingFilter == "4+" && s.Rating < 4) return false;
+        if (_ratingFilter == "3+" && s.Rating < 3) return false;
+        return true;
+    });
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadShops();
+    }
+
+    private async Task LoadShops()
+    {
+        _loading = true;
+        _shops = await Db.Shops.OrderByDescending(s => s.Rating).ToListAsync();
+        _loading = false;
+    }
+
+    private void OpenCreateDialog()
+    {
+        _isEdit = false;
+        _editShop = new Shop { Latitude = 10.759, Longitude = 106.708 };
+        _dialogVisible = true;
+    }
+
+    private void OpenEditDialog(Shop shop)
+    {
+        _isEdit = true;
+        _editShop = new Shop
+        {
+            Id = shop.Id,
+            Name = shop.Name,
+            Address = shop.Address,
+            Description = shop.Description,
+            ImageUrl = shop.ImageUrl,
+            Latitude = shop.Latitude,
+            Longitude = shop.Longitude,
+            IsVisited = shop.IsVisited,
+            Rating = shop.Rating,
+        };
+        _dialogVisible = true;
+    }
+
+    private async Task SaveShop()
+    {
+        if (_isEdit)
+        {
+            var existing = await Db.Shops.FindAsync(_editShop.Id);
+            if (existing is not null)
+            {
+                existing.Name = _editShop.Name;
+                existing.Address = _editShop.Address;
+                existing.Description = _editShop.Description;
+                existing.ImageUrl = _editShop.ImageUrl;
+                existing.Latitude = _editShop.Latitude;
+                existing.Longitude = _editShop.Longitude;
+                existing.IsVisited = _editShop.IsVisited;
+                existing.Rating = _editShop.Rating;
+                existing.UpdatedAt = DateTime.UtcNow;
+                await Db.SaveChangesAsync();
+                Snackbar.Add($"Đã cập nhật quán \"{existing.Name}\"!", Severity.Success);
+            }
+        }
+        else
+        {
+            _editShop.Id = Guid.NewGuid().ToString();
+            _editShop.CreatedAt = DateTime.UtcNow;
+            _editShop.UpdatedAt = DateTime.UtcNow;
+            Db.Shops.Add(_editShop);
+            await Db.SaveChangesAsync();
+            Snackbar.Add($"Đã thêm quán \"{_editShop.Name}\" thành công!", Severity.Success);
+        }
+
+        _dialogVisible = false;
+        await LoadShops();
+    }
+
+    private async Task ConfirmDelete(Shop shop)
+    {
+        var result = await DialogService.ShowMessageBoxAsync(
+            "Xác nhận xóa",
+            $"Bạn có chắc muốn xóa quán \"{shop.Name}\"? Tất cả món ăn liên quan sẽ bị xóa theo.",
+            yesText: "Xóa", cancelText: "Hủy");
+
+        if (result == true)
+        {
+            Db.Shops.Remove(shop);
+            await Db.SaveChangesAsync();
+            Snackbar.Add($"Đã xóa quán \"{shop.Name}\"!", Severity.Warning);
+            await LoadShops();
+        }
+    }
+
+    private async Task UploadImage(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file == null) return;
+
+        try
+        {
+            var webRootPath = Env.WebRootPath ?? Path.Combine(Env.ContentRootPath, "wwwroot");
+            var uploadPath = Path.Combine(webRootPath, "uploads", "shops");
+            if (!Directory.Exists(uploadPath))
+                Directory.CreateDirectory(uploadPath);
+
+            var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.Name)}";
+            var filePath = Path.Combine(uploadPath, fileName);
+
+            using var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024); // 5MB limit
+            using var fs = new FileStream(filePath, FileMode.Create);
+            await stream.CopyToAsync(fs);
+
+            _editShop.ImageUrl = $"/uploads/shops/{fileName}";
+            StateHasChanged();
+            Snackbar.Add("Đã tải ảnh lên thành công!", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Lỗi khi tải ảnh: {ex.Message}", Severity.Error);
+        }
+    }
+}
