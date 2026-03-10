@@ -42,6 +42,8 @@ dotnet ef database update
 # Chạy Server
 dotnet run
 
+# Dừng server
+taskkill /IM "FoodTour_WebAdmin.Api.exe" /F
 ```
 
 > **Cổng mặc định:** `http://localhost:5154` - Bạn có thể truy cập `http://localhost:5154/api/shops` để kiểm tra dữ liệu JSON.
