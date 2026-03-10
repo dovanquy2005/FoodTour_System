@@ -6,6 +6,59 @@
 
 <PageTitle>Quán ăn — FoodTour Admin</PageTitle>
 
+<style>
+    /* Styling for MudTable Pager to match the modern application design */
+    .mud-table-pagination {
+        border-top: 1px solid #F0E8E0 !important;
+        background-color: #FFFDF9 !important;
+        padding: 8px 16px !important;
+        margin: 0 !important;
+    }
+    .mud-table-pagination-caption, 
+    .mud-table-pagination-display {
+        color: #5C4A3D !important;
+        font-weight: 600 !important;
+        font-size: 0.95rem !important;
+    }
+    .mud-table-pagination-select {
+        margin: 0 16px !important;
+    }
+    .mud-table-pagination-select .mud-input-control {
+        margin: 0 !important;
+    }
+    .mud-table-pagination-select .mud-input {
+        background: white !important;
+        border-radius: 8px !important;
+        border: 1px solid #E0D5CB !important;
+        height: 34px !important;
+        padding: 0 4px 0 12px !important;
+    }
+    .mud-table-pagination-select .mud-input::before,
+    .mud-table-pagination-select .mud-input::after {
+        display: none !important; /* Remove underline */
+    }
+    .mud-table-pagination-select .mud-input-slot {
+        color: #E8672A !important;
+        font-weight: 800 !important;
+        font-size: 0.95rem !important;
+        padding: 0 !important;
+        margin-top: 2px !important;
+    }
+    .mud-table-pagination-select .mud-select-icon {
+        color: #8C7B6B !important;
+        margin-top: 2px !important;
+    }
+    .mud-table-pagination-actions .mud-icon-button {
+        color: #E8672A !important;
+    }
+    .mud-table-pagination-actions .mud-icon-button:hover {
+        background-color: #FFF0E6 !important;
+    }
+    .mud-table-pagination-actions .mud-icon-button.mud-disabled {
+        color: #E0D5CB !important;
+    }
+</style>
+
 <MudStack Spacing="4">
     <!-- ═══════ HEADER ═══════ -->
     <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Style="flex-wrap: wrap; gap: 12px;">
@@ -61,11 +114,11 @@
                 <MudTd>
                     <MudStack Row AlignItems="AlignItems.Center" Spacing="3">
                         <MudAvatar Size="Size.Medium" Style="background: linear-gradient(135deg, #E8672A, #F4A574); font-weight: 700; color: white;">
-                            @context.Name[0]
+                            @(string.IsNullOrEmpty(context.Name) ? "?" : context.Name[0].ToString().ToUpper())
                         </MudAvatar>
                         <MudStack Spacing="0">
                             <MudText Style="font-weight: 600; color: #2D1F14;">@context.Name</MudText>
-                            <MudText Typo="Typo.caption" Style="color: #B5A899;">@(context.Id.Length > 8 ? context.Id[..8] + "..." : context.Id)</MudText>
+                            <MudText Typo="Typo.caption" Style="color: #B5A899;">@(context.Id?.Length > 8 ? context.Id[..8] + "..." : context.Id ?? "")</MudText>
                         </MudStack>
                     </MudStack>
                 </MudTd>
@@ -93,11 +146,26 @@
                 </MudTd>
             </RowTemplate>
             <PagerContent>
-                <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+                <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }"
+                               RowsPerPageString="Số dòng mỗi trang:"
+                               InfoFormat="{first_item}-{last_item} trong tổng số {all_items}" />
             </PagerContent>
         </MudTable>
     </MudPaper>
 </MudStack>
+
+<!-- ═══════ SAVING OVERLAY ═══════ -->
+<MudOverlay Visible="_isSaving" DarkBackground="true" Absolute="false" ZIndex="9999">
+    <MudPaper Style="padding: 32px; border-radius: 24px; min-width: 300px; text-align: center; box-shadow: 0 16px 40px rgba(0,0,0,0.15); background: white;" Elevation="0">
+        <MudStack AlignItems="AlignItems.Center" Spacing="4">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" StrokeWidth="4" />
+            <MudStack Spacing="1">
+                <MudText Typo="Typo.h6" Style="font-weight: 800; color: #2D1F14;">Đang thiết lập quán ăn</MudText>
+                <MudText Typo="Typo.body2" Style="color: #8C7B6B;">Vui lòng chờ trong giây lát...</MudText>
+            </MudStack>
+        </MudStack>
+    </MudPaper>
+</MudOverlay>
 
 <!-- ═══════ CREATE / EDIT DIALOG ═══════ -->
 <MudDialog @bind-Visible="_dialogVisible" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
@@ -120,7 +188,7 @@
                               Required="true" RequiredError="Vui lòng nhập địa chỉ"
                               Immediate="true" />
                 <MudTextField @bind-Value="_editShop.Description" Label="Mô tả" Variant="Variant.Outlined"
-                              Lines="3" />
+                              Lines="3" Immediate="true" />
                 <div style="border: 1px dashed #C85520; border-radius: 12px; padding: 16px; text-align: center; background: #FFF0E6;">
                     <MudText Typo="Typo.body2" Style="color: #E8672A; font-weight: 600; margin-bottom: 8px;">📸 Tải ảnh lên</MudText>
                     <InputFile OnChange="UploadImage" accept=".jpg,.jpeg,.png,.webp" class="form-control" style="font-size: 0.85rem;" />
@@ -134,15 +202,15 @@
                 <MudGrid Spacing="2">
                     <MudItem xs="6">
                         <MudNumericField @bind-Value="_editShop.Latitude" Label="Vĩ độ (Latitude)" Variant="Variant.Outlined"
-                                         Format="F6" Step="0.0001" />
+                                         Format="F5" Step="0.0001" Immediate="true" />
                     </MudItem>
                     <MudItem xs="6">
                         <MudNumericField @bind-Value="_editShop.Longitude" Label="Kinh độ (Longitude)" Variant="Variant.Outlined"
-                                         Format="F6" Step="0.0001" />
+                                         Format="F5" Step="0.0001" Immediate="true" />
                     </MudItem>
                 </MudGrid>
                 <MudNumericField @bind-Value="_editShop.Rating" Label="Đánh giá (0-5)" Variant="Variant.Outlined"
-                                 Min="0.0" Max="5.0" Step="0.1" />
+                                 Min="0.0" Max="5.0" Step="0.1" Immediate="true" />
                 <MudSwitch @bind-Value="_editShop.IsVisited" Label="Đã ghé thăm" Color="Color.Primary" />
             </MudStack>
         </MudForm>
@@ -151,7 +219,7 @@
         <MudButton OnClick="@(() => _dialogVisible = false)" Variant="Variant.Text" Color="Color.Default"
                    Style="text-transform: none;">Hủy</MudButton>
         <MudButton OnClick="SaveShop" Variant="Variant.Filled" Color="Color.Primary"
-                   Disabled="@(!_formValid)"
+                   Disabled="@(!_formValid || _isSaving)"
                    Style="text-transform: none; border-radius: 10px; font-weight: 600;">
             @(_isEdit ? "Cập nhật" : "Tạo mới")
         </MudButton>
@@ -159,19 +227,21 @@
 </MudDialog>
 
 @code {
-    private List<Shop> _shops = new();
+    private List<ShopModel> _shops = new();
     private bool _loading = true;
+    private bool _isSaving = false;
     private string _searchString = "";
     private string _ratingFilter = "";
 
     // Dialog state
     private bool _dialogVisible;
     private bool _isEdit;
-    private Shop _editShop = new();
+    private string _editingId = "";
+    private FoodTour_WebAdmin.Api.DTOs.CreateShopRequest _editShop = new();
     private MudForm? _form;
     private bool _formValid;
 
-    private IEnumerable<Shop> _filteredShops => _shops.Where(s =>
+    private IEnumerable<ShopModel> _filteredShops => _shops.Where(s =>
     {
         if (!string.IsNullOrEmpty(_searchString) &&
             !s.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase) &&
@@ -190,81 +260,95 @@
     private async Task LoadShops()
     {
         _loading = true;
-        _shops = await Db.Shops.OrderByDescending(s => s.Rating).ToListAsync();
+        StateHasChanged();
+        _shops = await Db.Shops.Include(s => s.ShopTranslations).AsNoTracking().OrderByDescending(s => s.Rating).ToListAsync();
         _loading = false;
+        StateHasChanged();
     }
 
     private void OpenCreateDialog()
     {
         _isEdit = false;
-        _editShop = new Shop { Latitude = 10.759, Longitude = 106.708 };
+        _editingId = "";
+        _editShop = new FoodTour_WebAdmin.Api.DTOs.CreateShopRequest 
+        { 
+            Latitude = 10.759, 
+            Longitude = 106.708
+        };
         _dialogVisible = true;
     }
 
-    private void OpenEditDialog(Shop shop)
+    private void OpenEditDialog(ShopModel ShopModel)
     {
         _isEdit = true;
-        _editShop = new Shop
+        _editingId = ShopModel.Id;
+        _editShop = new FoodTour_WebAdmin.Api.DTOs.CreateShopRequest
         {
-            Id = shop.Id,
-            Name = shop.Name,
-            Address = shop.Address,
-            Description = shop.Description,
-            ImageUrl = shop.ImageUrl,
-            Latitude = shop.Latitude,
-            Longitude = shop.Longitude,
-            IsVisited = shop.IsVisited,
-            Rating = shop.Rating,
+            Name = ShopModel.Name,
+            Address = ShopModel.Address,
+            Description = ShopModel.Description,
+            ImageUrl = ShopModel.ImageUrl,
+            Latitude = ShopModel.Latitude,
+            Longitude = ShopModel.Longitude,
+            IsVisited = ShopModel.IsVisited,
+            Rating = ShopModel.Rating,
         };
         _dialogVisible = true;
     }
 
     private async Task SaveShop()
     {
-        if (_isEdit)
+        _isSaving = true;
+        StateHasChanged();
+        
+        try
         {
-            var existing = await Db.Shops.FindAsync(_editShop.Id);
-            if (existing is not null)
+            using var scope = Constants.ServiceProvider?.CreateScope();
+            var service = scope?.ServiceProvider.GetRequiredService<FoodTour_WebAdmin.Api.Services.ManageFoodTourService>();
+            
+            if (service != null && !string.IsNullOrEmpty(_editShop.Name))
             {
-                existing.Name = _editShop.Name;
-                existing.Address = _editShop.Address;
-                existing.Description = _editShop.Description;
-                existing.ImageUrl = _editShop.ImageUrl;
-                existing.Latitude = _editShop.Latitude;
-                existing.Longitude = _editShop.Longitude;
-                existing.IsVisited = _editShop.IsVisited;
-                existing.Rating = _editShop.Rating;
-                existing.UpdatedAt = DateTime.UtcNow;
-                await Db.SaveChangesAsync();
-                Snackbar.Add($"Đã cập nhật quán \"{existing.Name}\"!", Severity.Success);
+                if (_isEdit)
+                {
+                    await service.UpdateShopWithTranslationAsync(_editingId, _editShop);
+                    Snackbar.Add($"Đã cập nhật quán \"{_editShop.Name}\"!", Severity.Success);
+                }
+                else
+                {
+                    var newShop = await service.CreateShopWithTranslationAsync(_editShop);
+                    Snackbar.Add($"Đã thêm quán \"{_editShop.Name}\" thành công!", Severity.Success);
+                }
+            }
+            else
+            {
+                 Snackbar.Add($"Lỗi DI khi lấy ManageFoodTourService", Severity.Error);
             }
         }
-        else
+        finally
         {
-            _editShop.Id = Guid.NewGuid().ToString();
-            _editShop.CreatedAt = DateTime.UtcNow;
-            _editShop.UpdatedAt = DateTime.UtcNow;
-            Db.Shops.Add(_editShop);
-            await Db.SaveChangesAsync();
-            Snackbar.Add($"Đã thêm quán \"{_editShop.Name}\" thành công!", Severity.Success);
+            _isSaving = false;
         }
 
         _dialogVisible = false;
         await LoadShops();
     }
 
-    private async Task ConfirmDelete(Shop shop)
+    private async Task ConfirmDelete(ShopModel ShopModel)
     {
         var result = await DialogService.ShowMessageBoxAsync(
             "Xác nhận xóa",
-            $"Bạn có chắc muốn xóa quán \"{shop.Name}\"? Tất cả món ăn liên quan sẽ bị xóa theo.",
+            $"Bạn có chắc muốn xóa quán \"{ShopModel.Name}\"? Tất cả món ăn liên quan sẽ bị xóa theo.",
             yesText: "Xóa", cancelText: "Hủy");
 
         if (result == true)
         {
-            Db.Shops.Remove(shop);
-            await Db.SaveChangesAsync();
-            Snackbar.Add($"Đã xóa quán \"{shop.Name}\"!", Severity.Warning);
+            var toDelete = await Db.Shops.FindAsync(ShopModel.Id);
+            if (toDelete != null)
+            {
+                Db.Shops.Remove(toDelete);
+                await Db.SaveChangesAsync();
+            }
+            Snackbar.Add($"Đã xóa quán \"{ShopModel.Name}\"!", Severity.Warning);
             await LoadShops();
         }
     }

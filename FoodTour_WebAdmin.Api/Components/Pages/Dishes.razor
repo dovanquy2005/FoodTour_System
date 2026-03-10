@@ -6,6 +6,59 @@
 
 <PageTitle>Món ăn — FoodTour Admin</PageTitle>
 
+<style>
+    /* Styling for MudTable Pager to match the modern application design */
+    .mud-table-pagination {
+        border-top: 1px solid #F0E8E0 !important;
+        background-color: #FFFDF9 !important;
+        padding: 8px 16px !important;
+        margin: 0 !important;
+    }
+    .mud-table-pagination-caption, 
+    .mud-table-pagination-display {
+        color: #5C4A3D !important;
+        font-weight: 600 !important;
+        font-size: 0.95rem !important;
+    }
+    .mud-table-pagination-select {
+        margin: 0 16px !important;
+    }
+    .mud-table-pagination-select .mud-input-control {
+        margin: 0 !important;
+    }
+    .mud-table-pagination-select .mud-input {
+        background: white !important;
+        border-radius: 8px !important;
+        border: 1px solid #E0D5CB !important;
+        height: 34px !important;
+        padding: 0 4px 0 12px !important;
+    }
+    .mud-table-pagination-select .mud-input::before,
+    .mud-table-pagination-select .mud-input::after {
+        display: none !important; /* Remove underline */
+    }
+    .mud-table-pagination-select .mud-input-slot {
+        color: #E8672A !important;
+        font-weight: 800 !important;
+        font-size: 0.95rem !important;
+        padding: 0 !important;
+        margin-top: 2px !important;
+    }
+    .mud-table-pagination-select .mud-select-icon {
+        color: #8C7B6B !important;
+        margin-top: 2px !important;
+    }
+    .mud-table-pagination-actions .mud-icon-button {
+        color: #E8672A !important;
+    }
+    .mud-table-pagination-actions .mud-icon-button:hover {
+        background-color: #FFF0E6 !important;
+    }
+    .mud-table-pagination-actions .mud-icon-button.mud-disabled {
+        color: #E0D5CB !important;
+    }
+</style>
+
 <MudStack Spacing="4">
     <!-- ═══════ HEADER ═══════ -->
     <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Style="flex-wrap: wrap; gap: 12px;">
@@ -31,9 +84,9 @@
             <MudItem xs="12" sm="6" md="4">
                 <MudSelect @bind-Value="_selectedShopId" Label="Lọc theo quán" Variant="Variant.Outlined" Margin="Margin.Dense"
                            Clearable="true">
-                    @foreach (var shop in _shops)
+                    @foreach (var ShopModel in _shops)
                     {
-                        <MudSelectItem T="string" Value="@shop.Id">@shop.Name</MudSelectItem>
+                        <MudSelectItem T="string" Value="@ShopModel.Id">@ShopModel.Name</MudSelectItem>
                     }
                 </MudSelect>
             </MudItem>
@@ -64,13 +117,13 @@
                         </MudAvatar>
                         <MudStack Spacing="0">
                             <MudText Style="font-weight: 600; color: #2D1F14;">@context.Name</MudText>
-                            <MudText Typo="Typo.caption" Style="color: #B5A899;">@(context.Id.Length > 8 ? context.Id[..8] + "..." : context.Id)</MudText>
+                            <MudText Typo="Typo.caption" Style="color: #B5A899;">@(context.Id?.Length > 8 ? context.Id[..8] + "..." : context.Id ?? "")</MudText>
                         </MudStack>
                     </MudStack>
                 </MudTd>
                 <MudTd>
                     <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">
-                        @(_shopNames.TryGetValue(context.ShopId, out var name) ? name : (context.ShopId.Length > 8 ? context.ShopId[..8] : context.ShopId))
+                        @(_shopNames.TryGetValue(context.ShopId ?? "", out var name) ? name : (context.ShopId?.Length > 8 ? context.ShopId[..8] : context.ShopId ?? ""))
                     </MudChip>
                 </MudTd>
                 <MudTd>
@@ -86,11 +139,26 @@
                 </MudTd>
             </RowTemplate>
             <PagerContent>
-                <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }" />
+                <MudTablePager PageSizeOptions="new[] { 10, 25, 50 }"
+                               RowsPerPageString="Số dòng mỗi trang:"
+                               InfoFormat="{first_item}-{last_item} trong tổng số {all_items}" />
             </PagerContent>
         </MudTable>
     </MudPaper>
 </MudStack>
+
+<!-- ═══════ SAVING OVERLAY ═══════ -->
+<MudOverlay Visible="_isSaving" DarkBackground="true" Absolute="false" ZIndex="9999">
+    <MudPaper Style="padding: 32px; border-radius: 24px; min-width: 300px; text-align: center; box-shadow: 0 16px 40px rgba(0,0,0,0.15); background: white;" Elevation="0">
+        <MudStack AlignItems="AlignItems.Center" Spacing="4">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" StrokeWidth="4" />
+            <MudStack Spacing="1">
+                <MudText Typo="Typo.h6" Style="font-weight: 800; color: #2D1F14;">Đang lưu thông tin món</MudText>
+                <MudText Typo="Typo.body2" Style="color: #8C7B6B;">Vui lòng chờ trong giây lát...</MudText>
+            </MudStack>
+        </MudStack>
+    </MudPaper>
+</MudOverlay>
 
 <!-- ═══════ CREATE / EDIT DIALOG ═══════ -->
 <MudDialog @bind-Visible="_dialogVisible" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
@@ -110,14 +178,14 @@
                               Required="true" RequiredError="Vui lòng nhập tên món" Immediate="true" />
                 <MudSelect @bind-Value="_editDish.ShopId" Label="Quán ăn *" Variant="Variant.Outlined"
                            Required="true" RequiredError="Vui lòng chọn quán">
-                    @foreach (var shop in _shops)
+                    @foreach (var ShopModel in _shops)
                     {
-                        <MudSelectItem T="string" Value="@shop.Id">@shop.Name</MudSelectItem>
+                        <MudSelectItem T="string" Value="@ShopModel.Id">@ShopModel.Name</MudSelectItem>
                     }
                 </MudSelect>
                 <MudNumericField @bind-Value="_editDish.Price" Label="Giá (VNĐ) *" Variant="Variant.Outlined"
                                  Min="0.0" Step="1000.0" Format="N0"
-                                 Adornment="Adornment.End" AdornmentText="đ" />
+                                 Adornment="Adornment.End" AdornmentText="đ" Immediate="true" />
                 <div style="border: 1px dashed #C85520; border-radius: 12px; padding: 16px; text-align: center; background: #FFF0E6;">
                     <MudText Typo="Typo.body2" Style="color: #E8672A; font-weight: 600; margin-bottom: 8px;">📸 Tải ảnh lên</MudText>
                     <InputFile OnChange="UploadImage" accept=".jpg,.jpeg,.png,.webp" class="form-control" style="font-size: 0.85rem;" />
@@ -135,7 +203,7 @@
         <MudButton OnClick="@(() => _dialogVisible = false)" Variant="Variant.Text" Color="Color.Default"
                    Style="text-transform: none;">Hủy</MudButton>
         <MudButton OnClick="SaveDish" Variant="Variant.Filled" Color="Color.Primary"
-                   Disabled="@(!_formValid)"
+                   Disabled="@(!_formValid || _isSaving)"
                    Style="text-transform: none; border-radius: 10px; font-weight: 600;">
             @(_isEdit ? "Cập nhật" : "Tạo mới")
         </MudButton>
@@ -143,21 +211,23 @@
 </MudDialog>
 
 @code {
-    private List<Dish> _dishes = new();
-    private List<Shop> _shops = new();
+    private List<DishModel> _dishes = new();
+    private List<ShopModel> _shops = new();
     private Dictionary<string, string> _shopNames = new();
     private bool _loading = true;
+    private bool _isSaving = false;
     private string _searchString = "";
     private string? _selectedShopId;
 
     // Dialog state
     private bool _dialogVisible;
     private bool _isEdit;
-    private Dish _editDish = new();
+    private string _editingId = "";
+    private FoodTour_WebAdmin.Api.DTOs.CreateDishRequest _editDish = new();
     private MudForm? _form;
     private bool _formValid;
 
-    private IEnumerable<Dish> _filteredDishes => _dishes.Where(d =>
+    private IEnumerable<DishModel> _filteredDishes => _dishes.Where(d =>
     {
         if (!string.IsNullOrEmpty(_searchString) &&
             !d.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
@@ -169,7 +239,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _shops = await Db.Shops.OrderBy(s => s.Name).ToListAsync();
+        var allShops = await Db.Shops.Include(s => s.ShopTranslations).AsNoTracking().ToListAsync();
+        _shops = allShops.OrderBy(s => s.Name).ToList();
         _shopNames = _shops.ToDictionary(s => s.Id, s => s.Name);
         await LoadDishes();
     }
@@ -177,70 +248,88 @@
     private async Task LoadDishes()
     {
         _loading = true;
-        _dishes = await Db.Dishes.OrderBy(d => d.ShopId).ThenBy(d => d.Name).ToListAsync();
+        StateHasChanged();
+        var allDishes = await Db.Dishes.Include(d => d.DishTranslations).AsNoTracking().ToListAsync();
+        _dishes = allDishes.OrderBy(d => d.ShopId).ThenBy(d => d.Name).ToList();
         _loading = false;
+        StateHasChanged();
     }
 
     private void OpenCreateDialog()
     {
         _isEdit = false;
-        _editDish = new Dish();
+        _editingId = "";
+        _editDish = new FoodTour_WebAdmin.Api.DTOs.CreateDishRequest();
         _dialogVisible = true;
     }
 
-    private void OpenEditDialog(Dish dish)
+    private void OpenEditDialog(DishModel DishModel)
     {
         _isEdit = true;
-        _editDish = new Dish
+        _editingId = DishModel.Id;
+        _editDish = new FoodTour_WebAdmin.Api.DTOs.CreateDishRequest
         {
-            Id = dish.Id,
-            ShopId = dish.ShopId,
-            Name = dish.Name,
-            Price = dish.Price,
-            ImageUrl = dish.ImageUrl,
+            ShopId = DishModel.ShopId,
+            Name = DishModel.Name,
+            Price = DishModel.Price,
+            ImageUrl = DishModel.ImageUrl,
         };
         _dialogVisible = true;
     }
 
     private async Task SaveDish()
     {
-        if (_isEdit)
+        _isSaving = true;
+        StateHasChanged();
+        
+        try
         {
-            var existing = await Db.Dishes.FindAsync(_editDish.Id);
-            if (existing is not null)
+            using var scope = Constants.ServiceProvider?.CreateScope();
+            var service = scope?.ServiceProvider.GetRequiredService<FoodTour_WebAdmin.Api.Services.ManageFoodTourService>();
+            
+            if (service != null && !string.IsNullOrEmpty(_editDish.Name))
             {
-                existing.ShopId = _editDish.ShopId;
-                existing.Name = _editDish.Name;
-                existing.Price = _editDish.Price;
-                existing.ImageUrl = _editDish.ImageUrl;
-                await Db.SaveChangesAsync();
-                Snackbar.Add($"Đã cập nhật món \"{existing.Name}\"!", Severity.Success);
+                if (_isEdit)
+                {
+                    await service.UpdateDishWithTranslationAsync(_editingId, _editDish);
+                    Snackbar.Add($"Đã cập nhật món \"{_editDish.Name}\"!", Severity.Success);
+                }
+                else
+                {
+                    var newDish = await service.CreateDishWithTranslationAsync(_editDish);
+                    Snackbar.Add($"Đã thêm món \"{_editDish.Name}\" thành công!", Severity.Success);
+                }
+            }
+            else
+            {
+                 Snackbar.Add($"Lỗi DI khi lấy ManageFoodTourService", Severity.Error);
             }
         }
-        else
+        finally
         {
-            _editDish.Id = Guid.NewGuid().ToString();
-            Db.Dishes.Add(_editDish);
-            await Db.SaveChangesAsync();
-            Snackbar.Add($"Đã thêm món \"{_editDish.Name}\" thành công!", Severity.Success);
+            _isSaving = false;
         }
 
         _dialogVisible = false;
         await LoadDishes();
     }
 
-    private async Task ConfirmDelete(Dish dish)
+    private async Task ConfirmDelete(DishModel DishModel)
     {
         var result = await DialogService.ShowMessageBoxAsync(
             "Xác nhận xóa",
-            $"Bạn có chắc muốn xóa món \"{dish.Name}\"?",
+            $"Bạn có chắc muốn xóa món \"{DishModel.Name}\"?",
             yesText: "Xóa", cancelText: "Hủy");
 
         if (result == true)
         {
-            Db.Dishes.Remove(dish);
-            await Db.SaveChangesAsync();
-            Snackbar.Add($"Đã xóa món \"{dish.Name}\"!", Severity.Warning);
+            var toDelete = await Db.Dishes.FindAsync(DishModel.Id);
+            if (toDelete != null)
+            {
+                Db.Dishes.Remove(toDelete);
+                await Db.SaveChangesAsync();
+            }
+            Snackbar.Add($"Đã xóa món \"{DishModel.Name}\"!", Severity.Warning);
             await LoadDishes();
         }
     }

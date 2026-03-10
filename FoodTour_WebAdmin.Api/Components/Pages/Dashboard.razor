@@ -126,17 +126,17 @@
                     <MudText Typo="Typo.h6" Style="font-weight: 700;">🏆 Top quán ăn</MudText>
                     @if (_topShops is not null)
                     {
-                        @foreach (var shop in _topShops)
+                        @foreach (var ShopModel in _topShops)
                         {
                             <MudStack Row AlignItems="AlignItems.Center" Spacing="3" Style="padding: 8px 0; border-bottom: 1px solid #F0E8E0;">
                                 <MudAvatar Size="Size.Small" Style="background: #FFF0E6; color: #E8672A; font-weight: 700; font-size: 0.75rem;">
-                                    @shop.Rating.ToString("0.0")
+                                    @ShopModel.Rating.ToString("0.0")
                                 </MudAvatar>
                                 <MudStack Spacing="0" Style="flex: 1;">
-                                    <MudText Typo="Typo.body2" Style="font-weight: 600; color: #2D1F14;">@shop.Name</MudText>
-                                    <MudText Typo="Typo.caption" Style="color: #8C7B6B;">@shop.Address</MudText>
+                                    <MudText Typo="Typo.body2" Style="font-weight: 600; color: #2D1F14;">@ShopModel.Name</MudText>
+                                    <MudText Typo="Typo.caption" Style="color: #8C7B6B;">@ShopModel.Address</MudText>
                                 </MudStack>
-                                <MudRating ReadOnly="true" SelectedValue="@((int)Math.Round(shop.Rating))" Size="Size.Small"
+                                <MudRating ReadOnly="true" SelectedValue="@((int)Math.Round(ShopModel.Rating))" Size="Size.Small"
                                            FullIcon="@Icons.Material.Filled.Star" EmptyIcon="@Icons.Material.Filled.StarBorder" />
                             </MudStack>
                         }
@@ -196,8 +196,8 @@
     private int _totalShops;
     private int _totalDishes;
     private string _avgRating = "0";
-    private List<Shop>? _topShops;
-    private List<Shop>? _recentShops;
+    private List<ShopModel>? _topShops;
+    private List<ShopModel>? _recentShops;
 
     // Weekly mock data
     private (string Day, int Visits)[] _weeklyData =
@@ -213,7 +213,7 @@
         var avg = _totalShops > 0 ? await Db.Shops.AverageAsync(s => s.Rating) : 0;
         _avgRating = avg.ToString("0.0");
 
-        _topShops = await Db.Shops.OrderByDescending(s => s.Rating).Take(5).ToListAsync();
-        _recentShops = await Db.Shops.Include(s => s.Dishes).OrderByDescending(s => s.CreatedAt).Take(5).ToListAsync();
+        _topShops = await Db.Shops.Include(s => s.ShopTranslations).OrderByDescending(s => s.Rating).Take(5).ToListAsync();
+        _recentShops = await Db.Shops.Include(s => s.ShopTranslations).Include(s => s.Dishes).OrderByDescending(s => s.CreatedAt).Take(5).ToListAsync();
     }
 }

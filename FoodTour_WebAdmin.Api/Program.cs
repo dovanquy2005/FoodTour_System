@@ -11,6 +11,10 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")
                      ?? "Data Source=foodtour.db"));
 
+// Register Services
+builder.Services.AddHttpClient<FoodTour_WebAdmin.Api.Services.LangblyTranslateService>();
+builder.Services.AddScoped<FoodTour_WebAdmin.Api.Services.ManageFoodTourService>();
+
 // API Controllers
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -69,4 +73,5 @@ app.MapControllers();
 app.MapRazorComponents<FoodTour_WebAdmin.Api.Components.App>()
     .AddInteractiveServerRenderMode();
 
+FoodTour_WebAdmin.Api.Constants.ServiceProvider = app.Services;
 app.Run();

@@ -15,9 +15,10 @@ public class ShopsController : ControllerBase
 
     // GET: api/shops
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Shop>>> GetAll()
+    public async Task<ActionResult<IEnumerable<ShopModel>>> GetAll()
     {
         var shops = await _db.Shops
+            .Include(s => s.ShopTranslations)
             .OrderByDescending(s => s.Rating)
             .ToListAsync();
         return Ok(shops);
@@ -25,56 +26,57 @@ public class ShopsController : ControllerBase
 
     // GET: api/shops/{id}
     [HttpGet("{id}")]
-    public async Task<ActionResult<Shop>> GetById(string id)
+    public async Task<ActionResult<ShopModel>> GetById(string id)
     {
-        var shop = await _db.Shops
+        var ShopModel = await _db.Shops
+            .Include(s => s.ShopTranslations)
             .Include(s => s.Dishes)
             .FirstOrDefaultAsync(s => s.Id == id);
 
-        if (shop is null)
-            return NotFound(new { message = $"Shop with id '{id}' not found." });
+        if (ShopModel is null)
+            return NotFound(new { message = $"ShopModel with id '{id}' not found." });
 
-        return Ok(shop);
+        return Ok(ShopModel);
     }
 
     // POST: api/shops
     [HttpPost]
-    public async Task<ActionResult<Shop>> Create([FromBody] Shop shop)
+    public async Task<ActionResult<ShopModel>> Create([FromBody] ShopModel ShopModel)
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        if (string.IsNullOrEmpty(shop.Id))
-            shop.Id = Guid.NewGuid().ToString();
+        if (string.IsNullOrEmpty(ShopModel.Id))
+            ShopModel.Id = Guid.NewGuid().ToString();
 
-        shop.CreatedAt = DateTime.UtcNow;
-        shop.UpdatedAt = DateTime.UtcNow;
+        ShopModel.CreatedAt = DateTime.UtcNow;
+        ShopModel.UpdatedAt = DateTime.UtcNow;
 
-        _db.Shops.Add(shop);
+        _db.Shops.Add(ShopModel);
         await _db.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(GetById), new { id = shop.Id }, shop);
+        return CreatedAtAction(nameof(GetById), new { id = ShopModel.Id }, ShopModel);
     }
 
     // PUT: api/shops/{id}
     [HttpPut("{id}")]
-    public async Task<ActionResult<Shop>> Update(string id, [FromBody] Shop shop)
+    public async Task<ActionResult<ShopModel>> Update(string id, [FromBody] ShopModel ShopModel)
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        var existing = await _db.Shops.FindAsync(id);
+        var existing = await _db.Shops.Include(s => s.ShopTranslations).FirstOrDefaultAsync(s => s.Id == id);
         if (existing is null)
-            return NotFound(new { message = $"Shop with id '{id}' not found." });
+            return NotFound(new { message = $"ShopModel with id '{id}' not found." });
 
-        existing.Name = shop.Name;
-        existing.Address = shop.Address;
-        existing.Description = shop.Description;
-        existing.ImageUrl = shop.ImageUrl;
-        existing.Latitude = shop.Latitude;
-        existing.Longitude = shop.Longitude;
-        existing.IsVisited = shop.IsVisited;
-        existing.Rating = shop.Rating;
+        existing.Name = ShopModel.Name;
+        existing.Address = ShopModel.Address;
+        existing.Description = ShopModel.Description;
+        existing.ImageUrl = ShopModel.ImageUrl;
+        existing.Latitude = ShopModel.Latitude;
+        existing.Longitude = ShopModel.Longitude;
+        existing.IsVisited = ShopModel.IsVisited;
+        existing.Rating = ShopModel.Rating;
         existing.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
@@ -85,11 +87,11 @@ public class ShopsController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(string id)
     {
-        var shop = await _db.Shops.FindAsync(id);
-        if (shop is null)
-            return NotFound(new { message = $"Shop with id '{id}' not found." });
+        var ShopModel = await _db.Shops.FindAsync(id);
+        if (ShopModel is null)
+            return NotFound(new { message = $"ShopModel with id '{id}' not found." });
 
-        _db.Shops.Remove(shop);
+        _db.Shops.Remove(ShopModel);
         await _db.SaveChangesAsync();
 
         return NoContent();
