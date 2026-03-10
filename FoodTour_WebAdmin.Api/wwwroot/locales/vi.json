@@ -28,5 +28,18 @@
     "Tab_Map": "Bản đồ",
     "Tab_Scan": "Quét mã",
     "Tab_Alerts": "Thông báo",
-    "Tab_Settings": "Cài đặt"
+    "Tab_Settings": "Cài đặt",
+    "Explore_Title1": "Vinh Khanh Street Eats",
+    "Explore_Title2": "Khám phá ẩm thực đường phố",
+    "Explore_SearchPlaceholder": "Tìm ốc, hải sản, lẩu...",
+    "Map_Title": "FoodTour Map",
+    "Scan_Title": "Quét mã QR",
+    "Scan_Subtitle": "Quét mã tại bàn để bắt đầu",
+    "Scan_CameraInstruction": "Đưa camera vào mã QR",
+    "Scan_FooterInstruction": "Hướng camera điện thoại vào mã QR trên bàn để nghe thuyết minh khoa học về món ăn.",
+    "Alert_Title": "Thông báo",
+    "Alert_SampleTitle": "Dữ liệu tuyến phố đã cập nhật",
+    "Alert_SampleMessage": "Đã thêm file audio cho các quán ốc Quận 4.",
+    "Alert_Today": "Hôm nay",
+    "Alert_EmptyState": "Không có thông báo mới"
 }

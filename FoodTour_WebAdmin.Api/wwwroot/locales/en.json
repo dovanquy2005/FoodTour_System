@@ -28,5 +28,18 @@
     "Tab_Map": "Map",
     "Tab_Scan": "Scan QR",
     "Tab_Alerts": "Alerts",
-    "Tab_Settings": "Settings"
+    "Tab_Settings": "Settings",
+    "Explore_Title1": "Vinh Khanh Street Eats",
+    "Explore_Title2": "Explore street food",
+    "Explore_SearchPlaceholder": "Search for snails, seafood, hotpot...",
+    "Map_Title": "FoodTour Map",
+    "Scan_Title": "Scan QR Code",
+    "Scan_Subtitle": "Scan the code at the table to start",
+    "Scan_CameraInstruction": "Align the camera with the QR code",
+    "Scan_FooterInstruction": "Point your phone camera at the QR code on the table to hear a scientific commentary about the dish.",
+    "Alert_Title": "Alerts",
+    "Alert_SampleTitle": "Street route data updated",
+    "Alert_SampleMessage": "Audio files for District 4 snail shops have been added.",
+    "Alert_Today": "Today",
+    "Alert_EmptyState": "No new notifications"
 }

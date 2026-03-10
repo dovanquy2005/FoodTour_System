@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:models="clr-namespace:FoodTour.Mobile.Models"
              xmlns:viewmodels="clr-namespace:FoodTour.Mobile.ViewModels"
+             xmlns:ext="clr-namespace:FoodTour.Mobile.Extensions"
              x:Class="FoodTour.Mobile.Views.ExplorePage"
              x:DataType="viewmodels:ExploreViewModel"
              BackgroundColor="{StaticResource Background}"
@@ -11,12 +12,12 @@
 
 		<!-- ═══════ HEADER ═══════ -->
 		<VerticalStackLayout Grid.Row="0" Margin="0,12,0,18" HorizontalOptions="Center" Spacing="2">
-			<Label Text="Vinh Khanh Street Eats"
+			<Label Text="{ext:Translate Explore_Title1}"
 			       TextColor="{StaticResource TextPrimary}"
 			       FontSize="22"
 			       FontAttributes="Bold"
 			       HorizontalOptions="Center"/>
-			<Label Text="Khám phá ẩm thực đường phố"
+			<Label Text="{ext:Translate Explore_Title2}"
 			       TextColor="{StaticResource TextSecondary}"
 			       FontSize="13"
 			       HorizontalOptions="Center"/>
@@ -39,7 +40,7 @@
 				       Margin="0,0,10,0"
 				       Opacity="0.45"/>
 				<Entry Grid.Column="1"
-				       Placeholder="Tìm ốc, hải sản, lẩu..."
+				       Placeholder="{ext:Translate Explore_SearchPlaceholder}"
 				       PlaceholderColor="{StaticResource TextTertiary}"
 				       TextColor="{StaticResource TextPrimary}"
 				       BackgroundColor="Transparent"

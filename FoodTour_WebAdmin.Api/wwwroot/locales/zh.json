@@ -28,5 +28,18 @@
     "Tab_Map": "地图",
     "Tab_Scan": "扫描",
     "Tab_Alerts": "通知",
-    "Tab_Settings": "设置"
+    "Tab_Settings": "设置",
+    "Explore_Title1": "Vinh Khanh Street Eats",
+    "Explore_Title2": "探索街头小吃",
+    "Explore_SearchPlaceholder": "搜索蜗牛、海鲜、火锅...",
+    "Map_Title": "FoodTour 地图",
+    "Scan_Title": "扫描二维码",
+    "Scan_Subtitle": "扫描桌子上的二维码开始",
+    "Scan_CameraInstruction": "将相机对准二维码",
+    "Scan_FooterInstruction": "将手机摄像头对准桌子上的二维码，聆听有关这道菜的科学解说。",
+    "Alert_Title": "通知",
+    "Alert_SampleTitle": "街道路线数据已更新",
+    "Alert_SampleMessage": "已添加第 4 区蜗牛店的音频文件。",
+    "Alert_Today": "今天",
+    "Alert_EmptyState": "没有新通知"
 }

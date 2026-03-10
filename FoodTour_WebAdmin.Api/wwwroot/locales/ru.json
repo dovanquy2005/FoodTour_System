@@ -28,5 +28,18 @@
     "Tab_Map": "Карта",
     "Tab_Scan": "Скан QR",
     "Tab_Alerts": "Уведомления",
-    "Tab_Settings": "Настройки"
+    "Tab_Settings": "Настройки",
+    "Explore_Title1": "Vinh Khanh Street Eats",
+    "Explore_Title2": "Исследуйте уличную еду",
+    "Explore_SearchPlaceholder": "Поиск улиток, морепродуктов...",
+    "Map_Title": "Карта FoodTour",
+    "Scan_Title": "Сканировать QR-код",
+    "Scan_Subtitle": "Сканируйте код на столе, чтобы начать",
+    "Scan_CameraInstruction": "Наведите камеру на QR-код",
+    "Scan_FooterInstruction": "Наведите камеру телефона на QR-код на столе, чтобы прослушать научный комментарий о блюде.",
+    "Alert_Title": "Уведомления",
+    "Alert_SampleTitle": "Данные о маршруте обновлены",
+    "Alert_SampleMessage": "Добавлены аудиофайлы для магазинов в Районе 4.",
+    "Alert_Today": "Сегодня",
+    "Alert_EmptyState": "Нет новых уведомлений"
 }

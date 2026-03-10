@@ -28,5 +28,18 @@
     "Tab_Map": "マップ",
     "Tab_Scan": "スキャン",
     "Tab_Alerts": "通知",
-    "Tab_Settings": "設定"
+    "Tab_Settings": "設定",
+    "Explore_Title1": "Vinh Khanh Street Eats",
+    "Explore_Title2": "ストリートフードを探検",
+    "Explore_SearchPlaceholder": "カタツムリ、シーフード、火鍋を検索...",
+    "Map_Title": "FoodTourマップ",
+    "Scan_Title": "QRコードをスキャン",
+    "Scan_Subtitle": "テーブルのコードをスキャンして開始",
+    "Scan_CameraInstruction": "カメラをQRコードに合わせます",
+    "Scan_FooterInstruction": "テーブルのQRコードにスマホのカメラを向けると、料理の科学的な説明を聞くことができます。",
+    "Alert_Title": "通知",
+    "Alert_SampleTitle": "ルートデータが更新されました",
+    "Alert_SampleMessage": "4区のカタツムリ店の音声ファイルが追加されました。",
+    "Alert_Today": "今日",
+    "Alert_EmptyState": "新しい通知はありません"
 }

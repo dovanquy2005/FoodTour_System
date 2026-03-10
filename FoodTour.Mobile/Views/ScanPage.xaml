@@ -1,5 +1,6 @@
 ﻿<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:ext="clr-namespace:FoodTour.Mobile.Extensions"
              x:Class="FoodTour.Mobile.Views.ScanPage"
              BackgroundColor="{StaticResource Background}"
              NavigationPage.HasNavigationBar="False">
@@ -8,12 +9,12 @@
 
 		<!-- Header -->
 		<VerticalStackLayout Grid.Row="0" HorizontalOptions="Center" Spacing="4">
-			<Label Text="Quét mã QR"
+			<Label Text="{ext:Translate Scan_Title}"
 			       TextColor="{StaticResource TextPrimary}"
 			       FontSize="24"
 			       FontAttributes="Bold"
 			       HorizontalOptions="Center"/>
-			<Label Text="Quét mã tại bàn để bắt đầu"
+			<Label Text="{ext:Translate Scan_Subtitle}"
 			       TextColor="{StaticResource TextSecondary}"
 			       FontSize="13"
 			       HorizontalOptions="Center"/>
@@ -30,7 +31,7 @@
 			        Shadow="{Shadow Radius=12, Opacity=0.08, Offset='0,4'}">
 				<VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="12">
 					<Label Text="📷" FontSize="40" HorizontalOptions="Center"/>
-					<Label Text="Đưa camera vào mã QR"
+					<Label Text="{ext:Translate Scan_CameraInstruction}"
 					       TextColor="{StaticResource TextSecondary}"
 					       FontSize="14"
 					       HorizontalOptions="Center"/>
@@ -44,7 +45,7 @@
 		        StrokeShape="RoundRectangle 14"
 		        StrokeThickness="0"
 		        Padding="16,12">
-			<Label Text="Hướng camera điện thoại vào mã QR trên bàn để nghe thuyết minh khoa học về món ăn."
+			<Label Text="{ext:Translate Scan_FooterInstruction}"
 			       TextColor="{StaticResource TextSecondary}"
 			       FontSize="13"
 			       HorizontalTextAlignment="Center"

@@ -1,5 +1,6 @@
 ﻿<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:ext="clr-namespace:FoodTour.Mobile.Extensions"
              x:Class="FoodTour.Mobile.Views.AlertsPage"
              BackgroundColor="{StaticResource Background}"
              NavigationPage.HasNavigationBar="False">
@@ -8,7 +9,7 @@
 
 		<!-- Header -->
 		<Label Grid.Row="0"
-		       Text="Thông báo"
+		       Text="{ext:Translate Alert_Title}"
 		       TextColor="{StaticResource TextPrimary}"
 		       FontSize="24"
 		       FontAttributes="Bold"
@@ -34,15 +35,15 @@
 						        VerticalOptions="Start"
 						        Margin="0,6,0,0"/>
 						<VerticalStackLayout Grid.Column="1" Spacing="4">
-							<Label Text="Dữ liệu tuyến phố đã cập nhật"
+							<Label Text="{ext:Translate Alert_SampleTitle}"
 							       TextColor="{StaticResource TextPrimary}"
 							       FontSize="15"
 							       FontAttributes="Bold"/>
-							<Label Text="Đã thêm file audio cho các quán ốc Quận 4."
+							<Label Text="{ext:Translate Alert_SampleMessage}"
 							       TextColor="{StaticResource TextSecondary}"
 							       FontSize="13"
 							       LineHeight="1.2"/>
-							<Label Text="Hôm nay"
+							<Label Text="{ext:Translate Alert_Today}"
 							       TextColor="{StaticResource TextTertiary}"
 							       FontSize="12"
 							       Margin="0,2,0,0"/>
@@ -53,7 +54,7 @@
 				<!-- Empty state placeholder -->
 				<VerticalStackLayout Margin="0,30,0,0" HorizontalOptions="Center" Spacing="8">
 					<Label Text="🔔" FontSize="36" HorizontalOptions="Center" Opacity="0.4"/>
-					<Label Text="Không có thông báo mới"
+					<Label Text="{ext:Translate Alert_EmptyState}"
 					       TextColor="{StaticResource TextTertiary}"
 					       FontSize="14"
 					       HorizontalOptions="Center"/>
