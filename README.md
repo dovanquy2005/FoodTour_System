@@ -1,6 +1,6 @@
 # 🛵 FoodTour - Hệ thống Audio Guide Phố Ẩm Thực Vĩnh Khánh
 
-Dự án phát triển hệ thống hỗ trợ du lịch thông minh (Audio Guide) tập trung vào trải nghiệm người dùng đa ngôn ngữ và chế độ Offline-first tại phố ẩm thực Vĩnh Khánh.
+Dự án phát triển hệ thống hỗ trợ du lịch thông minh (Audio Guide) tập trung vào trải nghiệm người dùng đa ngôn ngữ và chế độ Offline/Online tại phố ẩm thực Vĩnh Khánh.
 
 ---
 
