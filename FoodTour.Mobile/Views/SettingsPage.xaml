@@ -62,6 +62,51 @@
 				</Border>
 			</VerticalStackLayout>
 
+			<!-- ═══════ CHẾ ĐỘ DỮ LIỆU ═══════ -->
+			<VerticalStackLayout Spacing="8">
+				<Label Text="{ext:Translate Settings_DataMode}"
+				       TextColor="{StaticResource TextSecondary}"
+				       FontSize="12"
+				       FontAttributes="Bold"
+				       Margin="4,0"
+				       CharacterSpacing="1"/>
+
+				<Border BackgroundColor="{StaticResource Surface}"
+				        StrokeShape="RoundRectangle 16"
+				        Stroke="{StaticResource CardBorder}"
+				        StrokeThickness="1"
+				        Padding="16,4"
+				        Shadow="{Shadow Radius=6, Opacity=0.05, Offset='0,2'}">
+					<VerticalStackLayout>
+						<Grid ColumnDefinitions="Auto, *, Auto" Padding="0,14">
+							<Label Grid.Column="0" Text="📶" FontSize="20" VerticalOptions="Center"/>
+							<VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Margin="14,0" Spacing="2">
+								<Label Text="Offline Mode" TextColor="{StaticResource TextPrimary}" FontSize="15" FontAttributes="Bold"/>
+								<Label TextColor="{StaticResource TextSecondary}" FontSize="13">
+                                    <Label.Triggers>
+                                        <DataTrigger TargetType="Label" Binding="{Binding Source={x:Reference DataModeSwitch}, Path=IsToggled}" Value="False">
+                                            <Setter Property="Text" Value="Nghe trực tuyến (Tiết kiệm bộ nhớ máy)" />
+                                        </DataTrigger>
+                                        <DataTrigger TargetType="Label" Binding="{Binding Source={x:Reference DataModeSwitch}, Path=IsToggled}" Value="True">
+                                            <Setter Property="Text" Value="Tải về máy (Tiết kiệm 4G/5G, kích thước ~45MB)" />
+                                        </DataTrigger>
+                                    </Label.Triggers>
+                                </Label>
+							</VerticalStackLayout>
+							<Switch Grid.Column="2" x:Name="DataModeSwitch"
+							        Toggled="OnDataModeToggled"
+							        OnColor="{StaticResource Primary}" ThumbColor="White"
+							        VerticalOptions="Center"/>
+						</Grid>
+						<!-- ProgressBar Section -->
+						<VerticalStackLayout x:Name="DataModeProgressBarSection" IsVisible="False" Padding="0,0,0,14">
+							<ProgressBar x:Name="DataModeProgressBar" Progress="0" ProgressColor="{StaticResource Primary}" HeightRequest="4"/>
+							<Label x:Name="DataModeProgressLabel" Text="Đang tải... 0%" FontSize="12" TextColor="{StaticResource Primary}" HorizontalOptions="Center" Margin="0,4,0,0" FontAttributes="Bold"/>
+						</VerticalStackLayout>
+					</VerticalStackLayout>
+				</Border>
+			</VerticalStackLayout>
+
 			<!-- ═══════ DỮ LIỆU OFFLINE ═══════ -->
 			<VerticalStackLayout Spacing="8">
 				<Label Text="{ext:Translate Settings_OfflineData}"

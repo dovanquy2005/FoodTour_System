@@ -41,6 +41,7 @@ public static class MauiProgram
         builder.Services.AddTransient<ShopDetailPage>();
         builder.Services.AddTransient<ShopDetailViewModel>();
         builder.Services.AddTransient<LanguageSelectionPage>();
+        builder.Services.AddTransient<OnboardingPage>();
         builder.Services.AddSingleton<DatabaseService>();
         // Localization dependencies
         builder.Services.AddSingleton<HttpClient>();
@@ -48,6 +49,8 @@ public static class MauiProgram
         
         // Đăng ký cho tab MainPage (OTA Localization Test)
         builder.Services.AddTransient<MainPage>();
+
+        builder.Services.AddSingleton<App>();
 
         return builder.Build();
     }

@@ -7,21 +7,40 @@
     xmlns:ext="clr-namespace:FoodTour.Mobile.Extensions"
     Shell.NavBarIsVisible="False"
     Shell.FlyoutBehavior="Disabled">
+	<!-- ═══════ RESOURCES & TEMPLATES ═══════ -->
 	<Shell.Resources>
 		<ResourceDictionary>
 			<Style x:Key="BaseStyle" TargetType="Element">
 				<Setter Property="Shell.BackgroundColor" Value="{StaticResource Background}" />
-				<Setter Property="Shell.ForegroundColor" Value="{StaticResource TextPrimary}" />
 				<Setter Property="Shell.TitleColor" Value="{StaticResource TextPrimary}" />
-				<Setter Property="Shell.DisabledColor" Value="{StaticResource Gray400}" />
-
+				<Setter Property="Shell.UnselectedColor" Value="{StaticResource TextTertiary}" />
 				<Setter Property="Shell.TabBarBackgroundColor" Value="{StaticResource Surface}" />
-				<Setter Property="Shell.TabBarUnselectedColor" Value="{StaticResource TextTertiary}" />
 				<Setter Property="Shell.TabBarTitleColor" Value="{StaticResource Primary}" />
+				<Setter Property="Shell.TabBarUnselectedColor" Value="{StaticResource TextTertiary}" />
 			</Style>
 			<Style TargetType="TabBar" BasedOn="{StaticResource BaseStyle}" />
 		</ResourceDictionary>
 	</Shell.Resources>
+
+	<Shell.TitleView>
+		<HorizontalStackLayout x:Name="StatusIndicatorContainer" 
+							   HorizontalOptions="End" 
+							   VerticalOptions="Center" 
+							   Margin="0,0,15,0" 
+							   Spacing="6"
+							   IsVisible="False">
+			<Label x:Name="StatusIcon" 
+				   Text="☁️" 
+				   FontSize="20" 
+				   VerticalOptions="Center"/>
+			<Label x:Name="StatusText" 
+				   Text="Offline Mode" 
+				   TextColor="{StaticResource TextSecondary}" 
+				   FontSize="12" 
+				   FontAttributes="Bold" 
+				   VerticalOptions="Center"/>
+		</HorizontalStackLayout>
+	</Shell.TitleView>
 
 	<!-- Trang khởi động -->
 	<ShellContent 

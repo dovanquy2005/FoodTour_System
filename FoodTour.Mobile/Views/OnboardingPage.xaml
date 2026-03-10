@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:ext="clr-namespace:FoodTour.Mobile.Extensions"
+             x:Class="FoodTour.Mobile.Views.OnboardingPage"
+             BackgroundColor="{StaticResource Background}"
+             NavigationPage.HasNavigationBar="False">
+
+    <Grid RowDefinitions="*, Auto" Margin="20, 40, 20, 30">
+        
+        <VerticalStackLayout Grid.Row="0" Spacing="15" VerticalOptions="Center">
+            <!-- Header Image Placeholder -->
+            <Border BackgroundColor="{StaticResource Gray100}"
+                    StrokeShape="RoundRectangle 20"
+                    StrokeThickness="0"
+                    HeightRequest="200"
+                    Margin="0,0,0,20">
+                <Label Text="{ext:Translate Onboarding_ImagePlaceholder}" 
+                       HorizontalOptions="Center" 
+                       VerticalOptions="Center" 
+                       TextColor="{StaticResource TextSecondary}"/>
+            </Border>
+
+            <!-- Title -->
+            <Label Text="{ext:Translate Onboarding_Title}"
+                   FontSize="28"
+                   FontAttributes="Bold"
+                   TextColor="{StaticResource TextPrimary}"
+                   HorizontalTextAlignment="Center"
+                   LineHeight="1.2"/>
+
+            <!-- Description -->
+            <Label Text="{ext:Translate Onboarding_Description}"
+                   FontSize="15"
+                   TextColor="{StaticResource TextSecondary}"
+                   HorizontalTextAlignment="Center"
+                   LineHeight="1.4"
+                   Margin="0, 10"/>
+
+            <!-- Info Text -->
+            <Label Text="{ext:Translate Onboarding_DataSize}"
+                   FontSize="14"
+                   FontAttributes="Italic"
+                   TextColor="{StaticResource TextTertiary}"
+                   HorizontalTextAlignment="Center"/>
+
+            <!-- Download Progress Area (Hidden by default) -->
+            <VerticalStackLayout x:Name="ProgressArea" 
+                                 IsVisible="False" 
+                                 Spacing="10" 
+                                 Margin="0, 20, 0, 0">
+                <ProgressBar x:Name="DownloadProgressBar" 
+                             Progress="0" 
+                             ProgressColor="{StaticResource Primary}" 
+                             HeightRequest="8"/>
+                <Label x:Name="DownloadStatusLabel" 
+                       Text="Đang tải... 0%" 
+                       FontSize="13" 
+                       TextColor="{StaticResource Primary}"
+                       HorizontalTextAlignment="Center"
+                       FontAttributes="Bold"/>
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+
+        <!-- Buttons Area -->
+        <VerticalStackLayout x:Name="ButtonsArea" Grid.Row="1" Spacing="12">
+            <!-- Primary Button -->
+            <Button Text="{ext:Translate Onboarding_OfflineBtn}"
+                    x:Name="DownloadOfflineButton"
+                    Clicked="OnDownloadOfflineClicked"
+                    BackgroundColor="{StaticResource Primary}"
+                    TextColor="White"
+                    FontAttributes="Bold"
+                    CornerRadius="14"
+                    HeightRequest="54"
+                    BorderWidth="0"/>
+
+            <!-- Secondary Button -->
+            <Button Text="{ext:Translate Onboarding_OnlineBtn}"
+                    x:Name="ListenOnlineButton"
+                    Clicked="OnListenOnlineClicked"
+                    BackgroundColor="Transparent"
+                    TextColor="{StaticResource TextSecondary}"
+                    FontAttributes="Bold"
+                    CornerRadius="14"
+                    HeightRequest="54"
+                    BorderWidth="0"/>
+        </VerticalStackLayout>
+    </Grid>
+</ContentPage>

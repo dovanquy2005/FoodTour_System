@@ -17,7 +17,19 @@ public partial class SplashPage : ContentPage
         // 2. Chuyển hướng đến trang chính thực sự của ứng dụng
         if (Application.Current?.Windows.Count > 0)
         {
-            Application.Current.Windows[0].Page = new AppShell();
+            var isSetupCompleted = Preferences.Default.Get("IsSetupCompleted", false);
+            if (isSetupCompleted)
+            {
+                Application.Current.Windows[0].Page = new AppShell();
+            }
+            else
+            {
+                var locService = Application.Current?.Handler?.MauiContext?.Services.GetService<Services.ILocalizationService>();
+                if (locService != null)
+                {
+                    Application.Current.Windows[0].Page = new OnboardingPage(locService);
+                }
+            }
         }
     }
 }
