@@ -34,3 +34,10 @@ Lệnh 3: Chạy Project
 Bash
 dotnet run
 Sau khi chạy lệnh 3, terminal sẽ hiện ra một đường link (thường là http://localhost:5154). Bạn copy link đó dán vào trình duyệt web (Chrome/Edge) là sẽ thấy tận mắt trang Web Admin cực xịn mà nó vừa làm cho bạn! Tương lai app MAUI của bạn cũng sẽ gọi API từ cái link http://localhost:5154/api/shops này để lấy danh sách quán ăn hiển thị lên điện thoại.
+
+
+----------- các bảng trong hệ thống -----------------
+
+<img width="637" height="612" alt="FoodTour_tables" src="https://github.com/user-attachments/assets/be1f32cc-ca4b-49e4-abdc-92df1768f596" />
+
+
