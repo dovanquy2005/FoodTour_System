@@ -10,5 +10,8 @@ public partial class AppShell : Shell
 
         // Đăng ký route cho trang chi tiết để có thể gọi: GoToAsync("ShopDetail")
         Routing.RegisterRoute(nameof(ShopDetailPage), typeof(ShopDetailPage));
+
+        // Register route for LanguageSelectionPage
+        Routing.RegisterRoute(nameof(LanguageSelectionPage), typeof(LanguageSelectionPage));
     }
 }

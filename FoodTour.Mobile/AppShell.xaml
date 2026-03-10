@@ -4,6 +4,7 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:views="clr-namespace:FoodTour.Mobile.Views"
+    xmlns:ext="clr-namespace:FoodTour.Mobile.Extensions"
     Shell.NavBarIsVisible="False"
     Shell.FlyoutBehavior="Disabled">
 	<Shell.Resources>
@@ -30,23 +31,23 @@
 		Shell.NavBarIsVisible="False" />
 
 	<TabBar Route="MainTabs">
-		<Tab Title="Khám phá" Icon="explore.png">
+		<Tab Title="{ext:Translate Tab_Explore}" Icon="explore.png">
 			<ShellContent Route="ExplorePage" ContentTemplate="{DataTemplate views:ExplorePage}" />
 		</Tab>
 
-		<Tab Title="Bản đồ" Icon="map.png">
+		<Tab Title="{ext:Translate Tab_Map}" Icon="map.png">
 			<ShellContent Route="MapPage" ContentTemplate="{DataTemplate views:MapPage}" />
 		</Tab>
 
-		<Tab Title="Quét mã" Icon="qr_code_scanner.png">
+		<Tab Title="{ext:Translate Tab_Scan}" Icon="qr_code_scanner.png">
 			<ShellContent Route="ScanPage" ContentTemplate="{DataTemplate views:ScanPage}" />
 		</Tab>
 
-		<Tab Title="Thông báo" Icon="notifications.png">
+		<Tab Title="{ext:Translate Tab_Alerts}" Icon="notifications.png">
 			<ShellContent Route="AlertsPage" ContentTemplate="{DataTemplate views:AlertsPage}" />
 		</Tab>
 
-		<Tab Title="Cài đặt" Icon="settings.png">
+		<Tab Title="{ext:Translate Tab_Settings}" Icon="settings.png">
 			<ShellContent Route="SettingsPage" ContentTemplate="{DataTemplate views:SettingsPage}" />
 		</Tab>
 	</TabBar>

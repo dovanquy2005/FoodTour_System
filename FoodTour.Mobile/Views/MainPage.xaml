@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:ext="clr-namespace:FoodTour.Mobile.Extensions"
+             x:Class="FoodTour.Mobile.Views.MainPage"
+             Title="Localization Demo">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="30,0" Spacing="25" VerticalOptions="Center">
+            
+            <Label Text="{ext:Translate WelcomeMessage}"
+                   Style="{StaticResource Headline}"
+                   SemanticProperties.HeadingLevel="Level1"
+                   HorizontalOptions="Center" />
+
+            <Label Text="{ext:Translate DescriptionText}"
+                   Style="{StaticResource SubHeadline}"
+                   SemanticProperties.HeadingLevel="Level2"
+                   SemanticProperties.Description="Description label"
+                   HorizontalOptions="Center" />
+
+            <!-- Demonstrate switching to Vietnamese localization -->
+            <Button Text="Switch to Vietnamese" 
+                    Clicked="OnVietnameseClicked"
+                    HorizontalOptions="Center" />
+
+            <!-- Demonstrate switching to English localization -->
+            <Button Text="Switch to English" 
+                    Clicked="OnEnglishClicked"
+                    HorizontalOptions="Center" />
+
+            <!-- Demonstrate TTS for localization -->
+            <Button Text="Read Welcome Message" 
+                    Clicked="OnSpeakClicked"
+                    SemanticProperties.Hint="Triggers text-to-speech for the welcome message"
+                    HorizontalOptions="Center" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

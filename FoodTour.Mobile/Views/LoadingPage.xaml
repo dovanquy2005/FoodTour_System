@@ -1,17 +1,23 @@
 ﻿<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:ext="clr-namespace:FoodTour.Mobile.Extensions"
              x:Class="FoodTour.Mobile.Views.LoadingPage"
-             BackgroundColor="White">
+             BackgroundColor="{StaticResource Background}"
+             NavigationPage.HasNavigationBar="False">
 
 	<VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="20">
-		<Label Text="FOOD TOUR VĨNH KHÁNH"
+		<Label Text="{ext:Translate App_Title}"
                FontSize="24"
                FontAttributes="Bold"
-               TextColor="Red"
-               HorizontalOptions="Center"/>
+               TextColor="{StaticResource Primary}"
+               HorizontalOptions="Center"
+               HorizontalTextAlignment="Center"/>
 
-		<ActivityIndicator IsRunning="True" Color="Red"/>
+		<ActivityIndicator IsRunning="True" Color="{StaticResource Primary}"/>
 
-		<Label Text="Đang tải dữ liệu..." TextColor="Gray"/>
+		<Label Text="{ext:Translate Common_Loading}" 
+               TextColor="{StaticResource TextSecondary}" 
+               HorizontalOptions="Center"
+               HorizontalTextAlignment="Center"/>
 	</VerticalStackLayout>
 </ContentPage>

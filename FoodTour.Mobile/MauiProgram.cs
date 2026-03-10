@@ -4,6 +4,7 @@ using Microsoft.Maui.Controls.Maps;
 using Microsoft.Maui.Maps;
 using FoodTour.Mobile.Views;
 using FoodTour.Mobile.ViewModels;
+using System.Net.Http;
 using FoodTour.Mobile.Services;
 namespace FoodTour.Mobile;
 public static class MauiProgram
@@ -39,7 +40,15 @@ public static class MauiProgram
         builder.Services.AddSingleton<LoadingViewModel>();
         builder.Services.AddTransient<ShopDetailPage>();
         builder.Services.AddTransient<ShopDetailViewModel>();
+        builder.Services.AddTransient<LanguageSelectionPage>();
         builder.Services.AddSingleton<DatabaseService>();
+        // Localization dependencies
+        builder.Services.AddSingleton<HttpClient>();
+        builder.Services.AddSingleton<ILocalizationService, LocalizationService>();
+        
+        // Đăng ký cho tab MainPage (OTA Localization Test)
+        builder.Services.AddTransient<MainPage>();
+
         return builder.Build();
     }
 }

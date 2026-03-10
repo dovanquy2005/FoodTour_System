@@ -44,7 +44,7 @@ public partial class MapPage : ContentPage
         MainMap.Loaded += MainMap_Loaded;
     }
 
-    protected override async void OnAppearing()
+    protected override void OnAppearing()
     {
         base.OnAppearing();
 
