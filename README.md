@@ -1,9 +1,3 @@
-Để bản **README** của bạn trông chuyên nghiệp, "xịn" như các dự án mã nguồn mở quốc tế mà vẫn giữ được sự gần gũi, dễ hiểu cho dân kỹ thuật, mình đã cấu trúc lại theo phong cách **Markdown chuẩn**.
-
-Phần này không chỉ giúp bạn quản lý dự án tốt hơn mà còn là điểm cộng cực lớn nếu bạn bỏ vào CV sau này đấy!
-
----
-
 # 🛵 FoodTour - Hệ thống Audio Guide Phố Ẩm Thực Vĩnh Khánh
 
 Dự án phát triển hệ thống hỗ trợ du lịch thông minh (Audio Guide) tập trung vào trải nghiệm người dùng đa ngôn ngữ và chế độ Offline-first tại phố ẩm thực Vĩnh Khánh.
