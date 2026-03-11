@@ -12,8 +12,6 @@ public partial class MapPage : ContentPage
     private string _lastEnteredShopName = string.Empty; // Lưu tên quán vừa ghé để tránh lặp lại thuyết minh
     private Location _userLocation = new Location(10.760464715817578, 106.70722160861798); // Vị trí người dùng
     // private bool _firstGpsFix = false;
-    private Pin? _userPin;
-
     public MapPage(MapViewModel vm)
     {
         try
@@ -104,23 +102,11 @@ public partial class MapPage : ContentPage
             // Vẽ vòng bán kính xung quanh các quán ăn
             DrawRadiusCircles();
 
-            _userPin = new Pin
-            {
-                Label = "User",
-                Type = PinType.Generic,
-                Location = _userLocation
-            };
-
-            MainMap?.Pins.Add(_userPin);
-
             if (MainMap != null)
             {
                 MainMap.MapClicked += OnMapClicked;
+                MainMap.IsShowingUser = true;
             }
-
-            // #if DEBUG
-            //             await SimulateMovement();
-            // #endif
 
             // Tọa độ trung tâm đường Vĩnh Khánh (khoảng Ốc Oanh)
             var location = _userLocation;
@@ -176,12 +162,6 @@ public partial class MapPage : ContentPage
                 Console.WriteLine($"DrawCircle error: {ex.Message}");
             }
         }
-
-        // Thêm lại user pin sau khi clear
-        if (_userPin != null)
-        {
-            MainMap.Pins.Add(_userPin);
-        }
     }
 
     private async Task SetupGps()
@@ -213,9 +193,6 @@ public partial class MapPage : ContentPage
 
                     MainThread.BeginInvokeOnMainThread(() =>
                     {
-                        if (_userPin != null)
-                            _userPin.Location = location;
-
                         MainMap?.MoveToRegion(
                             MapSpan.FromCenterAndRadius(
                                 location,
@@ -250,19 +227,6 @@ public partial class MapPage : ContentPage
                 if (MainMap == null) return;
 
                 var position = new Location(userLoc.Latitude, userLoc.Longitude);
-
-                if (_userPin != null)
-                    _userPin.Location = position;
-
-                // if (!_firstGpsFix)
-                // {
-                //     MainMap.MoveToRegion(
-                //         MapSpan.FromCenterAndRadius(
-                //             position,
-                //             Distance.FromMeters(300)));
-
-                //     _firstGpsFix = true;
-                // }
 
                 MainMap.MoveToRegion(
                     MapSpan.FromCenterAndRadius(position, Distance.FromMeters(300)));
