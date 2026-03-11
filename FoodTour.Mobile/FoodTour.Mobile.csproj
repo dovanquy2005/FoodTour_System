@@ -11,6 +11,8 @@
 		<AndroidFastDeployment>False</AndroidFastDeployment>
 		<RuntimeIdentifiers>android-arm;android-arm64;android-x86;android-x64</RuntimeIdentifiers>
 
+		<AndroidSupportedAbis>arm64-v8a;armeabi-v7a</AndroidSupportedAbis>
+
 		<ApplicationTitle>FoodTour</ApplicationTitle>
 		<ApplicationId>com.companyname.foodtour.mobile</ApplicationId>
 		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
