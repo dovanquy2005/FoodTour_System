@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FoodTour.Mobile.Models;
@@ -162,11 +162,7 @@ public partial class MapViewModel : BaseViewModel
         var data = await _dbService.GetShopsAsync();
         await MainThread.InvokeOnMainThreadAsync(() =>
         {
-            Shops.Clear();
-            foreach (var item in data)
-            {
-                Shops.Add(item);
-            }
+            Shops = new ObservableCollection<ShopModel>(data);
         });
     }
 }

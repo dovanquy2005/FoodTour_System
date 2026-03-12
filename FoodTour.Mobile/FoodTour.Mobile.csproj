@@ -21,6 +21,7 @@
 
 		<AndroidSdkDirectory>D:\Android\Sdk</AndroidSdkDirectory>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24.0</SupportedOSPlatformVersion>
+		<MauiEnableXamlCBindingWithSourceCompilation>true</MauiEnableXamlCBindingWithSourceCompilation>
 	</PropertyGroup>
 
 	<ItemGroup>
