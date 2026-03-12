@@ -1,16 +1,15 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Threading.Tasks;
 
 namespace FoodTour.Mobile;
 
 public partial class App : Application
 {
+    private Page _initialPage = new Views.SplashPage();
+
     public App(Services.ILocalizationService localizationService)
     {
         InitializeComponent();
-
-        // Prevent UI flash by using a blank page initially
-        MainPage = new ContentPage { BackgroundColor = Color.FromArgb("#120E0E") }; // Uses your Base Background or Black
 
         InitializeAppAsync(localizationService);
     }
@@ -37,27 +36,33 @@ public partial class App : Application
             Preferences.Default.Set("AppLanguage", currentLang);
         }
 
-        // Apply translation blockingly to memory before routing
-        await localizationService.ChangeLanguageAsync(currentLang);
+        // Load translation OTA if available. Combine with a 3-second minimum delay so the Splash Screen can be seen.
+        var locTask = localizationService.ChangeLanguageAsync(currentLang);
+        var delayTask = Task.Delay(3000);
+        await Task.WhenAll(locTask, delayTask);
 
         // Safe Routing
         var isSetupCompleted = Preferences.Default.Get("IsSetupCompleted", false);
 
         MainThread.BeginInvokeOnMainThread(() =>
         {
-            if (isSetupCompleted)
+            Page newPage = isSetupCompleted 
+                ? new AppShell() 
+                : new NavigationPage(new Views.OnboardingPage(localizationService));
+
+            if (Application.Current?.Windows.Count > 0)
             {
-                MainPage = new AppShell();
+                Application.Current.Windows[0].Page = newPage;
             }
             else
             {
-                MainPage = new NavigationPage(new Views.OnboardingPage(localizationService));
+                _initialPage = newPage;
             }
         });
     }
 
     protected override Window CreateWindow(IActivationState? activationState)
     {
-        return new Window(MainPage);
+        return new Window(_initialPage);
     }
 }

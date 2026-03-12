@@ -1,4 +1,4 @@
-﻿using Microsoft.Maui.Controls.Hosting;
+using Microsoft.Maui.Controls.Hosting;
 using Microsoft.Maui.Hosting;
 using Microsoft.Maui.Controls.Maps;
 using Microsoft.Maui.Maps;
@@ -44,7 +44,7 @@ public static class MauiProgram
         builder.Services.AddTransient<OnboardingPage>();
         builder.Services.AddSingleton<DatabaseService>();
         // Localization dependencies
-        builder.Services.AddSingleton<HttpClient>();
+        builder.Services.AddSingleton(sp => new HttpClient { Timeout = TimeSpan.FromSeconds(5) });
         builder.Services.AddSingleton<ILocalizationService, LocalizationService>();
         
         // Đăng ký cho tab MainPage (OTA Localization Test)

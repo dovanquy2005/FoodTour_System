@@ -1,4 +1,5 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FoodTour.Mobile.Models;
 using FoodTour.Mobile.Services;
@@ -21,7 +22,8 @@ namespace FoodTour.Mobile.ViewModels
             }
         }
 
-        public ObservableCollection<DishModel> Dishes { get; } = new();
+        [ObservableProperty]
+        ObservableCollection<DishModel> dishes = new();
 
         public ShopDetailViewModel(DatabaseService dbService)
         {
@@ -39,8 +41,7 @@ namespace FoodTour.Mobile.ViewModels
             var data = await _dbService.GetDishesByShopAsync(shopId);
             MainThread.BeginInvokeOnMainThread(() =>
             {
-                Dishes.Clear();
-                foreach (var d in data) Dishes.Add(d);
+                Dishes = new ObservableCollection<DishModel>(data);
             });
         }
     }
