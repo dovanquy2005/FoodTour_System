@@ -1,4 +1,4 @@
-﻿<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:models="clr-namespace:FoodTour.Mobile.Models"
              xmlns:viewmodels="clr-namespace:FoodTour.Mobile.ViewModels"
@@ -12,6 +12,15 @@
 
 		<!-- ═══════ HEADER ═══════ -->
 		<VerticalStackLayout Grid.Row="0" Margin="0,12,0,18" HorizontalOptions="Center" Spacing="2">
+			<!-- Offline Icon Badge -->
+			<Image Source="offline.png" 
+				   WidthRequest="40" 
+				   HeightRequest="40" 
+				   IsVisible="{Binding IsOffline}" 
+				   HorizontalOptions="Center"
+				   Margin="0,0,0,5"
+				   Aspect="AspectFit"/>
+			
 			<Label Text="{ext:Translate Explore_Title1}"
 			       TextColor="{StaticResource TextPrimary}"
 			       FontSize="22"
@@ -52,8 +61,7 @@
 		<!-- ═══════ DANH SÁCH QUÁN ĂN ═══════ -->
 		<CollectionView Grid.Row="2"
 		                ItemsSource="{Binding Shops}"
-		                SelectionMode="Single"
-		                SelectionChanged="OnShopSelected">
+		                SelectionMode="None">
 			<CollectionView.ItemTemplate>
 				<DataTemplate x:DataType="models:ShopModel">
 					<Border BackgroundColor="{StaticResource Surface}"
@@ -64,12 +72,15 @@
 					        Shadow="{Shadow Radius=8, Opacity=0.06, Offset='0,3'}">
 						<Grid RowDefinitions="175, Auto">
 
-							<!-- Ảnh quán + bo góc trên -->
+							<!-- Ảnh quán + bo góc trên (tap = mở chi tiết) -->
 							<Border Grid.Row="0"
 							        StrokeThickness="0"
 							        StrokeShape="RoundRectangle 16,16,0,0"
 							        BackgroundColor="{StaticResource Gray100}">
-								<Image Source="{Binding ImageUrl}" Aspect="AspectFill"/>
+								<Border.GestureRecognizers>
+									<TapGestureRecognizer Tapped="OnShopCardTapped" CommandParameter="{Binding .}" />
+								</Border.GestureRecognizers>
+								<Image Source="{Binding ImageUrl}" Aspect="AspectFill" InputTransparent="True"/>
 							</Border>
 
 							<!-- Badge rating -->
@@ -80,27 +91,51 @@
 							        HorizontalOptions="End"
 							        VerticalOptions="Start"
 							        Margin="0,10,10,0"
-							        Padding="9,5">
+							        Padding="9,5"
+							        InputTransparent="True">
 								<HorizontalStackLayout Spacing="4" VerticalOptions="Center">
 									<Label Text="★" TextColor="{StaticResource Primary}" FontSize="13" VerticalOptions="Center"/>
 									<Label Text="{Binding Rating}" TextColor="{StaticResource TextPrimary}" FontSize="12" FontAttributes="Bold" VerticalOptions="Center"/>
 								</HorizontalStackLayout>
 							</Border>
 
-							<!-- Thông tin quán -->
-							<VerticalStackLayout Grid.Row="1" Margin="14,12,14,14" Spacing="3">
-								<Label Text="{Binding Name}"
-								       TextColor="{StaticResource TextPrimary}"
-								       FontSize="17"
-								       FontAttributes="Bold"
-								       LineBreakMode="TailTruncation"
-								       MaxLines="1"/>
-								<Label Text="{Binding Address}"
-								       TextColor="{StaticResource TextSecondary}"
-								       FontSize="13"
-								       LineBreakMode="TailTruncation"
-								       MaxLines="1"/>
-							</VerticalStackLayout>
+							<!-- Thông tin quán + Nút dẫn đường -->
+							<Grid Grid.Row="1" ColumnDefinitions="*, Auto" Margin="14,12,14,14">
+								<!-- Tên + Địa chỉ (tap = mở chi tiết) -->
+								<VerticalStackLayout Grid.Column="0" Spacing="3" VerticalOptions="Center">
+									<VerticalStackLayout.GestureRecognizers>
+										<TapGestureRecognizer Tapped="OnShopCardTapped" CommandParameter="{Binding .}" />
+									</VerticalStackLayout.GestureRecognizers>
+									<Label Text="{Binding Name}"
+									       TextColor="{StaticResource TextPrimary}"
+									       FontSize="17"
+									       FontAttributes="Bold"
+									       LineBreakMode="TailTruncation"
+									       MaxLines="1"/>
+									<Label Text="{Binding Address}"
+									       TextColor="{StaticResource TextSecondary}"
+									       FontSize="13"
+									       LineBreakMode="TailTruncation"
+									       MaxLines="1"/>
+								</VerticalStackLayout>
+
+								<!-- Nút dẫn đường (dùng Image + Tap thay vì ImageButton) -->
+								<Border Grid.Column="1"
+								        StrokeThickness="0"
+								        WidthRequest="44" 
+								        HeightRequest="44"
+								        VerticalOptions="Center"
+								        Margin="8,0,0,0"
+								        Padding="4"
+								        BackgroundColor="Transparent">
+									<Border.GestureRecognizers>
+										<TapGestureRecognizer Tapped="OnNavigateToShopTapped" CommandParameter="{Binding .}" />
+									</Border.GestureRecognizers>
+									<Image Source="customer_journey.png" 
+									       Aspect="AspectFit"
+									       InputTransparent="True"/>
+								</Border>
+							</Grid>
 
 						</Grid>
 					</Border>

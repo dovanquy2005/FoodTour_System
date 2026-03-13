@@ -8,11 +8,13 @@ namespace FoodTour.Mobile.Views;
 public partial class OnboardingPage : ContentPage
 {
     private readonly Services.ILocalizationService _localizationService;
+    private readonly Services.DatabaseService _databaseService;
 
-    public OnboardingPage(Services.ILocalizationService localizationService)
+    public OnboardingPage(Services.ILocalizationService localizationService, Services.DatabaseService databaseService)
     {
         InitializeComponent();
         _localizationService = localizationService;
+        _databaseService = databaseService;
     }
 
     private async void OnDownloadOfflineClicked(object sender, EventArgs e)
@@ -21,29 +23,42 @@ public partial class OnboardingPage : ContentPage
         ButtonsArea.IsVisible = false;
         ProgressArea.IsVisible = true;
 
-        var downloadingTextTemplate = _localizationService["Onboarding_Downloading"] ?? "Đang tải... {0}%";
+        var downloadingTextTemplate = _localizationService["Onboarding_Downloading"] ?? "Đang tải dữ liệu... {0}%";
         var completeText = _localizationService["Onboarding_DownloadComplete"] ?? "Tải xuống hoàn tất!";
 
-        // Simulate file download
-        for (int i = 0; i <= 100; i += 2)
+        DownloadStatusLabel.Text = _localizationService["Onboarding_StartingDownload"] ?? "Đang bắt đầu tải...";
+        DownloadProgressBar.Progress = 0.1;
+
+        // Determine API URL (Emulator uses 10.0.2.2, Windows uses localhost)
+        string apiUrl = DeviceInfo.Platform == DevicePlatform.Android 
+            ? "http://10.0.2.2:5154" 
+            : "http://localhost:5154";
+
+        // REAL SYNC
+        bool success = await _databaseService.FullSyncAsync(apiUrl, _localizationService);
+
+        if (success)
         {
-            DownloadProgressBar.Progress = i / 100.0;
-            DownloadStatusLabel.Text = string.Format(downloadingTextTemplate, i);
-            await Task.Delay(50);
+            DownloadProgressBar.Progress = 1.0;
+            DownloadStatusLabel.Text = completeText;
+            await Task.Delay(1000);
+
+            // Save settings
+            Preferences.Default.Set("IsSetupCompleted", true);
+            Preferences.Default.Set("IsOfflineMode", true);
+
+            // Navigate to Main App
+            if (Application.Current?.Windows.Count > 0)
+            {
+                Application.Current.Windows[0].Page = new AppShell();
+            }
         }
-
-        // Complete
-        DownloadStatusLabel.Text = completeText;
-        await Task.Delay(500);
-
-        // Save settings
-        Preferences.Default.Set("IsSetupCompleted", true);
-        Preferences.Default.Set("IsOfflineMode", true);
-
-        // Navigate to Main App
-        if (Application.Current?.Windows.Count > 0)
+        else
         {
-            Application.Current.Windows[0].Page = new AppShell();
+            DownloadStatusLabel.Text = "Lỗi kết nối server. Vui lòng bật server admin.";
+            await Task.Delay(3000);
+            ButtonsArea.IsVisible = true;
+            ProgressArea.IsVisible = false;
         }
     }
 

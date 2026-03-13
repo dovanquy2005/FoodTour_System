@@ -123,6 +123,25 @@ namespace FoodTour.Mobile.Services
             }
         }
 
+        public async Task<bool> FullSyncAsync(string apiUrl, ILocalizationService localizationService)
+        {
+            // 1. Sync Data (Shops, Dishes, Images)
+            bool dataSuccess = await SyncDataFromApiAsync(apiUrl);
+            
+            // 2. Sync All Languages
+            try
+            {
+                await localizationService.PreloadAllLanguagesAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Language Sync Error: {ex.Message}");
+                // We might still consider it a partial success if data sync worked
+            }
+
+            return dataSuccess;
+        }
+
         // --- CÁC HÀM GET & BINDING ---
         public async Task<List<ShopModel>> GetShopsAsync()
         {

@@ -7,14 +7,14 @@ public partial class App : Application
 {
     private Page _initialPage = new Views.SplashPage();
 
-    public App(Services.ILocalizationService localizationService)
+    public App(Services.ILocalizationService localizationService, Services.DatabaseService databaseService)
     {
         InitializeComponent();
 
-        InitializeAppAsync(localizationService);
+        InitializeAppAsync(localizationService, databaseService);
     }
 
-    private async void InitializeAppAsync(Services.ILocalizationService localizationService)
+    private async void InitializeAppAsync(Services.ILocalizationService localizationService, Services.DatabaseService databaseService)
     {
         // Auto-Detect & Auto-Translate Logic
         // Gọi xuống hệ điều hành máy để hỏi xem máy đang cài ngôn ngữ gì 
@@ -36,9 +36,22 @@ public partial class App : Application
             Preferences.Default.Set("AppLanguage", currentLang);
         }
 
-        // Load translation OTA if available. Combine with a 3-second minimum delay so the Splash Screen can be seen.
-        var locTask = localizationService.ChangeLanguageAsync(currentLang);
-        var delayTask = Task.Delay(3000);
+        // Determine if we should wait for OTA localization
+        var isOfflineMode = Preferences.Default.Get("IsOfflineMode", false);
+        
+        Task locTask;
+        if (isOfflineMode)
+        {
+            // In offline mode, just trigger the change and move on (service uses cache)
+            locTask = localizationService.ChangeLanguageAsync(currentLang);
+        }
+        else
+        {
+            // In online mode, wait for it (blocks for better UX if server is up)
+            locTask = localizationService.ChangeLanguageAsync(currentLang);
+        }
+
+        var delayTask = Task.Delay(isOfflineMode ? 500 : 3000); // Shorter splash for offline
         await Task.WhenAll(locTask, delayTask);
 
         // Safe Routing
@@ -48,7 +61,7 @@ public partial class App : Application
         {
             Page newPage = isSetupCompleted 
                 ? new AppShell() 
-                : new NavigationPage(new Views.OnboardingPage(localizationService));
+                : new NavigationPage(new Views.OnboardingPage(localizationService, databaseService));
 
             if (Application.Current?.Windows.Count > 0)
             {

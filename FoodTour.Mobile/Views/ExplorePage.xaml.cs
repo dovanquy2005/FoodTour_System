@@ -1,5 +1,7 @@
-﻿using FoodTour.Mobile.Models;
+using FoodTour.Mobile.Models;
 using FoodTour.Mobile.ViewModels;
+using FoodTour.Mobile.Messages;
+using CommunityToolkit.Mvvm.Messaging;
 
 namespace FoodTour.Mobile.Views;
 
@@ -20,12 +22,30 @@ public partial class ExplorePage : ContentPage
         await _viewModel.LoadShops();
     }
 
-    private async void OnShopSelected(object sender, SelectionChangedEventArgs e)
+    private async void OnShopCardTapped(object? sender, TappedEventArgs e)
     {
-        if (e.CurrentSelection.FirstOrDefault() is ShopModel shop)
+        if (e.Parameter is ShopModel shop)
         {
             await _viewModel.GoToDetailCommand.ExecuteAsync(shop);
-            ((CollectionView)sender).SelectedItem = null;
+        }
+    }
+
+    private async void OnNavigateToShopTapped(object? sender, TappedEventArgs e)
+    {
+        if (e.Parameter is ShopModel shop)
+        {
+            try
+            {
+                // Gửi message trước khi chuyển tab
+                WeakReferenceMessenger.Default.Send(new RouteToShopMessage(shop));
+
+                // Chuyển sang tab Map
+                await Shell.Current.GoToAsync("//MapPage");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Navigate error: {ex.Message}");
+            }
         }
     }
 }

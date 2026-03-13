@@ -1,5 +1,7 @@
-﻿using FoodTour.Mobile.Services;
+using FoodTour.Mobile.Services;
 using FoodTour.Mobile.ViewModels;
+using FoodTour.Mobile.Messages;
+using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Maui.Controls.Maps;
 using Microsoft.Maui.Devices.Sensors;
 using Microsoft.Maui.Maps;
@@ -12,7 +14,8 @@ public partial class MapPage : ContentPage
     private MapViewModel _viewModel;
     private string _lastEnteredShopName = string.Empty; // Lưu tên quán vừa ghé để tránh lặp lại thuyết minh
     private Location _userLocation = new Location(10.761884, 106.702000); // Vị trí người dùng
-    // private bool _firstGpsFix = false;
+    private Models.ShopModel? _pendingRouteShop = null; // Quán cần chỉ đường nếu Map chưa vẽ xong
+
     public MapPage(MapViewModel vm)
     {
         try
@@ -41,6 +44,21 @@ public partial class MapPage : ContentPage
         BindingContext = vm;
         _viewModel = vm;
         MainMap.Loaded += MainMap_Loaded;
+
+        // Xử lý sự kiện "Dẫn Đường"
+        WeakReferenceMessenger.Default.Register<RouteToShopMessage>(this, (r, m) =>
+        {
+            if (MainMap != null && MainMap.Handler != null)
+            {
+                // Map đã sẵn sàng, vẽ đường ngay lập tức
+                DrawRouteToShop(m.TargetShop);
+            }
+            else
+            {
+                // Map chưa khởi tạo xong, lưu lại và vẽ khi Loaded
+                _pendingRouteShop = m.TargetShop;
+            }
+        });
     }
 
     protected override async void OnAppearing()
@@ -106,9 +124,17 @@ public partial class MapPage : ContentPage
                 MainMap.IsShowingUser = true;
             }
 
-            // Tọa độ trung tâm đường Vĩnh Khánh (khoảng Ốc Oanh)
-            // var location = _userLocation;
-            MainMap?.MoveToRegion(MapSpan.FromCenterAndRadius(_userLocation, Distance.FromMeters(250)));
+            // Nếu có yêu cầu chỉ đường từ trang Khám Phá, vẽ đường ngay
+            if (_pendingRouteShop != null)
+            {
+                DrawRouteToShop(_pendingRouteShop);
+                _pendingRouteShop = null; // Reset sau khi xử lý xong
+            }
+            else
+            {
+                // Chỉ tập trung vào vị trí người dùng nếu KHÔNG có yêu cầu chỉ đường
+                MainMap?.MoveToRegion(MapSpan.FromCenterAndRadius(_userLocation, Distance.FromMeters(250)));
+            }
         }
         catch (Exception ex)
         {
@@ -160,6 +186,53 @@ public partial class MapPage : ContentPage
                 Console.WriteLine($"DrawCircle error: {ex.Message}");
             }
         }
+    }
+
+    private void DrawRouteToShop(Models.ShopModel targetShop)
+    {
+        if (MainMap == null) return;
+
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            try
+            {
+                // Xóa mọi Polyline cũ trước khi vẽ đường mới
+                var oldPolylines = MainMap.MapElements.Where(e => e is Polyline).ToList();
+                foreach (var line in oldPolylines)
+                {
+                    MainMap.MapElements.Remove(line);
+                }
+
+                // Vẽ đường chim bay nét đứt (thực ra nét đứt phụ thuộc nền tảng, ta dùng stroke dày)
+                var routeLine = new Polyline
+                {
+                    StrokeColor = Colors.Blue,
+                    StrokeWidth = 8,
+                    Geopath =
+                    {
+                        _userLocation,          // Điểm bắt đầu (Người dùng)
+                        targetShop.Location     // Điểm kết thúc (Quán)
+                    }
+                };
+
+                MainMap.MapElements.Add(routeLine);
+
+                // Dời khung hình (Camera) ra giữa hai điểm để người dùng thấy tổng quan
+                double centerLat = (_userLocation.Latitude + targetShop.Location.Latitude) / 2;
+                double centerLng = (_userLocation.Longitude + targetShop.Location.Longitude) / 2;
+                double distanceKm = Location.CalculateDistance(_userLocation, targetShop.Location, DistanceUnits.Kilometers);
+                
+                // Mở rộng bán kính hiển thị thêm 20% cho thoải mái
+                double radiusMeters = (distanceKm * 1000) * 0.6; 
+                if (radiusMeters < 300) radiusMeters = 300; // Tối thiểu 300m
+
+                MainMap.MoveToRegion(MapSpan.FromCenterAndRadius(new Location(centerLat, centerLng), Distance.FromMeters(radiusMeters)));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"DrawRoute error: {ex.Message}");
+            }
+        });
     }
 
     private async Task SetupGps()

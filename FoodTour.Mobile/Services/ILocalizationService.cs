@@ -28,6 +28,16 @@ namespace FoodTour.Mobile.Services
         /// while making sure the Locale accurately matches the active language setting.
         /// </summary>
         /// <param name="key">The translation key</param>
+        /// <summary>
+        /// Read the translated text aloud corresponding to the given key, utilizing MAUI's Text-to-Speech API 
+        /// while making sure the Locale accurately matches the active language setting.
+        /// </summary>
+        /// <param name="key">The translation key</param>
         Task SpeakTextAsync(string key);
+
+        /// <summary>
+        /// Pre-downloads all supported languages to ensure offline availability.
+        /// </summary>
+        Task PreloadAllLanguagesAsync();
     }
 }

@@ -65,17 +65,38 @@ namespace FoodTour.Mobile.Services
             // FileSystem.AppDataDirectory securely persists across app launches 
             var filePath = Path.Combine(FileSystem.AppDataDirectory, fileName);
 
+            // Kiểm tra xem có đang ở chế độ Offline không
+            bool isOfflineMode = Preferences.Default.Get("IsOfflineMode", false);
+
+            if (isOfflineMode && File.Exists(filePath))
+            {
+                // Load ngay lập tức từ cache nếu đang chạy Offline
+                try
+                {
+                    var cachedJson = await File.ReadAllTextAsync(filePath);
+                    UpdateDictionaryFromJson(cachedJson);
+                    NotifyTranslationsChanged();
+                    Console.WriteLine($"[LocalizationService] Applied cached translation for '{languageCode}' (Offline Mode).");
+                    return; // Thoát sớm, không cần gọi API
+                }
+                catch (Exception fileException)
+                {
+                    Console.WriteLine($"[LocalizationService] Cache retrieval failed: {fileException.Message}");
+                    // Nếu lỗi đọc file, tiếp tục thử tải từ API
+                }
+            }
+
             try
             {
                 // Determine the correct Dev Tunnel or localhost port here
-                // Note for Devs: Replace '7295' with your exact API port
-                // Windows (Kestrel): https://localhost:7135
-                // Android Emulator: http://10.0.2.2:5154 (HTTP)
-                string baseUrl = DeviceInfo.Platform == DevicePlatform.Android ? "http://10.0.2.2:5154" : "https://localhost:7135";
+                string baseUrl = DeviceInfo.Platform == DevicePlatform.Android ? "http://10.0.2.2:5154" : "http://localhost:5154";
                 string requestUrl = $"{baseUrl}/locales/{languageCode}.json";
 
-                // Attempt OTA fetching of the Localization dictionary
-                var response = await _httpClient.GetAsync(requestUrl);
+                // Thay vì dùng _httpClient mặc định, ta dùng 1 client với Timeout rất ngắn (ví dụ 1.5s)
+                // để tránh giật lag UI khi server sập nhưng chưa kịp bật Offline mode
+                using var quickClient = new HttpClient { Timeout = TimeSpan.FromSeconds(1.5) };
+
+                var response = await quickClient.GetAsync(requestUrl);
                 response.EnsureSuccessStatusCode();
 
                 var jsonContent = await response.Content.ReadAsStringAsync();
@@ -182,6 +203,39 @@ namespace FoodTour.Mobile.Services
             catch (Exception ex)
             {
                 Console.WriteLine($"[LocalizationService] TTS Execution failed: {ex.Message}");
+            }
+        }
+        /// <summary>
+        /// Pre-downloads all supported languages to ensure offline availability.
+        /// </summary>
+        public async Task PreloadAllLanguagesAsync()
+        {
+            var supportedLangs = new[] { "vi", "en", "ja", "ru", "zh" };
+            string baseUrl = DeviceInfo.Platform == DevicePlatform.Android ? "http://10.0.2.2:5154" : "http://localhost:5154";
+            
+            // Dùng client timeout ngắn để không bị treo nếu lỗi mạng
+            using var quickClient = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+
+            foreach (var lang in supportedLangs)
+            {
+                var fileName = $"locale_{lang}.json";
+                var filePath = Path.Combine(FileSystem.AppDataDirectory, fileName);
+                string requestUrl = $"{baseUrl}/locales/{lang}.json";
+
+                try
+                {
+                    var response = await quickClient.GetAsync(requestUrl);
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var jsonContent = await response.Content.ReadAsStringAsync();
+                        await File.WriteAllTextAsync(filePath, jsonContent);
+                        Console.WriteLine($"[LocalizationService] Preloaded language '{lang}'.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[LocalizationService] Preload failed for '{lang}': {ex.Message}");
+                }
             }
         }
     }

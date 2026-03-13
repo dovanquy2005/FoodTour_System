@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using FoodTour.Mobile.Models;
 using FoodTour.Mobile.Services;
 using FoodTour.Mobile.Views;
+using CommunityToolkit.Mvvm.Messaging;
 
 namespace FoodTour.Mobile.ViewModels
 {
@@ -14,9 +15,13 @@ namespace FoodTour.Mobile.ViewModels
         [ObservableProperty]
         ObservableCollection<ShopModel> shops = new();
 
+        [ObservableProperty]
+        private bool isOffline;
+
         public ExploreViewModel(DatabaseService dbService)
         {
             _dbService = dbService;
+            IsOffline = Preferences.Default.Get("IsOfflineMode", false);
         }
 
         [RelayCommand]
@@ -37,6 +42,18 @@ namespace FoodTour.Mobile.ViewModels
             {
                 { "ShopData", shop }
             });
+        }
+
+        [RelayCommand]
+        async Task NavigateToShop(ShopModel shop)
+        {
+            if (shop == null) return;
+
+            // Gửi message sang MapPage
+            CommunityToolkit.Mvvm.Messaging.WeakReferenceMessenger.Default.Send(new Messages.RouteToShopMessage(shop));
+
+            // Chuyển sang tab Map (có route name là MainTabs)
+            await Shell.Current.GoToAsync("//MainTabs/MapPage");
         }
     }
 }
