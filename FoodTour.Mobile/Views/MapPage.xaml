@@ -3,7 +3,7 @@
 			 xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
 			 xmlns:maps="clr-namespace:Microsoft.Maui.Controls.Maps;assembly=Microsoft.Maui.Controls.Maps"
 			 xmlns:viewmodels="clr-namespace:FoodTour.Mobile.ViewModels"
-             xmlns:ext="clr-namespace:FoodTour.Mobile.Extensions"
+			 xmlns:ext="clr-namespace:FoodTour.Mobile.Extensions"
 			 x:Class="FoodTour.Mobile.Views.MapPage"
 			 x:DataType="viewmodels:MapViewModel"
 			 Shell.NavBarIsVisible="False"
@@ -12,7 +12,8 @@
 	<Grid>
 		<!-- Bản đồ chính -->
 		<maps:Map x:Name="MainMap"
-				  MapType="Street"/>
+				  MapType="Street"
+				  IsShowingUser="True"/>
 
 		<!-- ═══════ FLOATING AUDIO PLAYER ═══════ -->
 		<Border x:Name="PlayerBar"
