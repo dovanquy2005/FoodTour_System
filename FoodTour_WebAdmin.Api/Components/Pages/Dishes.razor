@@ -111,10 +111,16 @@
             <RowTemplate>
                 <MudTd>
                     <MudStack Row AlignItems="AlignItems.Center" Spacing="3">
-                        <MudAvatar Size="Size.Medium"
-                                   Style="background: #FFF0E6; color: #E8672A; border-radius: 8px;">
-                            <MudIcon Icon="@Icons.Material.Filled.LunchDining" />
-                        </MudAvatar>
+                        @if (!string.IsNullOrEmpty(context.ImageUrl) && (context.ImageUrl.Contains("/") || context.ImageUrl.StartsWith("data:image", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            <MudAvatar Size="Size.Medium" Image="@context.ImageUrl" Style="background: transparent;" />
+                        }
+                        else
+                        {
+                            <MudAvatar Size="Size.Medium" Style="background: #FFF0E6; color: #E8672A; border-radius: 8px;">
+                                <MudIcon Icon="@Icons.Material.Filled.LunchDining" />
+                            </MudAvatar>
+                        }
                         <MudStack Spacing="0">
                             <MudText Style="font-weight: 600; color: #2D1F14;">@context.Name</MudText>
                             <MudText Typo="Typo.caption" Style="color: #B5A899;">@(context.Id?.Length > 8 ? context.Id[..8] + "..." : context.Id ?? "")</MudText>
@@ -189,7 +195,7 @@
                 <div style="border: 1px dashed #C85520; border-radius: 12px; padding: 16px; text-align: center; background: #FFF0E6;">
                     <MudText Typo="Typo.body2" Style="color: #E8672A; font-weight: 600; margin-bottom: 8px;">📸 Tải ảnh lên</MudText>
                     <InputFile OnChange="UploadImage" accept=".jpg,.jpeg,.png,.webp" class="form-control" style="font-size: 0.85rem;" />
-                    @if (!string.IsNullOrEmpty(_editDish.ImageUrl))
+                    @if (!string.IsNullOrEmpty(_editDish.ImageUrl) && (_editDish.ImageUrl.Contains("/") || _editDish.ImageUrl.StartsWith("data:image", StringComparison.OrdinalIgnoreCase)))
                     {
                         <div style="margin-top: 12px;">
                             <img src="@_editDish.ImageUrl" style="height: 100px; border-radius: 8px; object-fit: cover;" />

@@ -1,4 +1,3 @@
-using Microsoft.Maui.Devices.Sensors;
 using SQLite;
 
 namespace FoodTour.Mobile.Models
@@ -11,9 +10,14 @@ namespace FoodTour.Mobile.Models
         [Indexed] // Đánh chỉ mục để tìm kiếm theo Shop nhanh hơn
         public string ShopId { get; set; } = string.Empty; // Khóa ngoại liên kết với ShopModel.Id
 
-        public string Name { get; set; } = string.Empty;
         public double Price { get; set; }
         public string ImageUrl { get; set; } = string.Empty;
-        
+
+        // For API Deserialization and View Binding
+        [Ignore]
+        public List<DishTranslationModel> DishTranslations { get; set; } = new();
+
+        [Ignore]
+        public string Name { get; set; } = string.Empty;
     }
 }

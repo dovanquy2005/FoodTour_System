@@ -1,4 +1,4 @@
-﻿using Microsoft.Maui.Devices.Sensors;
+using Microsoft.Maui.Devices.Sensors;
 using SQLite;
 
 namespace FoodTour.Mobile.Models
@@ -8,9 +8,6 @@ namespace FoodTour.Mobile.Models
         [PrimaryKey]
         public string Id { get; set; } = string.Empty;
 
-        public string Name { get; set; } = string.Empty;
-        public string Address { get; set; } = string.Empty;
-        public string Description { get; set; } = string.Empty;
         public string ImageUrl { get; set; } = string.Empty;
         public double Latitude { get; set; }
         public double Longitude { get; set; }
@@ -19,5 +16,16 @@ namespace FoodTour.Mobile.Models
 
         [Ignore]
         public Location Location => new Location(Latitude, Longitude);
+
+        // For API Deserialization and View Binding
+        [Ignore]
+        public List<ShopTranslationModel> ShopTranslations { get; set; } = new();
+
+        [Ignore]
+        public string Name { get; set; } = string.Empty;
+        [Ignore]
+        public string Address { get; set; } = string.Empty;
+        [Ignore]
+        public string Description { get; set; } = string.Empty;
     }
 }

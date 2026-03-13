@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FoodTour.Mobile.Services;
 using FoodTour.Mobile.Models;
@@ -8,6 +8,9 @@ namespace FoodTour.Mobile.ViewModels
 {
     public partial class SettingsViewModel : BaseViewModel
     {
+        [ObservableProperty]
+        private bool isBusy;
+
         [ObservableProperty]
         private bool isAutoPlay = true;
 
@@ -30,10 +33,12 @@ namespace FoodTour.Mobile.ViewModels
         private LanguageOption? selectedLanguageItem;
 
         private readonly ILocalizationService _localizationService;
+        private readonly DatabaseService _dbService;
 
-        public SettingsViewModel(ILocalizationService localizationService)
+        public SettingsViewModel(ILocalizationService localizationService, DatabaseService dbService)
         {
             _localizationService = localizationService;
+            _dbService = dbService;
             
             // Resume preferred language
             var savedLang = Preferences.Default.Get("AppLanguage", "vi");
@@ -106,11 +111,31 @@ namespace FoodTour.Mobile.ViewModels
         [RelayCommand]
         public async Task UpdateData()
         {
-            OfflineStatus = "120MB";
-            await Task.Delay(1500); // Simulate download
-            OfflineStatus = "125MB";
-            if (Shell.Current != null)
-                await Shell.Current.DisplayAlert(_localizationService["Common_Success"], _localizationService["Settings_UpdateSuccess"], _localizationService["Common_OK"]);
+            if (IsBusy) return;
+            IsBusy = true;
+            OfflineStatus = "Đang đồng bộ...";
+
+            // Determine API URL (Emulator uses 10.0.2.2, Windows uses localhost)
+            string apiUrl = DeviceInfo.Platform == DevicePlatform.Android 
+                ? "http://10.0.2.2:5154" 
+                : "http://localhost:5154";
+
+            bool success = await _dbService.SyncDataFromApiAsync(apiUrl);
+
+            if (success)
+            {
+                OfflineStatus = "Đã đồng bộ";
+                if (Shell.Current != null)
+                    await Shell.Current.DisplayAlert(_localizationService["Common_Success"], _localizationService["Settings_UpdateSuccess"], _localizationService["Common_OK"]);
+            }
+            else
+            {
+                OfflineStatus = "Lỗi đồng bộ";
+                if (Shell.Current != null)
+                    await Shell.Current.DisplayAlert("Lỗi", "Không thể cập nhật dữ liệu từ máy chủ.", _localizationService["Common_OK"]);
+            }
+            
+            IsBusy = false;
         }
 
         [RelayCommand]

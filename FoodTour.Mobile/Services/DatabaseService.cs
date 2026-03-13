@@ -1,5 +1,6 @@
-﻿using SQLite;
+using SQLite;
 using FoodTour.Mobile.Models;
+using System.Net.Http.Json;
 
 namespace FoodTour.Mobile.Services
 {
@@ -12,106 +13,178 @@ namespace FoodTour.Mobile.Services
             if (_database is not null)
                 return;
 
-            // 1. Đường dẫn Database
             var dbPath = Path.Combine(FileSystem.AppDataDirectory, "FoodTour.db3");
             _database = new SQLiteAsyncConnection(dbPath);
 
-            // 2. Tạo bảng ShopModel (thay thế PoiModel) và DishModel
+            // Xóa bảng cũ 1 lần để đảm bảo chuẩn schema mới (Migration)
+            if (!Preferences.Default.ContainsKey("DatabaseMigratedV2"))
+            {
+                await _database.DropTableAsync<ShopModel>();
+                await _database.DropTableAsync<DishModel>();
+                Preferences.Default.Set("DatabaseMigratedV2", true);
+            }
+
             await _database.CreateTableAsync<ShopModel>();
             await _database.CreateTableAsync<DishModel>();
+            await _database.CreateTableAsync<ShopTranslationModel>();
+            await _database.CreateTableAsync<DishTranslationModel>();
+        }
 
-            // 3. Kiểm tra và Seed dữ liệu chuẩn đường Vĩnh Khánh
-            int count = await _database.Table<ShopModel>().CountAsync();
-            if (count == 0)
+        private async Task<string> DownloadAndCacheImageAsync(HttpClient httpClient, string apiUrl, string relativeUrl)
+        {
+            if (string.IsNullOrEmpty(relativeUrl)) return relativeUrl;
+            
+            try
             {
-                await SeedInitialData();
+                var fileName = Path.GetFileName(relativeUrl);
+                var localPath = Path.Combine(FileSystem.AppDataDirectory, fileName);
+                
+                if (!File.Exists(localPath))
+                {
+                    var fullUrl = apiUrl.TrimEnd('/') + relativeUrl;
+                    var imageBytes = await httpClient.GetByteArrayAsync(fullUrl);
+                    await File.WriteAllBytesAsync(localPath, imageBytes);
+                }
+                return localPath;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Download image error: {ex.Message}");
+                return relativeUrl;
             }
         }
 
-        private async Task SeedInitialData()
+        public async Task<bool> SyncDataFromApiAsync(string apiUrl)
         {
-            // Tạo ID cố định để liên kết Shop và Dish
-            var shop1Id = Guid.NewGuid().ToString();
-            var shop2Id = Guid.NewGuid().ToString();
-            var shop3Id = Guid.NewGuid().ToString();
-
-            // --- SEED SHOPS (3 quán tiêu biểu trên đường Vĩnh Khánh) ---
-            var shops = new List<ShopModel>
+            await Init();
+            try
             {
-                new ShopModel 
-                { 
-                    Id = shop1Id, 
-                    Name = "Ốc Oanh 1", 
-                    Address = "534 Vĩnh Khánh, Quận 4", 
-                    Latitude = 10.75895, // Cập nhật: Sát mép đường Phường 8
-                    Longitude = 106.70945, 
-                    Description = "Quán ốc nổi tiếng nhất nhì Sài Gòn, nằm trong Michelin Guide 2024.", 
-                    Rating = 4.8, 
-                    ImageUrl = "shop_01.jpg" 
-                },
-                new ShopModel 
-                { 
-                    Id = shop2Id, 
-                    Name = "Ốc Đào II", 
-                    Address = "232/123 Vĩnh Khánh, Quận 4", 
-                    Latitude = 10.76042, // Cập nhật: Vị trí mặt tiền đường
-                    Longitude = 106.70589, 
-                    Description = "Chi nhánh của thương hiệu ốc Đào nổi tiếng, nước sốt đậm đà, không gian rộng rãi.", 
-                    Rating = 4.5, 
-                    ImageUrl = "shop_02.jpg" 
-                },
-                new ShopModel 
-                { 
-                    Id = shop3Id, 
-                    Name = "Ốc Vũ", 
-                    Address = "395 Vĩnh Khánh, Quận 4", 
-                    Latitude = 10.75933, // Cập nhật: Ngay đoạn giữa khu phố ốc
-                    Longitude = 106.70814, 
-                    Description = "Quán ốc bình dân với không khí nhộn nhịp đặc trưng của phố ẩm thực.", 
-                    Rating = 4.2, 
-                    ImageUrl = "shop_03.jpg" 
+                using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+                
+                // 1. Fetch Shops
+                var shopsResponse = await httpClient.GetAsync($"{apiUrl}/api/shops");
+                if (shopsResponse.IsSuccessStatusCode)
+                {
+                    var shops = await shopsResponse.Content.ReadFromJsonAsync<List<ShopModel>>();
+                    if (shops != null)
+                    {
+                        foreach (var shop in shops)
+                        {
+                            if (!string.IsNullOrEmpty(shop.ImageUrl) && shop.ImageUrl.StartsWith("/"))
+                            {
+                                shop.ImageUrl = await DownloadAndCacheImageAsync(httpClient, apiUrl, shop.ImageUrl);
+                            }
+
+                            await _database!.InsertOrReplaceAsync(shop);
+                            if (shop.ShopTranslations != null)
+                            {
+                                // Xóa translation cũ của shop này để tránh duplicate (Upsert mechanism)
+                                var oldTrans = await _database.Table<ShopTranslationModel>().Where(t => t.ShopId == shop.Id).ToListAsync();
+                                foreach (var t in oldTrans) await _database.DeleteAsync(t);
+                                
+                                await _database.InsertAllAsync(shop.ShopTranslations);
+                            }
+                        }
+                    }
                 }
-            };
-            await _database!.InsertAllAsync(shops);
 
-            // --- SEED DISHES (Mỗi quán 5 món ăn) ---
-            var dishes = new List<DishModel>
+                // 2. Fetch Dishes
+                var dishesResponse = await httpClient.GetAsync($"{apiUrl}/api/dishes");
+                if (dishesResponse.IsSuccessStatusCode)
+                {
+                    var dishes = await dishesResponse.Content.ReadFromJsonAsync<List<DishModel>>();
+                    if (dishes != null)
+                    {
+                        foreach (var dish in dishes)
+                        {
+                            if (!string.IsNullOrEmpty(dish.ImageUrl) && dish.ImageUrl.StartsWith("/"))
+                            {
+                                dish.ImageUrl = await DownloadAndCacheImageAsync(httpClient, apiUrl, dish.ImageUrl);
+                            }
+
+                            await _database!.InsertOrReplaceAsync(dish);
+                            if (dish.DishTranslations != null)
+                            {
+                                var oldTrans = await _database.Table<DishTranslationModel>().Where(t => t.DishId == dish.Id).ToListAsync();
+                                foreach (var t in oldTrans) await _database.DeleteAsync(t);
+
+                                await _database.InsertAllAsync(dish.DishTranslations);
+                            }
+                        }
+                    }
+                }
+
+                return true;
+            }
+            catch (Exception ex)
             {
-                // Món của Ốc Oanh (shop_01)
-                new DishModel { ShopId = shop1Id, Name = "Càng ghẹ rang muối", Price = 120000, ImageUrl = "dish_01.jpg" },
-                new DishModel { ShopId = shop1Id, Name = "Hào nướng phô mai", Price = 50000, ImageUrl = "dish_02.jpg" },
-                new DishModel { ShopId = shop1Id, Name = "Nghêu hấp Thái", Price = 120000, ImageUrl = "dish_03.jpg" },
-                new DishModel { ShopId = shop1Id, Name = "Bạch tuộc nướng muối ớt", Price = 160000, ImageUrl = "dish_04.jpg" },
-                new DishModel { ShopId = shop1Id, Name = "Chem chép xào tỏi", Price = 120000, ImageUrl = "dish_05.jpg" },
-
-                // Món của Ốc Đào II (shop_02)
-                new DishModel { ShopId = shop2Id, Name = "Ốc hương rang muối ớt", Price = 110000, ImageUrl = "dish_01.jpg" },
-                new DishModel { ShopId = shop2Id, Name = "Ốc hương xào bơ", Price = 110000, ImageUrl = "dish_02.jpg" },
-                new DishModel { ShopId = shop2Id, Name = "Sò huyết xào tỏi", Price = 110000, ImageUrl = "dish_03.jpg" },
-                new DishModel { ShopId = shop2Id, Name = "Nghêu hấp sả", Price = 80000, ImageUrl = "dish_04.jpg" },
-                new DishModel { ShopId = shop2Id, Name = "Ốc mỡ xào me", Price = 110000, ImageUrl = "dish_05.jpg" },
-
-                // Món của Ốc Vũ (shop_03)
-                new DishModel { ShopId = shop3Id, Name = "Lưỡi vịt Sapo", Price = 100000, ImageUrl = "dish_01.jpg" },
-                new DishModel { ShopId = shop3Id, Name = "Ốc tỏi nướng mắm", Price = 60000, ImageUrl = "dish_02.jpg" },
-                new DishModel { ShopId = shop3Id, Name = "Răng mực rang muối", Price = 60000, ImageUrl = "dish_03.jpg" },
-                new DishModel { ShopId = shop3Id, Name = "Bò lúc lắc", Price = 110000, ImageUrl = "dish_04.jpg" },
-                new DishModel { ShopId = shop3Id, Name = "Khoai tây chiên", Price = 50000, ImageUrl = "dish_05.jpg" }
-            };
-            await _database.InsertAllAsync(dishes);
+                System.Diagnostics.Debug.WriteLine($"Sync Error: {ex.Message}");
+                return false;
+            }
         }
 
-        // --- CÁC HÀM CRUD SHOP ---
+        // --- CÁC HÀM GET & BINDING ---
         public async Task<List<ShopModel>> GetShopsAsync()
         {
             await Init();
-            return await _database!.Table<ShopModel>().ToListAsync();
+            var langCode = Preferences.Default.Get("AppLanguage", "vi");
+            var shops = await _database!.Table<ShopModel>().ToListAsync();
+
+            foreach (var shop in shops)
+            {
+                var trans = await _database.Table<ShopTranslationModel>()
+                    .Where(t => t.ShopId == shop.Id && t.LanguageCode == langCode)
+                    .FirstOrDefaultAsync();
+
+                if (trans != null)
+                {
+                    shop.Name = trans.Name;
+                    shop.Address = trans.Address;
+                    shop.Description = trans.Description;
+                }
+            }
+            return shops;
         }
 
-        public async Task<ShopModel> GetShopAsync(string id)
+        public async Task<ShopModel?> GetShopAsync(string id)
         {
             await Init();
-            return await _database!.Table<ShopModel>().Where(i => i.Id == id).FirstOrDefaultAsync();
+            var langCode = Preferences.Default.Get("AppLanguage", "vi");
+            var shop = await _database!.Table<ShopModel>().Where(i => i.Id == id).FirstOrDefaultAsync();
+            if (shop != null)
+            {
+                var trans = await _database.Table<ShopTranslationModel>()
+                    .Where(t => t.ShopId == shop.Id && t.LanguageCode == langCode)
+                    .FirstOrDefaultAsync();
+
+                if (trans != null)
+                {
+                    shop.Name = trans.Name;
+                    shop.Address = trans.Address;
+                    shop.Description = trans.Description;
+                }
+            }
+            return shop;
+        }
+
+        public async Task<List<DishModel>> GetDishesByShopAsync(string shopId)
+        {
+            await Init();
+            var langCode = Preferences.Default.Get("AppLanguage", "vi");
+            var dishes = await _database!.Table<DishModel>().Where(d => d.ShopId == shopId).ToListAsync();
+
+            foreach (var dish in dishes)
+            {
+                var trans = await _database.Table<DishTranslationModel>()
+                    .Where(t => t.DishId == dish.Id && t.LanguageCode == langCode)
+                    .FirstOrDefaultAsync();
+
+                if (trans != null)
+                {
+                    dish.Name = trans.Name;
+                }
+            }
+            return dishes;
         }
 
         public async Task<int> AddShopAsync(ShopModel shop)
@@ -119,13 +192,6 @@ namespace FoodTour.Mobile.Services
             await Init();
             if (string.IsNullOrEmpty(shop.Id)) shop.Id = Guid.NewGuid().ToString();
             return await _database!.InsertAsync(shop);
-        }
-
-        // --- CÁC HÀM TRUY VẤN MÓN ĂN ---
-        public async Task<List<DishModel>> GetDishesByShopAsync(string shopId)
-        {
-            await Init();
-            return await _database!.Table<DishModel>().Where(d => d.ShopId == shopId).ToListAsync();
         }
 
         public async Task<int> DeleteShopAsync(ShopModel shop)

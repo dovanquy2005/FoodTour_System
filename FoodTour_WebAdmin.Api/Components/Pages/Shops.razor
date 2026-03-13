@@ -113,9 +113,16 @@
             <RowTemplate>
                 <MudTd>
                     <MudStack Row AlignItems="AlignItems.Center" Spacing="3">
-                        <MudAvatar Size="Size.Medium" Style="background: linear-gradient(135deg, #E8672A, #F4A574); font-weight: 700; color: white;">
-                            @(string.IsNullOrEmpty(context.Name) ? "?" : context.Name[0].ToString().ToUpper())
-                        </MudAvatar>
+                        @if (!string.IsNullOrEmpty(context.ImageUrl) && (context.ImageUrl.Contains("/") || context.ImageUrl.StartsWith("data:image", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            <MudAvatar Size="Size.Medium" Image="@context.ImageUrl" Style="background: transparent;" />
+                        }
+                        else
+                        {
+                            <MudAvatar Size="Size.Medium" Style="background: linear-gradient(135deg, #E8672A, #F4A574); font-weight: 700; color: white;">
+                                @(string.IsNullOrEmpty(context.Name) ? "?" : context.Name[0].ToString().ToUpper())
+                            </MudAvatar>
+                        }
                         <MudStack Spacing="0">
                             <MudText Style="font-weight: 600; color: #2D1F14;">@context.Name</MudText>
                             <MudText Typo="Typo.caption" Style="color: #B5A899;">@(context.Id?.Length > 8 ? context.Id[..8] + "..." : context.Id ?? "")</MudText>
@@ -192,7 +199,7 @@
                 <div style="border: 1px dashed #C85520; border-radius: 12px; padding: 16px; text-align: center; background: #FFF0E6;">
                     <MudText Typo="Typo.body2" Style="color: #E8672A; font-weight: 600; margin-bottom: 8px;">📸 Tải ảnh lên</MudText>
                     <InputFile OnChange="UploadImage" accept=".jpg,.jpeg,.png,.webp" class="form-control" style="font-size: 0.85rem;" />
-                    @if (!string.IsNullOrEmpty(_editShop.ImageUrl))
+                    @if (!string.IsNullOrEmpty(_editShop.ImageUrl) && (_editShop.ImageUrl.Contains("/") || _editShop.ImageUrl.StartsWith("data:image", StringComparison.OrdinalIgnoreCase)))
                     {
                         <div style="margin-top: 12px;">
                             <img src="@_editShop.ImageUrl" style="height: 100px; border-radius: 8px; object-fit: cover;" />
