@@ -44,36 +44,7 @@ public partial class MapViewModel : BaseViewModel
     // 👇 2. LOGIC PLAYER & GPS
 
     /// <summary>
-    /// Đọc thông báo "Bạn đã vào trong phạm vi quán..." trước khi thuyết minh.
-    /// Được gọi bởi OnAnnounceEnterShop của WalkingSimulationService.
-    /// </summary>
-    public async Task AnnounceEnterShop(ShopModel shop)
-    {
-        try
-        {
-            // Hủy bất kỳ TTS nào đang chạy
-            _ttsCts.Cancel();
-            _ttsCts = new CancellationTokenSource();
-
-            var locales = await TextToSpeech.Default.GetLocalesAsync();
-            var vnLocale = locales.FirstOrDefault(l => l.Language == "vi" && l.Country == "VN")
-                        ?? locales.FirstOrDefault(l => l.Language == "vi");
-
-            var options = new SpeechOptions
-            {
-                Locale = vnLocale,
-                Pitch = 0.9f,
-                Volume = 1.0f
-            };
-
-            string announcement = $"Bạn đã vào trong phạm vi quán {shop.Name}.";
-            await TextToSpeech.Default.SpeakAsync(announcement, options, _ttsCts.Token);
-        }
-        catch { }
-    }
-
-    /// <summary>
-    /// Bắt đầu thuyết minh shop. Gọi sau AnnounceEnterShop.
+    /// Bắt đầu thuyết minh shop.
     /// </summary>
     public async Task OnEnterShop(ShopModel shop)
     {

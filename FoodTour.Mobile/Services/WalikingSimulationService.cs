@@ -10,7 +10,6 @@ public class WalikingSimulationService
     private bool _isRunning = false;
     public Action<Location>? OnLocationUpdate;
     public Func<ShopModel, Task>? OnEnterShop;           // Gọi để bắt đầu thuyết minh
-    public Func<ShopModel, Task>? OnAnnounceEnterShop;   // Đọc thông báo "Bạn đã vào trong phạm vi quán..."
     public Action? OnExitShop;
     public Action? OnRouteFinished;
 
@@ -108,11 +107,7 @@ public class WalikingSimulationService
                 {
                     _insideShop = true;
 
-                    // 1. Await thông báo xong hẳn rồi mới tiếp tục
-                    if (OnAnnounceEnterShop != null)
-                        await OnAnnounceEnterShop(shop);
-
-                    // 2. Await thuyết minh
+                    // Thuyết minh
                     if (OnEnterShop != null)
                         await OnEnterShop(shop);
                 }
