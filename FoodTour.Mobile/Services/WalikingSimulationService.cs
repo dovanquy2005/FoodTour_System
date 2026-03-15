@@ -6,7 +6,7 @@ namespace FoodTour.Mobile.Services;
 public class WalikingSimulationService
 {
     private readonly List<ShopModel> _shops;
-    private bool _insideShop = false;
+    private ShopModel? _currentShop = null; // trachk shop đang active
     private bool _isRunning = false;
     public Action<Location>? OnLocationUpdate;
     public Func<ShopModel, Task>? OnEnterShop;           // Gọi để bắt đầu thuyết minh
@@ -61,7 +61,7 @@ public class WalikingSimulationService
     public void Stop()
     {
         _isRunning = false;
-        _insideShop = false;
+        _currentShop = null;
 
         try
         {
@@ -91,36 +91,46 @@ public class WalikingSimulationService
 
     private async Task CheckShop(Location location)
     {
+        // Case 1: Đang ở trong 1 shop → kiểm tra xem còn trong radius không
+        if (_currentShop != null)
+        {
+            double distToCurrent = Location.CalculateDistance(
+                location,
+                new Location(_currentShop.Latitude, _currentShop.Longitude),
+                DistanceUnits.Kilometers) * 1000;
+
+            if (distToCurrent <= 100)
+                return; // Vẫn trong shop cũ → không làm gì, bám ở đây
+
+            // Ra khỏi shop cũ → reset
+            _currentShop = null;
+            OnExitShop?.Invoke();
+            return; // Chờ update tiếp theo mới vào shop mới (tránh switch ngay lập tức)
+        }
+
+        // Case 2: Chưa có shop nào → tìm shop gần nhất trong 100m
+        ShopModel? nearest = null;
+        double minDist = double.MaxValue;
+
         foreach (var shop in _shops)
         {
-            var shopLoc = new Location(shop.Latitude, shop.Longitude);
+            double dist = Location.CalculateDistance(
+                location,
+                new Location(shop.Latitude, shop.Longitude),
+                DistanceUnits.Kilometers) * 1000;
 
-            double distance =
-                Location.CalculateDistance(
-                    location,
-                    shopLoc,
-                    DistanceUnits.Kilometers) * 1000;
-
-            if (distance <= 100)
+            if (dist <= 100 && dist < minDist)
             {
-                if (!_insideShop)
-                {
-                    _insideShop = true;
-
-                    // Thuyết minh
-                    if (OnEnterShop != null)
-                        await OnEnterShop(shop);
-                }
-
-                return;
+                minDist = dist;
+                nearest = shop;
             }
         }
 
-        // Người dùng đã ra khỏi tất cả các shop
-        if (_insideShop)
+        if (nearest != null)
         {
-            _insideShop = false;
-            OnExitShop?.Invoke();
+            _currentShop = nearest;
+            if (OnEnterShop != null)
+                await OnEnterShop(nearest);
         }
     }
 

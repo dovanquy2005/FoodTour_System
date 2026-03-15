@@ -12,23 +12,21 @@ namespace FoodTour.Mobile.Views;
 public partial class MapPage : ContentPage
 {
     private MapViewModel _viewModel;
-    private string _lastEnteredShopName = string.Empty; // Lưu tên quán vừa ghé để tránh lặp lại thuyết minh
+    private Models.ShopModel? _currentShop = null; // Kiểm tra distance đến đúng shop đang active (hysteresis)
     private Location? _userLocation = null; // Vị trí thật của người dùng
     private Models.ShopModel? _pendingRouteShop = null; // Quán cần chỉ đường nếu Map chưa vẽ xong
+    private bool _isMapLoaded = false; // Flag kiểm tra map render xong lần đầu chưa
 
-    // Follow state machine
     private enum FollowState { Following, Free, RouteView }
     private FollowState _followState = FollowState.Following;
 
     private const double FollowRadiusMeters = 250;
-
-    // Throttle MoveToRegion
+    private const double ShopRadiusMeters = 100; // bán kính nhận diện shop
     private DateTime _lastMoveTime = DateTime.MinValue;
     private const int MoveThrottleMs = 800;
-    // Debounce timer: sau 5s không kéo -> tự resume follow
     private CancellationTokenSource _resumeCts = new();
     private const int ResumeDelayMs = 30_000;
-    private bool _isProgrammaticMove = false; // Flag phân biệt MoveToRegion với gesture của user
+
     public MapPage(MapViewModel vm)
     {
         try
@@ -54,6 +52,7 @@ public partial class MapPage : ContentPage
             _viewModel = vm;
             return; // Thoát sớm — MainMap là null khi InitializeComponent thất bại
         }
+
         BindingContext = vm;
         _viewModel = vm;
         MainMap.Loaded += MainMap_Loaded;
@@ -62,15 +61,11 @@ public partial class MapPage : ContentPage
         WeakReferenceMessenger.Default.Register<RouteToShopMessage>(this, (r, m) =>
         {
             if (MainMap != null && MainMap.Handler != null)
-            {
                 // Map đã sẵn sàng, vẽ đường ngay lập tức
                 DrawRouteToShop(m.TargetShop);
-            }
             else
-            {
                 // Map chưa khởi tạo xong, lưu lại và vẽ khi Loaded
                 _pendingRouteShop = m.TargetShop;
-            }
         });
     }
 
@@ -86,6 +81,12 @@ public partial class MapPage : ContentPage
 
             // Khởi động hệ thống GPS
             await SetupGps();
+
+            // Edge case: Quay lại tab sau khi load lần đầu
+            if (_isMapLoaded && MainMap?.Handler != null)
+            {
+                MainThread.BeginInvokeOnMainThread(() => DrawRadiusCircles());
+            }
         }
         catch (Exception ex)
         {
@@ -99,16 +100,17 @@ public partial class MapPage : ContentPage
         try
         {
             _resumeCts.Cancel();
+            _currentShop = null; // reset khi thoát tab
+
             // Đã hủy đăng ký sự kiện CollectionChanged
+            if (_viewModel.Shops != null)
+                _viewModel.Shops.CollectionChanged -= OnShopsCollectionChanged;
+
             Geolocation.Default.LocationChanged -= OnUserLocationChanged;
-#if ANDROID
             UnhookAndroid();
-#endif
             // QUAN TRỌNG: Dừng hẳn việc lắng nghe GPS khi người dùng thoát tab Map để tiết kiệm PIN
             if (Geolocation.Default.IsListeningForeground)
-            {
                 Geolocation.Default.StopListeningForeground();
-            }
         }
         catch (Exception ex)
         {
@@ -116,46 +118,32 @@ public partial class MapPage : ContentPage
         }
     }
 
+    private void OnShopsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (!_isMapLoaded || MainMap?.Handler == null) return;
+        MainThread.BeginInvokeOnMainThread(() => DrawRadiusCircles());
+    }
+
     // MAP LOADED
     private async void MainMap_Loaded(object? sender, EventArgs e)
     {
         try
         {
-            // Chờ handler sẵn sàng một chút
-            if (MainMap != null && MainMap.Handler == null)
-            {
-                await Task.Delay(200);
-            }
-
             // Load dữ liệu từ Database nếu danh sách đang trống
             if (_viewModel.Shops == null || _viewModel.Shops.Count == 0)
             {
                 await _viewModel.LoadData();
             }
 
-            // Vẽ vòng bán kính xung quanh các quán ăn
-            DrawRadiusCircles();
+            // Đăng kí CollectionChanged sau khi có Shops
+            if (_viewModel.Shops != null)
+                _viewModel.Shops.CollectionChanged += OnShopsCollectionChanged;
 
             if (MainMap != null)
                 MainMap.IsShowingUser = true;
 
             // Hook gesture dectector của native map platform
-#if ANDROID
             HookAndroid();
-#endif
-
-            // Nếu có yêu cầu chỉ đường từ trang Khám Phá, vẽ đường ngay
-            if (_pendingRouteShop != null)
-            {
-                DrawRouteToShop(_pendingRouteShop);
-                _pendingRouteShop = null; // Reset sau khi xử lý xong
-            }
-            else if (_userLocation != null)
-            {
-                // Chỉ tập trung vào vị trí người dùng nếu KHÔNG có yêu cầu chỉ đường
-                TransitionTo(FollowState.Following);
-                MoveCamera(_userLocation, FollowRadiusMeters);
-            }
         }
         catch (Exception ex)
         {
@@ -164,10 +152,9 @@ public partial class MapPage : ContentPage
     }
 
     /// <summary>
-    /// NATIVE GESTURE HOOK. Ta hook xuống GoogleMap native để detect, sau đó gọi OnUserDraggedMap().
+    /// NATIVE GESTURE HOOK. Hook xuống native Google Maps để dùng các listener chính xác hơn.
     /// Do MAUI Maps abstraction không expose "user dragged map" event.
     /// </summary>
-#if ANDROID
     private Android.Gms.Maps.GoogleMap? _googleMap;
 
     private void HookAndroid()
@@ -179,9 +166,57 @@ public partial class MapPage : ContentPage
                 mapView.GetMapAsync(new MapReadyCallback(gmap =>
                 {
                     _googleMap = gmap;
-                    // CameraMove fires bất cứ khi nào camera bắt đầu di chuyển
-                    // (cả code lẫn gesture) — ta dùng _isProgrammaticMove để lọc
-                    _googleMap.CameraMove += OnAndroidCameraMove;
+
+                    // Detect đúng gesture của user
+                    _googleMap.SetOnCameraMoveStartedListener(new CameraMoveStartedCallback(reason =>
+                    {
+                        if (reason == Android.Gms.Maps.GoogleMap.OnCameraMoveStartedListener.ReasonGesture)
+                            TransitionTo(FollowState.Free);
+                    }));
+
+                    // Timer resume bắt đầu đếm khi user thả tay
+                    _googleMap.SetOnCameraIdleListener(new CameraIdleCallback(() =>
+                    {
+                        if (_followState == FollowState.Free)
+                            ScheduleResumeFollow();
+                    }));
+
+                    // Nuốt POI click của Google Maps
+                    _googleMap.SetOnPoiClickListener(new PoiClickCallback(poi =>
+                    {
+                        if (_viewModel.Shops == null) return;
+
+                        var matched = _viewModel.Shops.FirstOrDefault(shop =>
+                            Location.CalculateDistance(
+                                new Location(poi.LatLng.Latitude, poi.LatLng.Longitude),
+                                shop.Location,
+                                DistanceUnits.Kilometers) * 1000 < 50);
+
+                        if (matched != null)
+                            MainThread.BeginInvokeOnMainThread(async () =>
+                                await _viewModel.GoToDetailCommand.ExecuteAsync(matched));
+                    }));
+
+                    //Biết chính xác khi map render xong lần đầu
+                    _googleMap.SetOnMapLoadedCallback(new MapLoadedCallback(() =>
+                    {
+                        MainThread.BeginInvokeOnMainThread(() =>
+                        {
+                            _isMapLoaded = true;
+                            DrawRadiusCircles();
+
+                            if (_pendingRouteShop != null)
+                            {
+                                DrawRouteToShop(_pendingRouteShop);
+                                _pendingRouteShop = null;
+                            }
+                            else if (_userLocation != null)
+                            {
+                                TransitionTo(FollowState.Following);
+                                MoveCamera(_userLocation, FollowRadiusMeters);
+                            }
+                        });
+                    }));
                 }));
             }
         }
@@ -192,38 +227,32 @@ public partial class MapPage : ContentPage
     {
         if (_googleMap != null)
         {
-            _googleMap.CameraMove -= OnAndroidCameraMove;
+            _googleMap.SetOnCameraMoveStartedListener(null);
+            _googleMap.SetOnCameraIdleListener(null);
+            _googleMap.SetOnPoiClickListener(null);
+            _googleMap.SetOnMapLoadedCallback(null);
             _googleMap = null;
         }
     }
 
-    private void OnAndroidCameraMove(object? sender, EventArgs e)
-    {
-        if (!_isProgrammaticMove)
-            OnUserDraggedMap();
-    }
+    private class MapReadyCallback(Action<Android.Gms.Maps.GoogleMap> cb) : Java.Lang.Object, Android.Gms.Maps.IOnMapReadyCallback
+    { public void OnMapReady(Android.Gms.Maps.GoogleMap g) => cb(g); }
 
-    private class MapReadyCallback : Java.Lang.Object, Android.Gms.Maps.IOnMapReadyCallback
-    {
-        private readonly Action<Android.Gms.Maps.GoogleMap> _cb;
-        public MapReadyCallback(Action<Android.Gms.Maps.GoogleMap> cb) => _cb = cb;
-        public void OnMapReady(Android.Gms.Maps.GoogleMap googleMap) => _cb(googleMap);
-    }
-#endif
+    private class CameraMoveStartedCallback(Action<int> cb) : Java.Lang.Object, Android.Gms.Maps.GoogleMap.IOnCameraMoveStartedListener
+    { public void OnCameraMoveStarted(int reason) => cb(reason); }
 
-    // USER DRAGGED MAP
-    private void OnUserDraggedMap()
-    {
-        if (_followState == FollowState.Free) return; // Đã ở Free rồi, reset timer thôi
+    private class CameraIdleCallback(Action cb) : Java.Lang.Object, Android.Gms.Maps.GoogleMap.IOnCameraIdleListener
+    { public void OnCameraIdle() => cb(); }
 
-        TransitionTo(FollowState.Free);
-        ScheduleResumeFollow();
-    }
+    private class PoiClickCallback(Action<Android.Gms.Maps.Model.PointOfInterest> cb) : Java.Lang.Object, Android.Gms.Maps.GoogleMap.IOnPoiClickListener
+    { public void OnPoiClick(Android.Gms.Maps.Model.PointOfInterest poi) => cb(poi); }
+
+    private class MapLoadedCallback(Action cb) : Java.Lang.Object, Android.Gms.Maps.GoogleMap.IOnMapLoadedCallback
+    { public void OnMapLoaded() => cb(); }
 
     // STATE MACHINE
     private void TransitionTo(FollowState newState) => _followState = newState;
 
-    // AUTO-RESUME
     private void ScheduleResumeFollow()
     {
         // Reset đồng hồ mỗi lần user tương tác thêm
@@ -253,6 +282,7 @@ public partial class MapPage : ContentPage
         {
             // Kiểm tra quyền truy cập vị trí
             var status = await Permissions.CheckStatusAsync<Permissions.LocationWhenInUse>();
+
             if (status != PermissionStatus.Granted)
                 status = await Permissions.RequestAsync<Permissions.LocationWhenInUse>();
 
@@ -267,20 +297,16 @@ public partial class MapPage : ContentPage
             );
 
             var location = await Geolocation.Default.GetLocationAsync();
-
-            if (location != null)
+            if (location == null) return;
+            _userLocation = location;
+            MainThread.BeginInvokeOnMainThread(() =>
             {
-                _userLocation = location;
-
-                MainThread.BeginInvokeOnMainThread(() =>
+                TransitionTo(FollowState.Following);
+                if (MainMap?.Handler != null)
                 {
-                    TransitionTo(FollowState.Following);
-                    if (MainMap?.Handler != null)
-                    {
-                        MoveCamera(location, FollowRadiusMeters);
-                    }
-                });
-            }
+                    MoveCamera(location, FollowRadiusMeters);
+                }
+            });
         }
         catch (Exception ex)
         {
@@ -298,6 +324,7 @@ public partial class MapPage : ContentPage
 
             _userLocation = userLoc;
 
+            // Camera follow
             if (_followState == FollowState.Following)
             {
                 var now = DateTime.UtcNow;
@@ -314,36 +341,41 @@ public partial class MapPage : ContentPage
 
             if (_viewModel.Shops == null) return;
 
-            foreach (var shop in _viewModel.Shops)
+            // Case 1: Đang trong shop → chỉ check shop đó, tránh flapping
+            if (_currentShop != null)
             {
-                if (Location.CalculateDistance(userLoc, shop.Location, DistanceUnits.Kilometers) < 0.1)
-                {
-                    if (_lastEnteredShopName != shop.Name)
-                    {
-                        _lastEnteredShopName = shop.Name;
-                        MainThread.BeginInvokeOnMainThread(async () =>
-                        {
-                            try
-                            {
-                                HapticFeedback.Default.Perform(HapticFeedbackType.LongPress);
-                                await _viewModel.OnEnterShop(shop);
-                            }
-                            catch { }
-                        });
-                    }
-                    return; // Đã tìm thấy quán gần nhất, không cần kiểm tra thêm
-                }
+                double distToCurrent = Location.CalculateDistance(
+                    userLoc,
+                    _currentShop.Location,
+                    DistanceUnits.Kilometers) * 1000;
+
+                if (distToCurrent <= ShopRadiusMeters)
+                    return; // Vẫn trong shop cũ → bám ở đây, không làm gì
+
+                // Ra khỏi shop cũ
+                _currentShop = null;
+                MainThread.BeginInvokeOnMainThread(() => _viewModel.OnExitShop());
+                return; // Chờ update tiếp theo mới check shop mới (tránh switch ngay lập tức)
             }
 
-            // Người dùng đã ra khỏi tất cả các shop
-            if (_lastEnteredShopName != string.Empty)
+            // Case 2: Tìm shop GẦN NHẤT trong ShopRadiusMeters (dùng LINQ)
+            var nearest = _viewModel.Shops
+                .Select(s => (shop: s, dist: DistanceMeters(userLoc, s.Location)))
+                .Where(x => x.dist <= ShopRadiusMeters)
+                .OrderBy(x => x.dist)
+                .FirstOrDefault().shop;
+
+            if (nearest == null) return;
+            _currentShop = nearest;
+            MainThread.BeginInvokeOnMainThread(async () =>
             {
-                _lastEnteredShopName = string.Empty;
-                MainThread.BeginInvokeOnMainThread(() =>
+                try
                 {
-                    _viewModel.OnExitShop();
-                });
-            }
+                    HapticFeedback.Default.Perform(HapticFeedbackType.LongPress);
+                    await _viewModel.OnEnterShop(nearest);
+                }
+                catch { }
+            });
         }
         catch (Exception ex)
         {
@@ -362,12 +394,10 @@ public partial class MapPage : ContentPage
             {
                 // Không thể vẽ đường nếu chưa biết vị trí người dùng
                 if (_userLocation == null) return;
-
                 TransitionTo(FollowState.RouteView);
                 ScheduleResumeFollow();
 
-                var oldPolylines = MainMap.MapElements.Where(e => e is Polyline).ToList();
-                foreach (var line in oldPolylines)
+                foreach (var line in MainMap.MapElements.OfType<Polyline>().ToList())
                     MainMap.MapElements.Remove(line);
 
                 MainMap.MapElements.Add(new Polyline
@@ -377,12 +407,11 @@ public partial class MapPage : ContentPage
                     Geopath = { _userLocation, targetShop.Location }
                 });
 
-                double centerLat = (_userLocation.Latitude + targetShop.Location.Latitude) / 2;
-                double centerLng = (_userLocation.Longitude + targetShop.Location.Longitude) / 2;
-                double distanceKm = Location.CalculateDistance(_userLocation, targetShop.Location, DistanceUnits.Kilometers);
-                double radiusMeters = Math.Max((distanceKm * 1000) * 0.6, 300);
-
-                MoveCamera(new Location(centerLat, centerLng), radiusMeters);
+                double distKm = Location.CalculateDistance(_userLocation, targetShop.Location, DistanceUnits.Kilometers);
+                var center = new Location(
+                    (_userLocation.Latitude + targetShop.Location.Latitude) / 2,
+                    (_userLocation.Longitude + targetShop.Location.Longitude) / 2);
+                MoveCamera(center, Math.Max(distKm * 1000 * 0.6, 300));
             }
             catch (Exception ex)
             {
@@ -392,13 +421,11 @@ public partial class MapPage : ContentPage
     }
 
     // HELPERS
-    private void MoveCamera(Location location, double radiusMeters)
-    {
-        _isProgrammaticMove = true;
-        MainMap?.MoveToRegion(
-            MapSpan.FromCenterAndRadius(location, Distance.FromMeters(radiusMeters)));
-        _isProgrammaticMove = false;
-    }
+    private void MoveCamera(Location location, double radiusMeters) =>
+        MainMap?.MoveToRegion(MapSpan.FromCenterAndRadius(location, Distance.FromMeters(radiusMeters)));
+
+    private static double DistanceMeters(Location a, Location b) =>
+        Location.CalculateDistance(a, b, DistanceUnits.Kilometers) * 1000;
 
     private void DrawRadiusCircles()
     {
@@ -417,7 +444,7 @@ public partial class MapPage : ContentPage
                 MainMap.MapElements.Add(new Circle
                 {
                     Center = shop.Location,
-                    Radius = Distance.FromMeters(100), // Bán kính nhận diện 100m
+                    Radius = Distance.FromMeters(ShopRadiusMeters), // Bán kính nhận diện 100m
                     StrokeColor = Colors.Red,
                     StrokeWidth = 2,
                     FillColor = Colors.Red.WithAlpha(0.25f)
@@ -449,7 +476,6 @@ public partial class MapPage : ContentPage
         try
         {
             e.HideInfoWindow = false;
-            var pin = sender as Pin;
 
             if ((sender as Pin)?.BindingContext is Models.ShopModel shop)
             {
@@ -466,14 +492,12 @@ public partial class MapPage : ContentPage
     {
         try
         {
-            if (e.CurrentSelection.FirstOrDefault() is Models.ShopModel selectedPoi)
-            {
-                TransitionTo(FollowState.Free);
-                ScheduleResumeFollow();
+            if (e.CurrentSelection.FirstOrDefault() is not Models.ShopModel selectedPoi) return;
+            TransitionTo(FollowState.Free);
+            ScheduleResumeFollow();
 
-                MoveCamera(selectedPoi.Location, 300);
-                ((CollectionView)sender).SelectedItem = null; // Reset Selection để có thể bấm lại vào chính quán đó sau này
-            }
+            MoveCamera(selectedPoi.Location, 300);
+            ((CollectionView)sender).SelectedItem = null; // Reset Selection để có thể bấm lại vào chính quán đó sau này
         }
         catch (Exception ex)
         {
