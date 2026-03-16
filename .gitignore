@@ -16,6 +16,7 @@ obj/
 *.cache
 *.csproj.user
 *.txt
+*.db
 
 # --- C# .NET (Backend) ---
 [Bb]in/
@@ -29,5 +30,8 @@ dist/
 .env
 
 # --- Hệ thống ---
-Thumbs.dbFoodTour.Mobile/FoodTour.Mobile.csproj
+Thumbs.db
+
+# Ignore Mobile project file
+FoodTour.Mobile/FoodTour.Mobile.csproj
 FoodTour.Mobile/FoodTour.Mobile.csproj.user
