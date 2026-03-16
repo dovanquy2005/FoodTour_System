@@ -1,4 +1,4 @@
-﻿<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:viewmodels="clr-namespace:FoodTour.Mobile.ViewModels"
              xmlns:ext="clr-namespace:FoodTour.Mobile.Extensions"
@@ -84,10 +84,10 @@
 								<Label Text="Offline Mode" TextColor="{StaticResource TextPrimary}" FontSize="15" FontAttributes="Bold"/>
 								<Label TextColor="{StaticResource TextSecondary}" FontSize="13">
                                     <Label.Triggers>
-                                        <DataTrigger TargetType="Label" Binding="{Binding Source={x:Reference DataModeSwitch}, Path=IsToggled}" Value="False">
+                                        <DataTrigger TargetType="Label" Binding="{Binding Source={x:Reference DataModeSwitch}, Path=IsToggled, x:DataType='Switch'}" Value="False">
                                             <Setter Property="Text" Value="Nghe trực tuyến (Tiết kiệm bộ nhớ máy)" />
                                         </DataTrigger>
-                                        <DataTrigger TargetType="Label" Binding="{Binding Source={x:Reference DataModeSwitch}, Path=IsToggled}" Value="True">
+                                        <DataTrigger TargetType="Label" Binding="{Binding Source={x:Reference DataModeSwitch}, Path=IsToggled, x:DataType='Switch'}" Value="True">
                                             <Setter Property="Text" Value="Tải về máy (Tiết kiệm 4G/5G, kích thước ~45MB)" />
                                         </DataTrigger>
                                     </Label.Triggers>

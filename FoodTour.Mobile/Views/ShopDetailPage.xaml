@@ -1,14 +1,16 @@
-﻿<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:models="clr-namespace:FoodTour.Mobile.Models"
              xmlns:viewmodels="clr-namespace:FoodTour.Mobile.ViewModels"
+             xmlns:controls="clr-namespace:FoodTour.Mobile.Controls"
              x:Class="FoodTour.Mobile.Views.ShopDetailPage"
              x:DataType="viewmodels:ShopDetailViewModel"
              Title="Chi tiết địa điểm"
              BackgroundColor="{StaticResource Background}"
              Shell.NavBarIsVisible="False">
 
-	<ScrollView>
+	<Grid>
+		<ScrollView>
 		<VerticalStackLayout Spacing="0" Padding="0,0,0,24">
 
 			<!-- Hero image + Back button -->
@@ -105,4 +107,9 @@
 			</VerticalStackLayout>
 		</VerticalStackLayout>
 	</ScrollView>
+
+	<!-- Global Audio Player Overlay -->
+	<controls:FloatingAudioPlayer />
+
+	</Grid>
 </ContentPage>

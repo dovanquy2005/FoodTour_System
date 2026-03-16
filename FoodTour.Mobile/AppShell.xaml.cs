@@ -1,4 +1,4 @@
-﻿using FoodTour.Mobile.Views;
+using FoodTour.Mobile.Views;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Networking;
 using Microsoft.Maui.ApplicationModel;
@@ -7,9 +7,10 @@ namespace FoodTour.Mobile;
 
 public partial class AppShell : Shell
 {
-    public AppShell()
+    public AppShell(ViewModels.PlayerViewModel playerVm)
     {
         InitializeComponent();
+        BindingContext = playerVm;
         
         // Đăng ký route cho trang chi tiết
         Routing.RegisterRoute(nameof(Views.ShopDetailPage), typeof(Views.ShopDetailPage));

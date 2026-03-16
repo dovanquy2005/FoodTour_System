@@ -7,9 +7,12 @@ public partial class App : Application
 {
     private Page _initialPage = new Views.SplashPage();
 
-    public App(Services.ILocalizationService localizationService, Services.DatabaseService databaseService)
+    private readonly ViewModels.PlayerViewModel _playerVm;
+
+    public App(Services.ILocalizationService localizationService, Services.DatabaseService databaseService, ViewModels.PlayerViewModel playerVm)
     {
         InitializeComponent();
+        _playerVm = playerVm;
 
         InitializeAppAsync(localizationService, databaseService);
     }
@@ -60,8 +63,8 @@ public partial class App : Application
         MainThread.BeginInvokeOnMainThread(() =>
         {
             Page newPage = isSetupCompleted 
-                ? new AppShell() 
-                : new NavigationPage(new Views.OnboardingPage(localizationService, databaseService));
+                ? new AppShell(_playerVm) 
+                : new NavigationPage(new Views.OnboardingPage(localizationService, databaseService, _playerVm));
 
             if (Application.Current?.Windows.Count > 0)
             {

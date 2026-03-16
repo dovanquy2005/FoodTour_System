@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:ext="clr-namespace:FoodTour.Mobile.Extensions"
+             xmlns:viewmodels="clr-namespace:FoodTour.Mobile.ViewModels"
+             x:Class="FoodTour.Mobile.Controls.FloatingAudioPlayer"
+             x:DataType="viewmodels:PlayerViewModel">
+    <ContentView.Resources>
+        <ext:InvertedBoolConverter x:Key="InvertedBoolConverter" />
+    </ContentView.Resources>
+
+    <Grid VerticalOptions="End"
+          Margin="0,0,0,12"
+          IsVisible="{Binding IsVisible}">
+
+        <!-- ════════ EXPANDED PLAYER BAR ════════ -->
+        <Border x:Name="PlayerBar"
+                VerticalOptions="End"
+                Margin="10,0,10,0"
+                Padding="0"
+                BackgroundColor="#3A2525"
+                StrokeShape="RoundRectangle 16"
+                Stroke="#4A3535"
+                StrokeThickness="0.5"
+                Shadow="{Shadow Radius=20, Opacity=0.35, Offset='0,6'}"
+                IsVisible="{Binding IsMinimized, Converter={StaticResource InvertedBoolConverter}}">
+
+            <Grid RowDefinitions="Auto, 3" Padding="0">
+
+                <!-- Row 0: Main content -->
+                <Grid Grid.Row="0"
+                      ColumnDefinitions="Auto, *, Auto, Auto"
+                      ColumnSpacing="0"
+                      Padding="10,8,6,8">
+
+                    <!-- ── Thumbnail with audio bars overlay ── -->
+                    <Border Grid.Column="0"
+                            StrokeShape="RoundRectangle 10"
+                            StrokeThickness="0"
+                            WidthRequest="56"
+                            HeightRequest="56"
+                            BackgroundColor="#2A1A1A"
+                            VerticalOptions="Center">
+                        <Grid>
+                            <Image Source="{Binding ShopImage}"
+                                   Aspect="AspectFill"
+                                   WidthRequest="56"
+                                   HeightRequest="56"/>
+                            <!-- Dark overlay bottom for audio bars icon -->
+                            <BoxView Color="#80000000"
+                                     VerticalOptions="End"
+                                     HeightRequest="20"/>
+                            <!-- Audio bars icon (using unicode) -->
+                            <Label Text="▊▌█"
+                                   TextColor="White"
+                                   FontSize="9"
+                                   VerticalOptions="End"
+                                   HorizontalOptions="Center"
+                                   Margin="0,0,0,2"
+                                   Opacity="0.9"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- ── Title + Subtitle ── -->
+                    <VerticalStackLayout Grid.Column="1"
+                                         VerticalOptions="Center"
+                                         Spacing="2"
+                                         Margin="12,0,8,0">
+                        <Label Text="{Binding ShopName}"
+                               TextColor="White"
+                               FontSize="15"
+                               FontAttributes="Bold"
+                               LineBreakMode="TailTruncation"
+                               MaxLines="1"/>
+                        <Label Text="{Binding PlayerStatus}"
+                               TextColor="#9E8E8E"
+                               FontSize="12"
+                               LineBreakMode="TailTruncation"
+                               MaxLines="1"/>
+                    </VerticalStackLayout>
+
+                    <!-- ── Playback Controls: Prev | Play/Pause | Next ── -->
+                    <HorizontalStackLayout Grid.Column="2"
+                                           Spacing="0"
+                                           VerticalOptions="Center"
+                                           Margin="0,0,0,0">
+
+                        <!-- Previous button -->
+                        <Border StrokeThickness="0"
+                                BackgroundColor="Transparent"
+                                WidthRequest="36"
+                                HeightRequest="44">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding SkipPreviousCommand}"/>
+                            </Border.GestureRecognizers>
+                            <Label Text="⏮"
+                                   TextColor="#C0AEAE"
+                                   FontSize="18"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center"/>
+                        </Border>
+
+                        <!-- Play/Pause button (Red circle) -->
+                        <Border StrokeThickness="0"
+                                BackgroundColor="#E53935"
+                                StrokeShape="RoundRectangle 22"
+                                WidthRequest="44"
+                                HeightRequest="44">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding PlayPauseCommand}"/>
+                            </Border.GestureRecognizers>
+                            <Image Source="{Binding PlayIcon}"
+                                   WidthRequest="22"
+                                   HeightRequest="22"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center"/>
+                        </Border>
+
+                        <!-- Next button -->
+                        <Border StrokeThickness="0"
+                                BackgroundColor="Transparent"
+                                WidthRequest="36"
+                                HeightRequest="44">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding SkipNextCommand}"/>
+                            </Border.GestureRecognizers>
+                            <Label Text="⏭"
+                                   TextColor="#C0AEAE"
+                                   FontSize="18"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center"/>
+                        </Border>
+                    </HorizontalStackLayout>
+
+                    <!-- ── Minimize chevron (top-right) ── -->
+                    <Border Grid.Column="3"
+                            StrokeThickness="0"
+                            BackgroundColor="Transparent"
+                            WidthRequest="28"
+                            HeightRequest="28"
+                            VerticalOptions="Start"
+                            HorizontalOptions="End"
+                            Margin="0,0,2,0">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding MinimizeCommand}"/>
+                        </Border.GestureRecognizers>
+                        <Label Text="˅"
+                               TextColor="#9E8E8E"
+                               FontSize="18"
+                               FontAttributes="Bold"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center"/>
+                    </Border>
+                </Grid>
+
+                <!-- Row 1: Progress bar (red, flush at bottom) -->
+                <BoxView Grid.Row="1"
+                         Color="#E53935"
+                         HeightRequest="3"
+                         VerticalOptions="End"
+                         HorizontalOptions="Fill"/>
+            </Grid>
+        </Border>
+
+        <!-- ════════ MINIMIZED CIRCLE AVATAR ════════ -->
+        <Border x:Name="MinimizedAvatar"
+                IsVisible="{Binding IsMinimized}"
+                HorizontalOptions="Start"
+                VerticalOptions="End"
+                Margin="14,0,0,0"
+                WidthRequest="68"
+                HeightRequest="68"
+                StrokeShape="RoundRectangle 34"
+                Stroke="{StaticResource Primary}"
+                StrokeThickness="3"
+                BackgroundColor="#2A1810"
+                Shadow="{Shadow Radius=12, Opacity=0.3, Offset='0,4'}">
+            <Border.GestureRecognizers>
+                <TapGestureRecognizer Command="{Binding ExpandCommand}"/>
+            </Border.GestureRecognizers>
+
+            <Grid>
+                <!-- Avatar ảnh quán -->
+                <Image Source="{Binding ShopImage}"
+                       Aspect="AspectFill"
+                       WidthRequest="68"
+                       HeightRequest="68"
+                       Clip="{EllipseGeometry RadiusX=34, RadiusY=34, Center='34,34'}"/>
+
+                <!-- Nút expand (mũi tên lên, nền cam, góc trên phải) -->
+                <Border WidthRequest="24"
+                        HeightRequest="24"
+                        StrokeShape="RoundRectangle 12"
+                        StrokeThickness="0"
+                        BackgroundColor="{StaticResource Primary}"
+                        HorizontalOptions="End"
+                        VerticalOptions="Start"
+                        Margin="0,-2,-2,0">
+                    <Label Text="▲"
+                           TextColor="White"
+                           FontSize="11"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center"/>
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
+</ContentView>

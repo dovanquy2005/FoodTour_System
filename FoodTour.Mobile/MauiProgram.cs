@@ -46,6 +46,8 @@ public static class MauiProgram
         // Localization dependencies
         builder.Services.AddSingleton(sp => new HttpClient { Timeout = TimeSpan.FromSeconds(5) });
         builder.Services.AddSingleton<ILocalizationService, LocalizationService>();
+        builder.Services.AddSingleton<IAudioPlayerService, AudioPlayerService>();
+        builder.Services.AddSingleton<PlayerViewModel>();
         
         // Đăng ký cho tab MainPage (OTA Localization Test)
         builder.Services.AddTransient<MainPage>();
