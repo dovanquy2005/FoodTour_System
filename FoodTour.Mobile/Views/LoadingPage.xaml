@@ -3,7 +3,8 @@
              xmlns:ext="clr-namespace:FoodTour.Mobile.Extensions"
              x:Class="FoodTour.Mobile.Views.LoadingPage"
              BackgroundColor="{StaticResource Background}"
-             NavigationPage.HasNavigationBar="False">
+             NavigationPage.HasNavigationBar="False"
+             Shell.NavBarIsVisible="False">
 
 	<VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="20">
 		<Label Text="{ext:Translate App_Title}"

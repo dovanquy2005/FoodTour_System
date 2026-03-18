@@ -7,7 +7,12 @@
              x:Class="FoodTour.Mobile.Views.ExplorePage"
              x:DataType="viewmodels:ExploreViewModel"
              BackgroundColor="{StaticResource Background}"
-             NavigationPage.HasNavigationBar="False">
+             Shell.NavBarIsVisible="False">
+
+	<!-- Converter giải quyết đường dẫn ảnh: ưu tiên cache cục bộ, fallback về URL API -->
+	<ContentPage.Resources>
+		<ext:ImageUrlConverter x:Key="ImageUrlConverter"/>
+	</ContentPage.Resources>
 
 	<Grid>
 	<Grid RowDefinitions="Auto, Auto, *" Margin="20, 15, 20, 0">
@@ -82,7 +87,7 @@
 								<Border.GestureRecognizers>
 									<TapGestureRecognizer Tapped="OnShopCardTapped" CommandParameter="{Binding .}" />
 								</Border.GestureRecognizers>
-								<Image Source="{Binding ImageUrl}" Aspect="AspectFill" InputTransparent="True"/>
+								<Image Source="{Binding ImageUrl, Converter={StaticResource ImageUrlConverter}}" Aspect="AspectFill" InputTransparent="True"/>
 							</Border>
 
 							<!-- Badge rating -->

@@ -31,4 +31,15 @@ public partial class FloatingAudioPlayer : ContentView
             BindingContext = playerVm;
         }
     }
+
+    private void OnSliderDragCompleted(object sender, EventArgs e)
+    {
+        if (BindingContext is PlayerViewModel vm)
+        {
+            if (vm.SeekCommand.CanExecute(null))
+            {
+                vm.SeekCommand.Execute(null);
+            }
+        }
+    }
 }

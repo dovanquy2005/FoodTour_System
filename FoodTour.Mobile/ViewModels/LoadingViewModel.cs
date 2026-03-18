@@ -1,4 +1,4 @@
-﻿namespace FoodTour.Mobile.ViewModels
+namespace FoodTour.Mobile.ViewModels
 {
     public class LoadingViewModel : BaseViewModel
     {
@@ -12,10 +12,37 @@
 
         private async void CheckAndLoadData()
         {
-            // Khởi tạo Database và Seed dữ liệu mẫu
+            // Khởi tạo Database và đảm bảo dữ liệu đã sẵn sàng
             await _dbService.GetShopsAsync();
-            await Task.Delay(1500); // Thêm một chút delay để user kịp nhìn màn hình splash
 
+            // Đồng bộ dữ liệu ngầm: kiểm tra mạng và đồng bộ không chặn navigation
+            // Fire-and-forget: người dùng vẫn được chuyển sang MainTabs ngay lập tức
+            if (Connectivity.Current.NetworkAccess == NetworkAccess.Internet)
+            {
+                string apiUrl = DeviceInfo.Platform == DevicePlatform.Android
+                    ? "http://10.0.2.2:5154"
+                    : "http://localhost:5154";
+
+                // Bắt đầu đồng bộ ngầm — không await để không chặn UI
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _dbService.SyncDataFromApiAsync(apiUrl);
+                        System.Diagnostics.Debug.WriteLine("Background sync: Đồng bộ dữ liệu ngầm thành công.");
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Background sync error: {ex.Message}");
+                    }
+                });
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("Background sync: Không có mạng, bỏ qua đồng bộ ngầm.");
+            }
+
+            // Chuyển sang trang chính ngay lập tức — không chờ đồng bộ hoàn tất
             await Shell.Current.GoToAsync("//MainTabs");
         }
     }

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
-using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Maui.Media;
@@ -11,32 +10,27 @@ using Microsoft.Maui.Storage;
 namespace FoodTour.Mobile.Services
 {
     /// <summary>
-    /// Implementation of ILocalizationService that provides Over-The-Air text translation capabilities, 
-    /// fallback caching strategy for offline support, and native Text-to-Speech translation output.
-    /// Uses DI for injecting HttpClient and strictly follows Clean Architecture by abstracting IO operations.
+    /// Dịch vụ bản địa hóa Offline-First: đọc file JSON ngôn ngữ trực tiếp từ app bundle,
+    /// không cần tải từ API. Hỗ trợ Text-to-Speech cho nội dung đã dịch.
     /// </summary>
     public class LocalizationService : ILocalizationService
     {
-        private readonly HttpClient _httpClient;
         private Dictionary<string, string> _localizedStrings;
         private string _currentLanguageCode;
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
         /// <summary>
-        /// Service constructor injecting HttpClient. 
-        /// Uses DI to maintain loose coupling while taking care of network abstractions.
+        /// Constructor không cần HttpClient vì file JSON được đóng gói sẵn trong app bundle.
         /// </summary>
-        public LocalizationService(HttpClient httpClient)
+        public LocalizationService()
         {
-            _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
             _localizedStrings = new Dictionary<string, string>();
-            _currentLanguageCode = "en"; // Base fallback language
+            _currentLanguageCode = "vi"; // Ngôn ngữ mặc định
         }
 
         /// <summary>
-        /// Indexer for fetching localized strings dynamically. 
-        /// Will return $"[{key}]" gracefully if the string does not exist, alerting missing localized entries.
+        /// Truy xuất chuỗi dịch theo key. Trả về "[key]" nếu không tìm thấy để dễ phát hiện lỗi thiếu bản dịch.
         /// </summary>
         public string this[string key]
         {
@@ -49,90 +43,46 @@ namespace FoodTour.Mobile.Services
                     return localizedValue;
                 }
 
-                // Exception handler constraint: graceful miss
+                // Trả về key trong ngoặc vuông để dễ nhận biết thiếu bản dịch
                 return $"[{key}]";
             }
         }
 
         /// <summary>
-        /// Retrieves translation dictionary OTA and handles fallback cache management.
+        /// Đổi ngôn ngữ: đọc file JSON từ thư mục Resources/Raw/locales/ đã đóng gói trong app bundle.
+        /// Sử dụng FileSystem.OpenAppPackageFileAsync() để đọc MauiAsset.
+        /// Không cần kết nối mạng — hoạt động hoàn toàn offline.
         /// </summary>
         public async Task ChangeLanguageAsync(string languageCode)
         {
             _currentLanguageCode = languageCode;
-            var fileName = $"locale_{languageCode}.json";
-            
-            // FileSystem.AppDataDirectory securely persists across app launches 
-            var filePath = Path.Combine(FileSystem.AppDataDirectory, fileName);
-
-            // Kiểm tra xem có đang ở chế độ Offline không
-            bool isOfflineMode = Preferences.Default.Get("IsOfflineMode", false);
-
-            if (isOfflineMode && File.Exists(filePath))
-            {
-                // Load ngay lập tức từ cache nếu đang chạy Offline
-                try
-                {
-                    var cachedJson = await File.ReadAllTextAsync(filePath);
-                    UpdateDictionaryFromJson(cachedJson);
-                    NotifyTranslationsChanged();
-                    Console.WriteLine($"[LocalizationService] Applied cached translation for '{languageCode}' (Offline Mode).");
-                    return; // Thoát sớm, không cần gọi API
-                }
-                catch (Exception fileException)
-                {
-                    Console.WriteLine($"[LocalizationService] Cache retrieval failed: {fileException.Message}");
-                    // Nếu lỗi đọc file, tiếp tục thử tải từ API
-                }
-            }
 
             try
             {
-                // Determine the correct Dev Tunnel or localhost port here
-                string baseUrl = DeviceInfo.Platform == DevicePlatform.Android ? "http://10.0.2.2:5154" : "http://localhost:5154";
-                string requestUrl = $"{baseUrl}/locales/{languageCode}.json";
+                // Đọc file JSON từ app bundle (Resources/Raw/locales/)
+                // FileSystem.OpenAppPackageFileAsync đọc file MauiAsset đã đóng gói
+                var filePath = $"locales/{languageCode}.json";
+                using var stream = await FileSystem.OpenAppPackageFileAsync(filePath);
+                using var reader = new StreamReader(stream);
+                var jsonContent = await reader.ReadToEndAsync();
 
-                // Thay vì dùng _httpClient mặc định, ta dùng 1 client với Timeout rất ngắn (ví dụ 1.5s)
-                // để tránh giật lag UI khi server sập nhưng chưa kịp bật Offline mode
-                using var quickClient = new HttpClient { Timeout = TimeSpan.FromSeconds(1.5) };
-
-                var response = await quickClient.GetAsync(requestUrl);
-                response.EnsureSuccessStatusCode();
-
-                var jsonContent = await response.Content.ReadAsStringAsync();
-
-                // Save JSON document directly to AppDataDirectory for offline operation
-                await File.WriteAllTextAsync(filePath, jsonContent);
-
+                // Phân tích JSON thành dictionary các chuỗi dịch
                 UpdateDictionaryFromJson(jsonContent);
+
+                // Thông báo UI cập nhật tất cả binding
                 NotifyTranslationsChanged();
+
+                Console.WriteLine($"[LocalizationService] Đã tải ngôn ngữ '{languageCode}' từ app bundle.");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[LocalizationService] OTA Update failed: {ex.Message}. Attempting to use offline cache...");
-
-                // Fallback operation to retrieve the cached target language
-                if (File.Exists(filePath))
-                {
-                    try
-                    {
-                        var cachedJson = await File.ReadAllTextAsync(filePath);
-                        UpdateDictionaryFromJson(cachedJson);
-                        NotifyTranslationsChanged();
-                        Console.WriteLine($"[LocalizationService] Applied cached translation for '{languageCode}'.");
-                    }
-                    catch (Exception fileException)
-                    {
-                        Console.WriteLine($"[LocalizationService] Cache retrieval failed: {fileException.Message}");
-                    }
-                }
-                else
-                {
-                    Console.WriteLine($"[LocalizationService] No cache file found for language '{languageCode}'.");
-                }
+                Console.WriteLine($"[LocalizationService] Lỗi đọc file ngôn ngữ '{languageCode}': {ex.Message}");
             }
         }
 
+        /// <summary>
+        /// Phân tích chuỗi JSON thành Dictionary để lưu trữ các cặp key-value bản dịch.
+        /// </summary>
         private void UpdateDictionaryFromJson(string json)
         {
             try
@@ -143,7 +93,6 @@ namespace FoodTour.Mobile.Services
                     PropertyNameCaseInsensitive = true
                 };
 
-                // Utilizing System.Text.Json to perform an efficient deserialization 
                 var parsedDictionary = JsonSerializer.Deserialize<Dictionary<string, string>>(json, options);
                 
                 if (parsedDictionary != null)
@@ -153,26 +102,28 @@ namespace FoodTour.Mobile.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[LocalizationService] Error parsing JSON translation map: {ex.Message}");
+                Console.WriteLine($"[LocalizationService] Lỗi phân tích JSON: {ex.Message}");
             }
         }
 
+        /// <summary>
+        /// Thông báo tất cả UI binding rằng ngôn ngữ đã thay đổi, buộc làm mới toàn bộ giao diện.
+        /// </summary>
         private void NotifyTranslationsChanged()
         {
-            // By wrapping with MainThread.BeginInvokeOnMainThread, we guarantee that 
-            // the UI elements safely receive the property changed updates avoiding silent background thread failures.
+            // Đảm bảo chạy trên Main Thread để tránh lỗi cập nhật UI từ background thread
             MainThread.BeginInvokeOnMainThread(() =>
             {
-                // Passing null signals MAUI bindings that ALL properties have changed, forcing a total refresh
+                // null = tất cả thuộc tính đã thay đổi → MAUI làm mới toàn bộ binding
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(null));
                 
-                // Specific signal for indexer binding updates
+                // Thông báo riêng cho indexer binding
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Item[]"));
             });
         }
 
         /// <summary>
-        /// Looks up OS TTS Localizations and attempts to audibly output the matching translated text. 
+        /// Đọc text đã dịch và phát âm bằng Text-to-Speech với locale phù hợp.
         /// </summary>
         public async Task SpeakTextAsync(string key)
         {
@@ -183,7 +134,7 @@ namespace FoodTour.Mobile.Services
                 var locales = await TextToSpeech.Default.GetLocalesAsync();
                 Locale? matchingLocale = null;
 
-                // Match specific localization language using ISO logic
+                // Tìm locale TTS phù hợp với ngôn ngữ hiện tại
                 foreach (var locale in locales)
                 {
                     if (locale.Language.StartsWith(_currentLanguageCode, StringComparison.OrdinalIgnoreCase))
@@ -202,41 +153,19 @@ namespace FoodTour.Mobile.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[LocalizationService] TTS Execution failed: {ex.Message}");
+                Console.WriteLine($"[LocalizationService] Lỗi TTS: {ex.Message}");
             }
         }
+
         /// <summary>
-        /// Pre-downloads all supported languages to ensure offline availability.
+        /// Không cần tải trước ngôn ngữ nữa vì file JSON đã nằm trong app bundle.
+        /// Giữ phương thức này để tương thích interface, nhưng không làm gì cả.
         /// </summary>
-        public async Task PreloadAllLanguagesAsync()
+        public Task PreloadAllLanguagesAsync()
         {
-            var supportedLangs = new[] { "vi", "en", "ja", "ru", "zh" };
-            string baseUrl = DeviceInfo.Platform == DevicePlatform.Android ? "http://10.0.2.2:5154" : "http://localhost:5154";
-            
-            // Dùng client timeout ngắn để không bị treo nếu lỗi mạng
-            using var quickClient = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
-
-            foreach (var lang in supportedLangs)
-            {
-                var fileName = $"locale_{lang}.json";
-                var filePath = Path.Combine(FileSystem.AppDataDirectory, fileName);
-                string requestUrl = $"{baseUrl}/locales/{lang}.json";
-
-                try
-                {
-                    var response = await quickClient.GetAsync(requestUrl);
-                    if (response.IsSuccessStatusCode)
-                    {
-                        var jsonContent = await response.Content.ReadAsStringAsync();
-                        await File.WriteAllTextAsync(filePath, jsonContent);
-                        Console.WriteLine($"[LocalizationService] Preloaded language '{lang}'.");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[LocalizationService] Preload failed for '{lang}': {ex.Message}");
-                }
-            }
+            // File JSON đã đóng gói trong app — không cần tải từ server
+            Console.WriteLine("[LocalizationService] PreloadAllLanguagesAsync: Bỏ qua — file đã có sẵn trong app bundle.");
+            return Task.CompletedTask;
         }
     }
 }

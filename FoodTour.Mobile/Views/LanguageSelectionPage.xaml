@@ -7,7 +7,8 @@
              x:Class="FoodTour.Mobile.Views.LanguageSelectionPage"
              x:DataType="viewmodels:SettingsViewModel"
              Title="{ext:Translate Settings_SelectLanguage}"
-             BackgroundColor="{StaticResource Background}">
+             BackgroundColor="{StaticResource Background}"
+             Shell.NavBarIsVisible="False">
 
     <ScrollView>
         <VerticalStackLayout Padding="20" Spacing="15">

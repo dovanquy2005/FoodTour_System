@@ -57,6 +57,15 @@ namespace FoodTour.Mobile.Services
         public async Task<bool> SyncDataFromApiAsync(string apiUrl)
         {
             await Init();
+
+            // Kiểm tra kết nối mạng: nếu không có Internet, trả về false ngay lập tức (Fast-Fail)
+            // Tránh chờ đợi 30 giây timeout của HttpClient khi không có mạng
+            if (Connectivity.Current.NetworkAccess != NetworkAccess.Internet)
+            {
+                System.Diagnostics.Debug.WriteLine("SyncDataFromApiAsync: Không có kết nối mạng, bỏ qua đồng bộ.");
+                return false;
+            }
+
             try
             {
                 using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
@@ -70,9 +79,11 @@ namespace FoodTour.Mobile.Services
                     {
                         foreach (var shop in shops)
                         {
+                            // Tải ảnh về cache cục bộ nhưng KHÔNG ghi đè ImageUrl trong model
+                            // SQLite luôn lưu đường dẫn tương đối từ server (ví dụ: /uploads/shops/123.jpg)
                             if (!string.IsNullOrEmpty(shop.ImageUrl) && shop.ImageUrl.StartsWith("/"))
                             {
-                                shop.ImageUrl = await DownloadAndCacheImageAsync(httpClient, apiUrl, shop.ImageUrl);
+                                await DownloadAndCacheImageAsync(httpClient, apiUrl, shop.ImageUrl);
                             }
 
                             await _database!.InsertOrReplaceAsync(shop);
@@ -97,9 +108,11 @@ namespace FoodTour.Mobile.Services
                     {
                         foreach (var dish in dishes)
                         {
+                            // Tải ảnh về cache cục bộ nhưng KHÔNG ghi đè ImageUrl trong model
+                            // SQLite luôn lưu đường dẫn tương đối từ server
                             if (!string.IsNullOrEmpty(dish.ImageUrl) && dish.ImageUrl.StartsWith("/"))
                             {
-                                dish.ImageUrl = await DownloadAndCacheImageAsync(httpClient, apiUrl, dish.ImageUrl);
+                                await DownloadAndCacheImageAsync(httpClient, apiUrl, dish.ImageUrl);
                             }
 
                             await _database!.InsertOrReplaceAsync(dish);
@@ -217,6 +230,79 @@ namespace FoodTour.Mobile.Services
         {
             await Init();
             return await _database!.DeleteAsync(shop);
+        }
+
+        /// <summary>
+        /// Tải tất cả ảnh của Shops và Dishes từ server về cache cục bộ.
+        /// Dùng cho nút "Tải ảnh offline" trong trang Cài đặt.
+        /// Chỉ tải những ảnh chưa có trong cache.
+        /// </summary>
+        public async Task<bool> DownloadAllImagesAsync(string apiUrl)
+        {
+            await Init();
+
+            // Kiểm tra kết nối mạng trước khi tải ảnh
+            if (Connectivity.Current.NetworkAccess != NetworkAccess.Internet)
+            {
+                System.Diagnostics.Debug.WriteLine("DownloadAllImagesAsync: Không có kết nối mạng.");
+                return false;
+            }
+
+            try
+            {
+                using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+
+                // Tải ảnh của tất cả Shops
+                var shops = await _database!.Table<ShopModel>().ToListAsync();
+                foreach (var shop in shops)
+                {
+                    if (!string.IsNullOrEmpty(shop.ImageUrl) && shop.ImageUrl.StartsWith("/"))
+                    {
+                        await DownloadAndCacheImageAsync(httpClient, apiUrl, shop.ImageUrl);
+                    }
+                }
+
+                // Tải ảnh của tất cả Dishes
+                var dishes = await _database.Table<DishModel>().ToListAsync();
+                foreach (var dish in dishes)
+                {
+                    if (!string.IsNullOrEmpty(dish.ImageUrl) && dish.ImageUrl.StartsWith("/"))
+                    {
+                        await DownloadAndCacheImageAsync(httpClient, apiUrl, dish.ImageUrl);
+                    }
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"DownloadAllImagesAsync Error: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Xóa tất cả file ảnh đã cache trong AppDataDirectory.
+        /// Dùng cho nút "Xóa cache ảnh" trong trang Cài đặt.
+        /// </summary>
+        public Task<int> ClearImageCacheAsync()
+        {
+            int deletedCount = 0;
+            var imageExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
+            var files = Directory.GetFiles(FileSystem.AppDataDirectory);
+
+            foreach (var file in files)
+            {
+                var ext = Path.GetExtension(file).ToLowerInvariant();
+                if (imageExtensions.Contains(ext))
+                {
+                    File.Delete(file);
+                    deletedCount++;
+                }
+            }
+
+            System.Diagnostics.Debug.WriteLine($"ClearImageCacheAsync: Đã xóa {deletedCount} file ảnh cache.");
+            return Task.FromResult(deletedCount);
         }
     }
 }

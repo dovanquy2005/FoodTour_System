@@ -11,14 +11,13 @@ namespace FoodTour.Mobile.ViewModels
         [ObservableProperty]
         private bool isBusy;
 
+        // Bật/tắt tự động phát audio khi người dùng đến gần quán
         [ObservableProperty]
         private bool isAutoPlay = true;
 
+        // Hiển thị dung lượng lưu trữ offline hiện tại
         [ObservableProperty]
-        private string radius = "20";
-
-        [ObservableProperty]
-        private string offlineStatus = "120MB";
+        private string offlineStatus = "—";
 
         [ObservableProperty]
         private string appVersion = "1.0.0 (Beta)";
@@ -39,8 +38,8 @@ namespace FoodTour.Mobile.ViewModels
         {
             _localizationService = localizationService;
             _dbService = dbService;
-            
-            // Resume preferred language
+
+            // Khôi phục ngôn ngữ đã lưu trước đó
             var savedLang = Preferences.Default.Get("AppLanguage", "vi");
             SelectedLanguage = savedLang switch
             {
@@ -90,13 +89,13 @@ namespace FoodTour.Mobile.ViewModels
         {
             if (SelectedLanguageItem == null || Shell.Current == null) return;
 
-            // Deselect previous
+            // Bỏ chọn ngôn ngữ cũ
             foreach (var lang in Languages)
             {
                 lang.IsSelected = false;
             }
 
-            // Select new
+            // Chọn ngôn ngữ mới và lưu vào Preferences
             SelectedLanguageItem.IsSelected = true;
             SelectedLanguage = SelectedLanguageItem.DisplayName;
             string langCode = SelectedLanguageItem.Code;
@@ -104,49 +103,36 @@ namespace FoodTour.Mobile.ViewModels
             Preferences.Default.Set("AppLanguage", langCode);
             await _localizationService.ChangeLanguageAsync(langCode);
 
-            // Pop page
+            // Quay lại trang trước
             await Shell.Current.GoToAsync("..");
         }
 
+        /// <summary>
+        /// Xóa tất cả file ảnh đã cache trên thiết bị.
+        /// Hiển thị cảnh báo xác nhận trước khi xóa.
+        /// </summary>
         [RelayCommand]
-        public async Task UpdateData()
+        public async Task ClearImageCache()
         {
-            if (IsBusy) return;
-            IsBusy = true;
-            OfflineStatus = "Đang đồng bộ...";
-
-            // Determine API URL (Emulator uses 10.0.2.2, Windows uses localhost)
-            string apiUrl = DeviceInfo.Platform == DevicePlatform.Android 
-                ? "http://10.0.2.2:5154" 
-                : "http://localhost:5154";
-
-            bool success = await _dbService.SyncDataFromApiAsync(apiUrl);
-
-            if (success)
-            {
-                OfflineStatus = "Đã đồng bộ";
-                if (Shell.Current != null)
-                    await Shell.Current.DisplayAlert(_localizationService["Common_Success"], _localizationService["Settings_UpdateSuccess"], _localizationService["Common_OK"]);
-            }
-            else
-            {
-                OfflineStatus = "Lỗi đồng bộ";
-                if (Shell.Current != null)
-                    await Shell.Current.DisplayAlert("Lỗi", "Không thể cập nhật dữ liệu từ máy chủ.", _localizationService["Common_OK"]);
-            }
-            
-            IsBusy = false;
-        }
-
-        [RelayCommand]
-        public async Task ClearData()
-        {
-            bool result = false;
+            // Xác nhận xóa cache ảnh
+            bool confirm = false;
             if (Shell.Current != null)
-                result = await Shell.Current.DisplayAlert(_localizationService["Settings_ClearConfirmTitle"], _localizationService["Settings_ClearConfirmMsg"], _localizationService["Common_Yes"], _localizationService["Common_No"]);
-            if (result)
+                confirm = await Shell.Current.DisplayAlert(
+                    _localizationService["Settings_ClearConfirmTitle"],
+                    _localizationService["Settings_ClearCacheConfirmMsg"],
+                    _localizationService["Common_Yes"],
+                    _localizationService["Common_No"]);
+
+            if (confirm)
             {
-                OfflineStatus = "0MB";
+                int deleted = await _dbService.ClearImageCacheAsync();
+                OfflineStatus = $"Đã xóa {deleted} ảnh";
+
+                if (Shell.Current != null)
+                    await Shell.Current.DisplayAlert(
+                        _localizationService["Common_Success"],
+                        $"{_localizationService["Settings_ClearCacheDone"]} ({deleted})",
+                        _localizationService["Common_OK"]);
             }
         }
     }

@@ -4,7 +4,7 @@
              xmlns:ext="clr-namespace:FoodTour.Mobile.Extensions"
              x:Class="FoodTour.Mobile.Views.OnboardingPage"
              BackgroundColor="{StaticResource Background}"
-             NavigationPage.HasNavigationBar="False">
+             Shell.NavBarIsVisible="False">
 
     <Grid RowDefinitions="*, Auto" Margin="20, 40, 20, 30">
         

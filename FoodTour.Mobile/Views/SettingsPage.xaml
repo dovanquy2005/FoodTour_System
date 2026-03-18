@@ -5,7 +5,7 @@
              x:Class="FoodTour.Mobile.Views.SettingsPage"
              x:DataType="viewmodels:SettingsViewModel"
              BackgroundColor="{StaticResource Background}"
-             NavigationPage.HasNavigationBar="False">
+             Shell.NavBarIsVisible="False">
 
 	<ScrollView>
 		<VerticalStackLayout Margin="20, 20, 20, 40" Spacing="22">
@@ -32,82 +32,20 @@
 				        StrokeThickness="1"
 				        Padding="16,4"
 				        Shadow="{Shadow Radius=6, Opacity=0.05, Offset='0,2'}">
-					<Grid RowDefinitions="Auto, 1, Auto">
-
-						<!-- Toggle Auto Play -->
-						<Grid Grid.Row="0" ColumnDefinitions="Auto, *, Auto" Padding="0,14">
-							<Label Grid.Column="0" Text="🎙️" FontSize="20" VerticalOptions="Center"/>
-							<Label Grid.Column="1" Text="{ext:Translate Settings_AutoPlay}"
-							       TextColor="{StaticResource TextPrimary}" FontSize="15"
-							       VerticalOptions="Center" Margin="14,0"/>
-							<Switch Grid.Column="2" IsToggled="{Binding IsAutoPlay}"
-							        OnColor="{StaticResource Primary}" ThumbColor="White"
-							        VerticalOptions="Center"/>
-						</Grid>
-
-						<BoxView Grid.Row="1" Color="{StaticResource Gray100}" HeightRequest="1" HorizontalOptions="Fill"/>
-
-						<!-- Set Radius -->
-						<Grid Grid.Row="2" ColumnDefinitions="Auto, *, Auto" Padding="0,14">
-							<Label Grid.Column="0" Text="📍" FontSize="20" VerticalOptions="Center"/>
-							<Label Grid.Column="1" Text="{ext:Translate Settings_Radius}"
-							       TextColor="{StaticResource TextPrimary}" FontSize="15"
-							       VerticalOptions="Center" Margin="14,0"/>
-							<Entry Grid.Column="2" Text="{Binding Radius}" Keyboard="Numeric"
-							       TextColor="{StaticResource Primary}" BackgroundColor="Transparent"
-							       HorizontalTextAlignment="End" WidthRequest="60"
-							       FontSize="16" FontAttributes="Bold"/>
-						</Grid>
+					<!-- Chỉ giữ lại toggle Tự động phát -->
+					<Grid ColumnDefinitions="Auto, *, Auto" Padding="0,10">
+						<Label Grid.Column="0" Text="🎙️" FontSize="20" VerticalOptions="Center"/>
+						<Label Grid.Column="1" Text="{ext:Translate Settings_AutoPlay}"
+						       TextColor="{StaticResource TextPrimary}" FontSize="15"
+						       VerticalOptions="Center" Margin="14,0"/>
+						<Switch Grid.Column="2" IsToggled="{Binding IsAutoPlay}"
+						        OnColor="{StaticResource Primary}" ThumbColor="White"
+						        VerticalOptions="Center"/>
 					</Grid>
 				</Border>
 			</VerticalStackLayout>
 
-			<!-- ═══════ CHẾ ĐỘ DỮ LIỆU ═══════ -->
-			<VerticalStackLayout Spacing="8">
-				<Label Text="{ext:Translate Settings_DataMode}"
-				       TextColor="{StaticResource TextSecondary}"
-				       FontSize="12"
-				       FontAttributes="Bold"
-				       Margin="4,0"
-				       CharacterSpacing="1"/>
-
-				<Border BackgroundColor="{StaticResource Surface}"
-				        StrokeShape="RoundRectangle 16"
-				        Stroke="{StaticResource CardBorder}"
-				        StrokeThickness="1"
-				        Padding="16,4"
-				        Shadow="{Shadow Radius=6, Opacity=0.05, Offset='0,2'}">
-					<VerticalStackLayout>
-						<Grid ColumnDefinitions="Auto, *, Auto" Padding="0,14">
-							<Label Grid.Column="0" Text="📶" FontSize="20" VerticalOptions="Center"/>
-							<VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Margin="14,0" Spacing="2">
-								<Label Text="Offline Mode" TextColor="{StaticResource TextPrimary}" FontSize="15" FontAttributes="Bold"/>
-								<Label TextColor="{StaticResource TextSecondary}" FontSize="13">
-                                    <Label.Triggers>
-                                        <DataTrigger TargetType="Label" Binding="{Binding Source={x:Reference DataModeSwitch}, Path=IsToggled, x:DataType='Switch'}" Value="False">
-                                            <Setter Property="Text" Value="Nghe trực tuyến (Tiết kiệm bộ nhớ máy)" />
-                                        </DataTrigger>
-                                        <DataTrigger TargetType="Label" Binding="{Binding Source={x:Reference DataModeSwitch}, Path=IsToggled, x:DataType='Switch'}" Value="True">
-                                            <Setter Property="Text" Value="Tải về máy (Tiết kiệm 4G/5G, kích thước ~45MB)" />
-                                        </DataTrigger>
-                                    </Label.Triggers>
-                                </Label>
-							</VerticalStackLayout>
-							<Switch Grid.Column="2" x:Name="DataModeSwitch"
-							        Toggled="OnDataModeToggled"
-							        OnColor="{StaticResource Primary}" ThumbColor="White"
-							        VerticalOptions="Center"/>
-						</Grid>
-						<!-- ProgressBar Section -->
-						<VerticalStackLayout x:Name="DataModeProgressBarSection" IsVisible="False" Padding="0,0,0,14">
-							<ProgressBar x:Name="DataModeProgressBar" Progress="0" ProgressColor="{StaticResource Primary}" HeightRequest="4"/>
-							<Label x:Name="DataModeProgressLabel" Text="Đang tải... 0%" FontSize="12" TextColor="{StaticResource Primary}" HorizontalOptions="Center" Margin="0,4,0,0" FontAttributes="Bold"/>
-						</VerticalStackLayout>
-					</VerticalStackLayout>
-				</Border>
-			</VerticalStackLayout>
-
-			<!-- ═══════ DỮ LIỆU OFFLINE ═══════ -->
+			<!-- ═══════ DỮ LIỆU & HÌNH ẢNH ═══════ -->
 			<VerticalStackLayout Spacing="8">
 				<Label Text="{ext:Translate Settings_OfflineData}"
 				       TextColor="{StaticResource TextSecondary}"
@@ -122,9 +60,10 @@
 				        StrokeThickness="1"
 				        Padding="16,4"
 				        Shadow="{Shadow Radius=6, Opacity=0.05, Offset='0,2'}">
-					<Grid RowDefinitions="Auto, 1, Auto, 1, Auto">
+					<!-- Chỉ giữ lại: Trạng thái lưu trữ + Xóa cache ảnh -->
+					<Grid RowDefinitions="Auto, 1, Auto">
 
-						<!-- Trạng thái -->
+						<!-- Trạng thái lưu trữ -->
 						<Grid Grid.Row="0" ColumnDefinitions="Auto, *, Auto" Padding="0,14">
 							<Label Grid.Column="0" Text="💾" FontSize="20" VerticalOptions="Center"/>
 							<Label Grid.Column="1" Text="{ext:Translate Settings_Status}"
@@ -137,28 +76,13 @@
 
 						<BoxView Grid.Row="1" Color="{StaticResource Gray100}" HeightRequest="1" HorizontalOptions="Fill"/>
 
-						<!-- Cập nhật dữ liệu -->
+						<!-- Xóa cache ảnh -->
 						<Grid Grid.Row="2" ColumnDefinitions="Auto, *, Auto" Padding="0,14">
 							<Grid.GestureRecognizers>
-								<TapGestureRecognizer Command="{Binding UpdateDataCommand}"/>
-							</Grid.GestureRecognizers>
-							<Label Grid.Column="0" Text="🔄" FontSize="20" VerticalOptions="Center"/>
-							<Label Grid.Column="1" Text="{ext:Translate Settings_UpdateData}"
-							       TextColor="{StaticResource Info}" FontSize="15"
-							       VerticalOptions="Center" Margin="14,0"/>
-							<Label Grid.Column="2" Text="❯" TextColor="{StaticResource TextTertiary}"
-							       FontSize="14" VerticalOptions="Center"/>
-						</Grid>
-
-						<BoxView Grid.Row="3" Color="{StaticResource Gray100}" HeightRequest="1" HorizontalOptions="Fill"/>
-
-						<!-- Xóa dữ liệu -->
-						<Grid Grid.Row="4" ColumnDefinitions="Auto, *, Auto" Padding="0,14">
-							<Grid.GestureRecognizers>
-								<TapGestureRecognizer Command="{Binding ClearDataCommand}"/>
+								<TapGestureRecognizer Command="{Binding ClearImageCacheCommand}"/>
 							</Grid.GestureRecognizers>
 							<Label Grid.Column="0" Text="🗑️" FontSize="20" VerticalOptions="Center"/>
-							<Label Grid.Column="1" Text="{ext:Translate Settings_ClearData}"
+							<Label Grid.Column="1" Text="{ext:Translate Settings_ClearImageCache}"
 							       TextColor="{StaticResource Error}" FontSize="15"
 							       VerticalOptions="Center" Margin="14,0"/>
 							<Label Grid.Column="2" Text="❯" TextColor="{StaticResource TextTertiary}"
@@ -218,16 +142,6 @@
 					</Grid>
 				</Border>
 			</VerticalStackLayout>
-
-			<!-- Logout Button -->
-			<!-- <Button Text="{ext:Translate Settings_Logout}"
-			        BackgroundColor="{StaticResource Gray100}"
-			        TextColor="{StaticResource Error}"
-			        FontAttributes="Bold"
-			        CornerRadius="14"
-			        HeightRequest="52"
-			        Margin="0, 8, 0, 0"
-			        BorderWidth="0"/> -->
 
 		</VerticalStackLayout>
 	</ScrollView>

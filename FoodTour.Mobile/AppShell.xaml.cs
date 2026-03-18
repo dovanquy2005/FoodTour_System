@@ -34,34 +34,24 @@ public partial class AppShell : Shell
         });
     }
 
+    // Cập nhật chỉ báo trạng thái mạng — đã loại bỏ logic "Offline Mode" cũ
+    // Chỉ hiển thị trạng thái kết nối mạng thực tế
     public void UpdateStatusIndicator()
     {
-        var isOfflineMode = Preferences.Default.Get("IsOfflineMode", false);
         var currentAccess = Connectivity.Current.NetworkAccess;
 
-        if (isOfflineMode)
+        if (currentAccess == NetworkAccess.Internet)
         {
-            // Offline Mode ON: Green Cloud with a Tick + text "Offline Mode"
-            StatusIcon.Text = "✅"; // Can use an image/font icon for cloud+tick
-            StatusText.Text = "Offline Mode";
-            StatusText.TextColor = Colors.LimeGreen;
-            StatusIndicatorContainer.IsVisible = true;
+            // Có kết nối mạng → ẩn chỉ báo
+            StatusIndicatorContainer.IsVisible = false;
         }
         else
         {
-            if (currentAccess == NetworkAccess.Internet)
-            {
-                // Offline Mode OFF & Connected: Hide indicator or subtle Wi-Fi icon
-                StatusIndicatorContainer.IsVisible = false;
-            }
-            else
-            {
-                // Offline Mode OFF & Disconnected: Red Wi-Fi slashed + text "No Connection"
-                StatusIcon.Text = "❌"; // Red cross or slashed wifi icon
-                StatusText.Text = "No Connection";
-                StatusText.TextColor = Colors.Red;
-                StatusIndicatorContainer.IsVisible = true;
-            }
+            // Không có mạng → hiển thị cảnh báo mất kết nối
+            StatusIcon.Text = "❌";
+            StatusText.Text = "No Connection";
+            StatusText.TextColor = Colors.Red;
+            StatusIndicatorContainer.IsVisible = true;
         }
     }
 

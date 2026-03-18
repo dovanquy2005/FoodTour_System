@@ -3,7 +3,7 @@
              xmlns:ext="clr-namespace:FoodTour.Mobile.Extensions"
              x:Class="FoodTour.Mobile.Views.AlertsPage"
              BackgroundColor="{StaticResource Background}"
-             NavigationPage.HasNavigationBar="False">
+             Shell.NavBarIsVisible="False">
 
 	<Grid RowDefinitions="Auto, *" Margin="20, 25, 20, 0">
 

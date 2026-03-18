@@ -144,7 +144,7 @@
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer Command="{Binding MinimizeCommand}"/>
                         </Border.GestureRecognizers>
-                        <Label Text="˅"
+                        <Label Text="&lt;"
                                TextColor="#9E8E8E"
                                FontSize="18"
                                FontAttributes="Bold"
@@ -153,12 +153,18 @@
                     </Border>
                 </Grid>
 
-                <!-- Row 1: Progress bar (red, flush at bottom) -->
-                <BoxView Grid.Row="1"
-                         Color="#E53935"
-                         HeightRequest="3"
-                         VerticalOptions="End"
-                         HorizontalOptions="Fill"/>
+                <!-- Row 1: Progress bar (interactive slider) -->
+                <Slider Grid.Row="1"
+                        Minimum="0"
+                        Maximum="{Binding Duration}"
+                        Value="{Binding CurrentPosition, Mode=TwoWay}"
+                        MinimumTrackColor="#E53935"
+                        MaximumTrackColor="#5A4545"
+                        ThumbColor="#E53935"
+                        HeightRequest="20"
+                        Margin="-4,0,-4,-4"
+                        VerticalOptions="End"
+                        DragCompleted="OnSliderDragCompleted" />
             </Grid>
         </Border>
 

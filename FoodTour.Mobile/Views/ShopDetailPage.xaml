@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:models="clr-namespace:FoodTour.Mobile.Models"
              xmlns:viewmodels="clr-namespace:FoodTour.Mobile.ViewModels"
+             xmlns:ext="clr-namespace:FoodTour.Mobile.Extensions"
              xmlns:controls="clr-namespace:FoodTour.Mobile.Controls"
              x:Class="FoodTour.Mobile.Views.ShopDetailPage"
              x:DataType="viewmodels:ShopDetailViewModel"
@@ -9,13 +10,18 @@
              BackgroundColor="{StaticResource Background}"
              Shell.NavBarIsVisible="False">
 
+	<!-- Converter giải quyết đường dẫn ảnh: ưu tiên cache cục bộ, fallback về URL API -->
+	<ContentPage.Resources>
+		<ext:ImageUrlConverter x:Key="ImageUrlConverter"/>
+	</ContentPage.Resources>
+
 	<Grid>
 		<ScrollView>
 		<VerticalStackLayout Spacing="0" Padding="0,0,0,24">
 
 			<!-- Hero image + Back button -->
 			<Grid>
-				<Image Source="{Binding Shop.ImageUrl}" Aspect="AspectFill" HeightRequest="260"/>
+				<Image Source="{Binding Shop.ImageUrl, Converter={StaticResource ImageUrlConverter}}" Aspect="AspectFill" HeightRequest="260"/>
 
 				<!-- Gradient overlay at top for status bar readability -->
 				<BoxView BackgroundColor="#40000000" HeightRequest="100" VerticalOptions="Start"/>
@@ -82,7 +88,7 @@
 									        StrokeShape="RoundRectangle 10"
 									        WidthRequest="75" HeightRequest="75"
 									        BackgroundColor="{StaticResource Gray100}">
-										<Image Source="{Binding ImageUrl}"
+										<Image Source="{Binding ImageUrl, Converter={StaticResource ImageUrlConverter}}"
 										       Aspect="AspectFill"
 										       WidthRequest="75" HeightRequest="75"/>
 									</Border>

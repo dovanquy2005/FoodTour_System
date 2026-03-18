@@ -21,7 +21,7 @@ public partial class MapPage : ContentPage
     private FollowState _followState = FollowState.Following;
 
     private const double FollowRadiusMeters = 250;
-    private const double ShopRadiusMeters = 100; // bán kính nhận diện shop
+    private const double ShopRadiusMeters = 50; // bán kính nhận diện shop
     private DateTime _lastMoveTime = DateTime.MinValue;
     private const int MoveThrottleMs = 800;
     private CancellationTokenSource _resumeCts = new();
