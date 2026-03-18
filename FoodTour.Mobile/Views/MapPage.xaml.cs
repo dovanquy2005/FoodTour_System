@@ -21,11 +21,12 @@ public partial class MapPage : ContentPage
     private FollowState _followState = FollowState.Following;
 
     private const double FollowRadiusMeters = 250;
-    private const double ShopRadiusMeters = 50; // bán kính nhận diện shop
+    private const double ShopRadiusMeters = 100; // bán kính nhận diện shop
     private DateTime _lastMoveTime = DateTime.MinValue;
     private const int MoveThrottleMs = 800;
     private CancellationTokenSource _resumeCts = new();
     private const int ResumeDelayMs = 30_000;
+    private readonly Dictionary<Models.ShopModel, Circle> _shopCircles = new();
 
     public MapPage(MapViewModel vm)
     {
@@ -202,6 +203,7 @@ public partial class MapPage : ContentPage
                     {
                         MainThread.BeginInvokeOnMainThread(() =>
                         {
+                            if (_isMapLoaded) return;
                             _isMapLoaded = true;
                             DrawRadiusCircles();
 
@@ -217,6 +219,24 @@ public partial class MapPage : ContentPage
                             }
                         });
                     }));
+
+                    MainThread.BeginInvokeOnMainThread(() =>
+                    {
+                        if (_isMapLoaded) return; // guard tránh chạy 2 lần nếu callback kịp fire
+                        _isMapLoaded = true;
+                        DrawRadiusCircles();
+
+                        if (_pendingRouteShop != null)
+                        {
+                            DrawRouteToShop(_pendingRouteShop);
+                            _pendingRouteShop = null;
+                        }
+                        else if (_userLocation != null)
+                        {
+                            TransitionTo(FollowState.Following);
+                            MoveCamera(_userLocation, FollowRadiusMeters);
+                        }
+                    });
                 }));
             }
         }
@@ -353,9 +373,13 @@ public partial class MapPage : ContentPage
                     return; // Vẫn trong shop cũ → bám ở đây, không làm gì
 
                 // Ra khỏi shop cũ
+                var exitedShop = _currentShop; // Lưu tạm trước khi null
                 _currentShop = null;
-                MainThread.BeginInvokeOnMainThread(() => _viewModel.OnExitShop());
-                return; // Chờ update tiếp theo mới check shop mới (tránh switch ngay lập tức)
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    ResetShopCircle(exitedShop); // Reset về đỏ
+                    _viewModel.OnExitShop();
+                });
             }
 
             // Case 2: Tìm shop GẦN NHẤT trong ShopRadiusMeters (dùng LINQ)
@@ -371,10 +395,14 @@ public partial class MapPage : ContentPage
             {
                 try
                 {
+                    HighlightShopCircle(nearest); // Highlight xanh
                     HapticFeedback.Default.Perform(HapticFeedbackType.LongPress);
                     await _viewModel.OnEnterShop(nearest);
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"EnterShop error: {ex.Message}\n{ex.StackTrace}");
+                }
             });
         }
         catch (Exception ex)
@@ -433,6 +461,7 @@ public partial class MapPage : ContentPage
 
         MainMap.MapElements.Clear();
         MainMap.Pins.Clear();
+        _shopCircles.Clear();
 
         if (_viewModel.Shops == null || _viewModel.Shops.Count == 0) return;
 
@@ -441,14 +470,16 @@ public partial class MapPage : ContentPage
             try
             {
                 // Vẽ vòng tròn bán kính 100m (dùng Inline Object Intialization)
-                MainMap.MapElements.Add(new Circle
+                var circle = new Circle
                 {
                     Center = shop.Location,
-                    Radius = Distance.FromMeters(ShopRadiusMeters), // Bán kính nhận diện 100m
+                    Radius = Distance.FromMeters(ShopRadiusMeters),
                     StrokeColor = Colors.Red,
                     StrokeWidth = 2,
                     FillColor = Colors.Red.WithAlpha(0.25f)
-                });
+                };
+                MainMap.MapElements.Add(circle);
+                _shopCircles[shop] = circle;
 
                 // Thêm cọc (Pin) ở giữa tâm
                 var pin = new Pin
@@ -503,5 +534,19 @@ public partial class MapPage : ContentPage
         {
             Console.WriteLine($"Selection error: {ex.Message}");
         }
+    }
+
+    private void HighlightShopCircle(Models.ShopModel shop)
+    {
+        if (!_shopCircles.TryGetValue(shop, out var circle)) return;
+        circle.StrokeColor = Colors.Green;
+        circle.FillColor = Colors.Green.WithAlpha(0.25f);
+    }
+
+    private void ResetShopCircle(Models.ShopModel shop)
+    {
+        if (!_shopCircles.TryGetValue(shop, out var circle)) return;
+        circle.StrokeColor = Colors.Red;
+        circle.FillColor = Colors.Red.WithAlpha(0.25f);
     }
 }

@@ -56,21 +56,21 @@ public partial class MapViewModel : BaseViewModel
     }
 
     [RelayCommand]
-    void SkipNext()
+    async Task SkipNext()
     {
         if (Shops == null || Shops.Count == 0 || _currentShop == null) return;
         int idx = Shops.IndexOf(_currentShop);
         int nextIdx = (idx + 1) % Shops.Count;
-        _ = OnEnterShop(Shops[nextIdx]);
+        await OnEnterShop(Shops[nextIdx]);
     }
 
     [RelayCommand]
-    void SkipPrevious()
+    async Task SkipPrevious()
     {
         if (Shops == null || Shops.Count == 0 || _currentShop == null) return;
         int idx = Shops.IndexOf(_currentShop);
         int prevIdx = (idx - 1 + Shops.Count) % Shops.Count;
-        _ = OnEnterShop(Shops[prevIdx]);
+        await OnEnterShop(Shops[prevIdx]);
     }
 
     // 👇 3. LOGIC LOAD DATABASE
