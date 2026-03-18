@@ -9,7 +9,7 @@ public class WalikingSimulationService
     private ShopModel? _currentShop = null; // trachk shop đang active
     private bool _isRunning = false;
     public Action<Location>? OnLocationUpdate;
-    public Func<ShopModel, Task>? OnEnterShop;           // Gọi để bắt đầu thuyết minh
+    public Func<ShopModel, Task>? OnEnterShop; // Gọi để bắt đầu thuyết minh
     public Action? OnExitShop;
     public Action? OnRouteFinished;
 
