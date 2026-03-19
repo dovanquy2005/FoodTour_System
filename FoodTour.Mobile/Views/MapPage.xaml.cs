@@ -341,6 +341,7 @@ public partial class MapPage : ContentPage
         {
             var userLoc = e.Location;
             if (userLoc == null) return;
+            if (userLoc.Accuracy.HasValue && userLoc.Accuracy.Value > 25.0) return; // Lọc GPS kém chính xác
 
             _userLocation = userLoc;
 
@@ -369,7 +370,7 @@ public partial class MapPage : ContentPage
                     _currentShop.Location,
                     DistanceUnits.Kilometers) * 1000;
 
-                if (distToCurrent <= ShopRadiusMeters)
+                if (distToCurrent <= ShopRadiusMeters * 1.3)
                     return; // Vẫn trong shop cũ → bám ở đây, không làm gì
 
                 // Ra khỏi shop cũ
