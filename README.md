@@ -1,5 +1,3 @@
-
-```markdown
 # FoodTour - Hệ thống Audio Guide Phố Ẩm Thực Vĩnh Khánh
 
 Dự án phát triển hệ thống hỗ trợ du lịch thông minh (Audio Guide) tập trung vào trải nghiệm người dùng đa ngôn ngữ và chế độ Offline/Online tại phố ẩm thực Vĩnh Khánh.
@@ -41,19 +39,6 @@ Sử dụng các lệnh .NET CLI sau trong thư mục `FoodTour_WebAdmin.Api` đ
 **1. Cài đặt Provider cho PostgreSQL**
 ```bash
 dotnet add package Npgsql.EntityFrameworkCore.PostgreSQL
-```
-
-**2. Tạo bản ghi nhận thay đổi cấu trúc database (Migration)**
-*(Thay 'TenMigration' bằng tên mô tả, vd: InitDB)*
-```bash
-dotnet ef migrations add TenMigration
-```
-
-**3. Đẩy và áp dụng cấu trúc lên database Supabase thực tế**
-```bash
-dotnet ef database update
-```
-
 ---
 
 ## 🚀 Hướng Dẫn Khởi Chạy (Quick Start)
