@@ -11,9 +11,23 @@ namespace FoodTour.Mobile.ViewModels
     public partial class ExploreViewModel : BaseViewModel
     {
         private readonly DatabaseService _dbService;
+        private List<ShopModel> _allShops = new();
 
         [ObservableProperty]
         ObservableCollection<ShopModel> shops = new();
+
+        private string _searchQuery = string.Empty;
+        public string SearchQuery
+        {
+            get => _searchQuery;
+            set
+            {
+                if (SetProperty(ref _searchQuery, value))
+                {
+                    FilterShops();
+                }
+            }
+        }
 
         [ObservableProperty]
         private bool isOffline;
@@ -30,8 +44,25 @@ namespace FoodTour.Mobile.ViewModels
             var data = await _dbService.GetShopsAsync();
             MainThread.BeginInvokeOnMainThread(() =>
             {
-                Shops = new ObservableCollection<ShopModel>(data);
+                _allShops = data;
+                FilterShops();
             });
+        }
+
+        private void FilterShops()
+        {
+            if (string.IsNullOrWhiteSpace(_searchQuery))
+            {
+                Shops = new ObservableCollection<ShopModel>(_allShops);
+            }
+            else
+            {
+                var query = _searchQuery.ToLowerInvariant();
+                var filtered = _allShops.Where(s => 
+                    (s.Name?.ToLowerInvariant().Contains(query) == true) || 
+                    (s.Address?.ToLowerInvariant().Contains(query) == true));
+                Shops = new ObservableCollection<ShopModel>(filtered);
+            }
         }
 
         [RelayCommand]

@@ -10,13 +10,15 @@ public partial class OnboardingPage : ContentPage
     private readonly Services.ILocalizationService _localizationService;
     private readonly Services.DatabaseService _databaseService;
     private readonly ViewModels.PlayerViewModel _playerVm;
+    private readonly Services.WalikingSimulationService _locationService;
 
-    public OnboardingPage(Services.ILocalizationService localizationService, Services.DatabaseService databaseService, ViewModels.PlayerViewModel playerVm)
+    public OnboardingPage(Services.ILocalizationService localizationService, Services.DatabaseService databaseService, ViewModels.PlayerViewModel playerVm, Services.WalikingSimulationService locationService)
     {
         InitializeComponent();
         _localizationService = localizationService;
         _databaseService = databaseService;
         _playerVm = playerVm;
+        _locationService = locationService;
     }
 
     private async void OnDownloadOfflineClicked(object sender, EventArgs e)
@@ -52,7 +54,7 @@ public partial class OnboardingPage : ContentPage
             // Navigate to Main App
             if (Application.Current?.Windows.Count > 0)
             {
-                Application.Current.Windows[0].Page = new AppShell(_playerVm);
+                Application.Current.Windows[0].Page = new AppShell(_playerVm, _locationService);
             }
         }
         else
@@ -73,7 +75,7 @@ public partial class OnboardingPage : ContentPage
         // Navigate to Main App
         if (Application.Current?.Windows.Count > 0)
         {
-            Application.Current.Windows[0].Page = new AppShell(_playerVm);
+            Application.Current.Windows[0].Page = new AppShell(_playerVm, _locationService);
         }
     }
 }

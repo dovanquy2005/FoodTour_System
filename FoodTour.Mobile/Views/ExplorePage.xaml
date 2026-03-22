@@ -56,6 +56,7 @@
 				       Margin="0,0,10,0"
 				       Opacity="0.45"/>
 				<Entry Grid.Column="1"
+				       Text="{Binding SearchQuery, Mode=TwoWay}"
 				       Placeholder="{ext:Translate Explore_SearchPlaceholder}"
 				       PlaceholderColor="{StaticResource TextTertiary}"
 				       TextColor="{StaticResource TextPrimary}"

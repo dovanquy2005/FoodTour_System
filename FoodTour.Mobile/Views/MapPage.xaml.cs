@@ -20,13 +20,13 @@ public partial class MapPage : ContentPage
     private enum FollowState { Following, Free, RouteView }
     private FollowState _followState = FollowState.Following;
 
-    private const double FollowRadiusMeters = 250;
+    private const double FollowRadiusMeters = 250; // bán kính follow
     private const double ShopRadiusMeters = 50; // bán kính nhận diện shop
-    private DateTime _lastMoveTime = DateTime.MinValue;
-    private const int MoveThrottleMs = 800;
+    private DateTime _lastMoveTime = DateTime.MinValue; // thời gian cuối cùng user move map
+    private const int MoveThrottleMs = 800; // khoảng thời gian giữa 2 lần check move
     private CancellationTokenSource _resumeCts = new();
-    private const int ResumeDelayMs = 30_000;
-    private readonly Dictionary<Models.ShopModel, Circle> _shopCircles = new();
+    private const int ResumeDelayMs = 30_000; // Tự động resume follow sau 30s
+    private readonly Dictionary<Models.ShopModel, Circle> _shopCircles = new(); // Lưu trữ các vòng tròn bán kính của shop
 
     public MapPage(MapViewModel vm)
     {
@@ -109,9 +109,6 @@ public partial class MapPage : ContentPage
 
             Geolocation.Default.LocationChanged -= OnUserLocationChanged;
             UnhookAndroid();
-            // QUAN TRỌNG: Dừng hẳn việc lắng nghe GPS khi người dùng thoát tab Map để tiết kiệm PIN
-            if (Geolocation.Default.IsListeningForeground)
-                Geolocation.Default.StopListeningForeground();
         }
         catch (Exception ex)
         {
@@ -308,13 +305,9 @@ public partial class MapPage : ContentPage
 
             if (status != PermissionStatus.Granted) return;
 
-            // Đăng ký nhận thông tin vị trí mới
+            // Đăng ký nhận thông tin vị trí mới (Lắng nghe Foreground đã được khởi chạy ở Global Service)
             Geolocation.Default.LocationChanged -= OnUserLocationChanged;
             Geolocation.Default.LocationChanged += OnUserLocationChanged;
-
-            await Geolocation.Default.StartListeningForegroundAsync(
-                new GeolocationListeningRequest(GeolocationAccuracy.Best, TimeSpan.FromSeconds(1))
-            );
 
             var location = await Geolocation.Default.GetLocationAsync();
             if (location == null) return;
@@ -379,7 +372,6 @@ public partial class MapPage : ContentPage
                 MainThread.BeginInvokeOnMainThread(() =>
                 {
                     ResetShopCircle(exitedShop); // Reset về đỏ
-                    _viewModel.OnExitShop();
                 });
             }
 
@@ -392,13 +384,12 @@ public partial class MapPage : ContentPage
 
             if (nearest == null) return;
             _currentShop = nearest;
-            MainThread.BeginInvokeOnMainThread(async () =>
+            MainThread.BeginInvokeOnMainThread(() =>
             {
                 try
                 {
                     HighlightShopCircle(nearest); // Highlight xanh
                     HapticFeedback.Default.Perform(HapticFeedbackType.LongPress);
-                    await _viewModel.OnEnterShop(nearest);
                 }
                 catch (Exception ex)
                 {

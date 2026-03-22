@@ -8,11 +8,13 @@ public partial class App : Application
     private Page _initialPage = new Views.SplashPage();
 
     private readonly ViewModels.PlayerViewModel _playerVm;
+    private readonly Services.WalikingSimulationService _locationService;
 
-    public App(Services.ILocalizationService localizationService, Services.DatabaseService databaseService, ViewModels.PlayerViewModel playerVm)
+    public App(Services.ILocalizationService localizationService, Services.DatabaseService databaseService, ViewModels.PlayerViewModel playerVm, Services.WalikingSimulationService locationService)
     {
         InitializeComponent();
         _playerVm = playerVm;
+        _locationService = locationService;
 
         InitializeAppAsync(localizationService, databaseService);
     }
@@ -63,8 +65,8 @@ public partial class App : Application
         MainThread.BeginInvokeOnMainThread(() =>
         {
             Page newPage = isSetupCompleted 
-                ? new AppShell(_playerVm) 
-                : new NavigationPage(new Views.OnboardingPage(localizationService, databaseService, _playerVm));
+                ? new AppShell(_playerVm, _locationService) 
+                : new NavigationPage(new Views.OnboardingPage(localizationService, databaseService, _playerVm, _locationService));
 
             if (Application.Current?.Windows.Count > 0)
             {

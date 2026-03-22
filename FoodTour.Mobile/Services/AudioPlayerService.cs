@@ -64,11 +64,29 @@ public class AudioPlayerService : IAudioPlayerService
         string desc = shop.Description ?? "Mời bạn ghé thăm.";
         string fullContent = $"{name}. {desc}".Replace("\n", ". ").Replace("  ", " ");
         
-        // Tách thành các đoạn câu nhỏ để có thể dừng/tiếp tục chính xác hơn
-        _sentences = fullContent.Split(new[] { ". ", ".", "?", "!" }, StringSplitOptions.RemoveEmptyEntries)
-                                .Select(s => s.Trim() + ".")
-                                .Where(s => s.Length > 1)
-                                .ToList();
+        // Tách thành các đoạn câu nhỏ trước
+        var rawSentences = fullContent.Split(new[] { ". ", "? ", "! " }, StringSplitOptions.RemoveEmptyEntries)
+                                      .Select(s => s.Trim() + ". ")
+                                      .Where(s => s.Length > 2)
+                                      .ToList();
+                                      
+        // Gom lại thành các đoạn lớn (tối thiểu 250 ký tự) để tránh lỗi ngắt quãng delay quá lâu của trình đọc TTS
+        _sentences = new List<string>();
+        string currentChunk = "";
+        
+        foreach (var s in rawSentences)
+        {
+            currentChunk += s;
+            if (currentChunk.Length >= 250)
+            {
+                _sentences.Add(currentChunk.TrimEnd());
+                currentChunk = "";
+            }
+        }
+        if (!string.IsNullOrWhiteSpace(currentChunk))
+        {
+            _sentences.Add(currentChunk.TrimEnd());
+        }
                                 
         _currentSentenceIndex = 0;
         _currentPosition = 0;

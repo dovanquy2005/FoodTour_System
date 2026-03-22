@@ -11,15 +11,12 @@ namespace FoodTour.Mobile.ViewModels;
 public partial class MapViewModel : BaseViewModel
 {
     private readonly DatabaseService _dbService;
-    private readonly IAudioPlayerService _audioService;
-    private ShopModel? _currentShop;
 
     [ObservableProperty] ObservableCollection<ShopModel> shops;
 
-    public MapViewModel(DatabaseService dbService, IAudioPlayerService audioService)
+    public MapViewModel(DatabaseService dbService)
     {
         _dbService = dbService;
-        _audioService = audioService;
         Shops = new ObservableCollection<ShopModel>();
     }
 
@@ -34,44 +31,7 @@ public partial class MapViewModel : BaseViewModel
         });
     }
 
-    // 👇 2. LOGIC PLAYER & GPS
 
-    /// <summary>
-    /// Bắt đầu thuyết minh shop.
-    /// </summary>
-    public async Task OnEnterShop(ShopModel shop)
-    {
-        _currentShop = shop;
-        await _audioService.PlayShopAsync(shop);
-    }
-
-    /// <summary>
-    /// Dừng thuyết minh khi người dùng ra khỏi bán kính shop.
-    /// Được gọi bởi OnExitShop của WalkingSimulationService.
-    /// </summary>
-    public void OnExitShop()
-    {
-        _audioService.Stop();
-        _currentShop = null;
-    }
-
-    [RelayCommand]
-    async Task SkipNext()
-    {
-        if (Shops == null || Shops.Count == 0 || _currentShop == null) return;
-        int idx = Shops.IndexOf(_currentShop);
-        int nextIdx = (idx + 1) % Shops.Count;
-        await OnEnterShop(Shops[nextIdx]);
-    }
-
-    [RelayCommand]
-    async Task SkipPrevious()
-    {
-        if (Shops == null || Shops.Count == 0 || _currentShop == null) return;
-        int idx = Shops.IndexOf(_currentShop);
-        int prevIdx = (idx - 1 + Shops.Count) % Shops.Count;
-        await OnEnterShop(Shops[prevIdx]);
-    }
 
     // 👇 3. LOGIC LOAD DATABASE
     [RelayCommand]

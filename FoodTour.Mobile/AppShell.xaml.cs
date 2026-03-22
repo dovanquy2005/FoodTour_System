@@ -7,7 +7,7 @@ namespace FoodTour.Mobile;
 
 public partial class AppShell : Shell
 {
-    public AppShell(ViewModels.PlayerViewModel playerVm)
+    public AppShell(ViewModels.PlayerViewModel playerVm, Services.WalikingSimulationService locationService)
     {
         InitializeComponent();
         BindingContext = playerVm;
@@ -18,6 +18,9 @@ public partial class AppShell : Shell
 
         // Đăng ký sự kiện lắng nghe kết nối mạng
         Connectivity.ConnectivityChanged += Connectivity_ConnectivityChanged;
+        
+        // Bắt đầu dịch vụ GPS ngầm toàn cục
+        _ = locationService.Start();
     }
 
     protected override void OnAppearing()

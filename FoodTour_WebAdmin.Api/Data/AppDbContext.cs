@@ -59,6 +59,7 @@ public class AppDbContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
+        /*
         // ═══════ SEED DATA — Vinh Khanh Food Street ═══════
 
         var shop1 = "s-001"; var shop2 = "s-002"; var shop3 = "s-003";
@@ -205,5 +206,6 @@ public class AppDbContext : DbContext
             new DishTranslationModel { Id = 39, DishId = "d-039", LanguageCode = "vi", Name = "Tré trộn rau răm" },
             new DishTranslationModel { Id = 40, DishId = "d-040", LanguageCode = "vi", Name = "Gỏi khô bò" }
         );
+        */
     }
 }

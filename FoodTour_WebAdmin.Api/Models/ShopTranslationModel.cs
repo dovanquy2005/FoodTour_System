@@ -12,7 +12,7 @@ public class ShopTranslationModel
     public string Name { get; set; } = string.Empty;
     public string Address { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty; // Audio Script
-
+    public string? AudioUrl { get; set; }
     // Navigation property
     [JsonIgnore]
     public ShopModel Shop { get; set; } = null!;

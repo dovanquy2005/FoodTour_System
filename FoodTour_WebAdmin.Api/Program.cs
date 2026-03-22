@@ -6,10 +6,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 // ═══════ SERVICES ═══════
 
-// EF Core + SQLite
+// EF Core + PostgreSQL (Supabase)
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")
-                     ?? "Data Source=foodtour.db"));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Register Services
 builder.Services.AddHttpClient<FoodTour_WebAdmin.Api.Services.LangblyTranslateService>();
