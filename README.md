@@ -60,7 +60,7 @@ dotnet run
 taskkill /IM "FoodTour_WebAdmin.Api.exe" /F
 ```
 
-> 💡 **Lưu ý:** Cổng mặc định là `http://localhost:5154` - Bạn có thể truy cập `http://localhost:5154/api/shops` để kiểm tra dữ liệu JSON. Hoặc kiểm tra trên môi trường Production tại link Render.
+> 💡 **Lưu ý:** Cổng mặc định là `https://foodtour-admin-api.onrender.com/`
 
 ### Chạy Ứng Dụng Mobile (Android)
 Đảm bảo bạn đã mở máy ảo Android (Emulator) trước khi chạy lệnh:
