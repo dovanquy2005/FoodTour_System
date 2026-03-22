@@ -17,6 +17,7 @@ builder.Services.AddScoped<FoodTour_WebAdmin.Api.Services.ManageFoodTourService>
 // API Controllers
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 // Blazor Server
 builder.Services.AddRazorComponents()
@@ -47,6 +48,12 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 // ═══════ DATABASE INITIALIZATION ═══════
 // Use EF Core Migrations instead (dotnet ef database update)
