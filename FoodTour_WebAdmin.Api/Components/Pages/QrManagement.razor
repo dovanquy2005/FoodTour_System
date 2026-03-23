@@ -1,0 +1,251 @@
+@page "/qr-management"
+@inject AppDbContext Db
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>Quản lý QR — FoodTour Admin</PageTitle>
+
+<style>
+    .qr-card {
+        padding: 24px;
+        border-radius: 16px;
+        border: 1px solid #F0E8E0;
+        background: white;
+        transition: all 0.25s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .qr-card:hover {
+        border-color: #E8672A;
+        box-shadow: 0 8px 24px rgba(232,103,42,0.12);
+        transform: translateY(-2px);
+    }
+    .qr-canvas-wrapper {
+        background: white;
+        padding: 16px;
+        border-radius: 12px;
+        border: 2px dashed #F0E8E0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin: 12px 0;
+    }
+    .qr-card:hover .qr-canvas-wrapper {
+        border-color: #F4A574;
+    }
+    .qr-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: auto;
+        padding-top: 12px;
+    }
+</style>
+
+<MudStack Spacing="4">
+    <!-- ═══════ HEADER ═══════ -->
+    <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Style="flex-wrap: wrap; gap: 12px;">
+        <MudStack Spacing="0">
+            <MudText Typo="Typo.h5" Style="font-weight: 800; color: #2D1F14;">📱 Quản lý QR Code</MudText>
+            <MudText Typo="Typo.body2" Style="color: #8C7B6B;">Tạo và quản lý mã QR cho các quán ăn trên phố Vĩnh Khánh</MudText>
+        </MudStack>
+        <MudStack Row Spacing="2">
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Print"
+                       Style="border-radius: 12px; text-transform: none; font-weight: 600;"
+                       OnClick="PrintAllQr">
+                In tất cả
+            </MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
+                       Style="border-radius: 12px; text-transform: none; font-weight: 600; padding: 10px 24px;"
+                       OnClick="RegenerateAll">
+                Tạo lại QR
+            </MudButton>
+        </MudStack>
+    </MudStack>
+
+    <!-- ═══════ SEARCH & FILTERS ═══════ -->
+    <MudPaper Elevation="0" Style="padding: 16px; border-radius: 16px; border: 1px solid #F0E8E0;">
+        <MudGrid Spacing="3">
+            <MudItem xs="12" sm="6" md="5">
+                <MudTextField @bind-Value="_searchString" Placeholder="Tìm kiếm quán ăn..."
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Immediate="true" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4">
+                <MudSelect @bind-Value="_qrSize" Label="Kích thước QR" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    <MudSelectItem T="int" Value="150">Nhỏ (150px)</MudSelectItem>
+                    <MudSelectItem T="int" Value="200">Vừa (200px)</MudSelectItem>
+                    <MudSelectItem T="int" Value="300">Lớn (300px)</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="12" md="3" Style="display: flex; align-items: center; gap: 8px;">
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                    @_filteredShops.Count() quán ăn
+                </MudChip>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <!-- ═══════ QR CODE GRID ═══════ -->
+    @if (_loading)
+    {
+        <MudPaper Elevation="0" Style="padding: 64px; border-radius: 16px; border: 1px solid #F0E8E0; text-align: center;">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" StrokeWidth="4" />
+            <MudText Typo="Typo.body1" Style="margin-top: 16px; color: #8C7B6B;">Đang tải danh sách quán ăn...</MudText>
+        </MudPaper>
+    }
+    else if (!_filteredShops.Any())
+    {
+        <MudPaper Elevation="0" Style="padding: 64px; border-radius: 16px; border: 1px solid #F0E8E0; text-align: center;">
+            <MudIcon Icon="@Icons.Material.Filled.SearchOff" Style="font-size: 48px; color: #B5A899;" />
+            <MudText Typo="Typo.h6" Style="margin-top: 12px; color: #8C7B6B;">Không tìm thấy kết quả</MudText>
+        </MudPaper>
+    }
+    else
+    {
+        <MudGrid Spacing="4">
+            @foreach (var shop in _filteredShops)
+            {
+                <MudItem xs="12" sm="6" md="4" lg="3">
+                    <MudPaper Class="qr-card" Elevation="0">
+                        <!-- Shop info -->
+                        <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Style="width: 100%; margin-bottom: 8px;">
+                            <MudAvatar Size="Size.Small" Style="background: linear-gradient(135deg, #E8672A, #F4A574); font-weight: 700; color: white; font-size: 0.7rem;">
+                                @(string.IsNullOrEmpty(shop.Name) ? "?" : shop.Name[0].ToString().ToUpper())
+                            </MudAvatar>
+                            <MudStack Spacing="0" Style="flex: 1; min-width: 0;">
+                                <MudText Typo="Typo.body2" Style="font-weight: 700; color: #2D1F14; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    @shop.Name
+                                </MudText>
+                                <MudText Typo="Typo.caption" Style="color: #B5A899; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    @shop.Address
+                                </MudText>
+                            </MudStack>
+                        </MudStack>
+
+                        <!-- QR code -->
+                        <div class="qr-canvas-wrapper">
+                            <div id="qr-@shop.Id" style="width: @(_qrSize)px; height: @(_qrSize)px; display: flex; align-items: center; justify-content: center;">
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Primary" />
+                            </div>
+                        </div>
+
+                        <!-- QR data label -->
+                        <MudText Typo="Typo.caption" Style="color: #B5A899; font-family: monospace; font-size: 0.7rem; text-align: center; word-break: break-all; max-width: 100%; padding: 0 8px;">
+                            @GetQrContent(shop)
+                        </MudText>
+
+                        <!-- Actions -->
+                        <div class="qr-actions">
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.Download"
+                                       Style="border-radius: 8px; text-transform: none; font-size: 0.75rem;"
+                                       OnClick="@(() => DownloadQr(shop))">
+                                Tải về
+                            </MudButton>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.ContentCopy"
+                                       Style="border-radius: 8px; text-transform: none; font-size: 0.75rem;"
+                                       OnClick="@(() => CopyLink(shop))">
+                                Sao chép
+                            </MudButton>
+                        </div>
+                    </MudPaper>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+</MudStack>
+
+@code {
+    private List<ShopModel> _shops = new();
+    private bool _loading = true;
+    private string _searchString = "";
+    private int _qrSize = 200;
+    private string _baseUrl = "";
+
+    private IEnumerable<ShopModel> _filteredShops => _shops.Where(s =>
+    {
+        if (!string.IsNullOrEmpty(_searchString) &&
+            !s.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase) &&
+            !s.Address.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return false;
+        return true;
+    });
+
+    protected override async Task OnInitializedAsync()
+    {
+        _baseUrl = Navigation.BaseUri.TrimEnd('/');
+        _shops = await Db.Shops
+            .Include(s => s.ShopTranslations)
+            .AsNoTracking()
+            .OrderBy(s => s.ShopTranslations.FirstOrDefault(t => t.LanguageCode == "vi")!.Name)
+            .ToListAsync();
+        _loading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_loading)
+        {
+            await GenerateAllQrCodes();
+        }
+    }
+
+    private string GetQrContent(ShopModel shop)
+    {
+        // URL dẫn đến Landing Page — tự nhận diện ngôn ngữ trình duyệt
+        return $"{_baseUrl}/foodtour/{shop.Id}";
+    }
+
+    private async Task GenerateAllQrCodes()
+    {
+        foreach (var shop in _filteredShops)
+        {
+            var content = GetQrContent(shop);
+            await JS.InvokeVoidAsync("generateQrCode", $"qr-{shop.Id}", content, _qrSize);
+        }
+    }
+
+    private async Task RegenerateAll()
+    {
+        Snackbar.Add("Đang tạo lại mã QR...", Severity.Info);
+        await GenerateAllQrCodes();
+        Snackbar.Add("Đã tạo lại tất cả mã QR!", Severity.Success);
+    }
+
+    private async Task DownloadQr(ShopModel shop)
+    {
+        try
+        {
+            var fileName = $"QR_{shop.Name.Replace(" ", "_")}.png";
+            await JS.InvokeVoidAsync("downloadQrCode", $"qr-{shop.Id}", fileName);
+            Snackbar.Add($"Đã tải QR của \"{shop.Name}\"!", Severity.Success);
+        }
+        catch
+        {
+            Snackbar.Add("Lỗi khi tải mã QR!", Severity.Error);
+        }
+    }
+
+    private async Task CopyLink(ShopModel shop)
+    {
+        try
+        {
+            var content = GetQrContent(shop);
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", content);
+            Snackbar.Add("Đã sao chép liên kết!", Severity.Success);
+        }
+        catch
+        {
+            Snackbar.Add("Không thể sao chép!", Severity.Error);
+        }
+    }
+
+    private async Task PrintAllQr()
+    {
+        await JS.InvokeVoidAsync("printQrCodes");
+    }
+}

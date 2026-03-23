@@ -12,6 +12,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 // Register Services
 builder.Services.AddHttpClient<FoodTour_WebAdmin.Api.Services.LangblyTranslateService>();
+builder.Services.AddSingleton<FoodTour_WebAdmin.Api.Services.ISupabaseStorageService, FoodTour_WebAdmin.Api.Services.SupabaseStorageService>();
+builder.Services.AddHttpClient<FoodTour_WebAdmin.Api.Services.ITtsService, FoodTour_WebAdmin.Api.Services.GoogleTtsService>();
+builder.Services.AddSingleton<FoodTour_WebAdmin.Api.Services.IQrCodeService, FoodTour_WebAdmin.Api.Services.QrCodeService>();
 builder.Services.AddScoped<FoodTour_WebAdmin.Api.Services.ManageFoodTourService>();
 
 // API Controllers

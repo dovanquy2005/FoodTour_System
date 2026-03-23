@@ -64,5 +64,37 @@
 
     <script src="_framework/blazor.web.js"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+
+    <!-- QR Code Library -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+    <script>
+        window.generateQrCode = function (elementId, content, size) {
+            var container = document.getElementById(elementId);
+            if (!container) return;
+            container.innerHTML = '';
+            var canvas = document.createElement('canvas');
+            container.appendChild(canvas);
+            QRCode.toCanvas(canvas, content, {
+                width: size,
+                margin: 2,
+                color: { dark: '#2D1F14', light: '#FFFFFF' }
+            });
+        };
+
+        window.downloadQrCode = function (elementId, fileName) {
+            var container = document.getElementById(elementId);
+            if (!container) return;
+            var canvas = container.querySelector('canvas');
+            if (!canvas) return;
+            var link = document.createElement('a');
+            link.download = fileName;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        };
+
+        window.printQrCodes = function () {
+            window.print();
+        };
+    </script>
 </body>
 </html>

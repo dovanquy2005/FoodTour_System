@@ -2,7 +2,8 @@
 @inject AppDbContext Db
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
-@inject IWebHostEnvironment Env
+@inject FoodTour_WebAdmin.Api.Services.ISupabaseStorageService StorageService
+@inject FoodTour_WebAdmin.Api.Services.ManageFoodTourService ManageService
 
 <PageTitle>Quán ăn — FoodTour Admin</PageTitle>
 
@@ -310,26 +311,23 @@
         
         try
         {
-            using var scope = Constants.ServiceProvider?.CreateScope();
-            var service = scope?.ServiceProvider.GetRequiredService<FoodTour_WebAdmin.Api.Services.ManageFoodTourService>();
-            
-            if (service != null && !string.IsNullOrEmpty(_editShop.Name))
+            if (!string.IsNullOrEmpty(_editShop.Name))
             {
                 if (_isEdit)
                 {
-                    await service.UpdateShopWithTranslationAsync(_editingId, _editShop);
+                    await ManageService.UpdateShopWithTranslationAsync(_editingId, _editShop);
                     Snackbar.Add($"Đã cập nhật quán \"{_editShop.Name}\"!", Severity.Success);
                 }
                 else
                 {
-                    var newShop = await service.CreateShopWithTranslationAsync(_editShop);
+                    var newShop = await ManageService.CreateShopWithTranslationAsync(_editShop);
                     Snackbar.Add($"Đã thêm quán \"{_editShop.Name}\" thành công!", Severity.Success);
                 }
             }
-            else
-            {
-                 Snackbar.Add($"Lỗi DI khi lấy ManageFoodTourService", Severity.Error);
-            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Lỗi: {ex.Message}", Severity.Error);
         }
         finally
         {
@@ -367,19 +365,11 @@
 
         try
         {
-            var webRootPath = Env.WebRootPath ?? Path.Combine(Env.ContentRootPath, "wwwroot");
-            var uploadPath = Path.Combine(webRootPath, "uploads", "shops");
-            if (!Directory.Exists(uploadPath))
-                Directory.CreateDirectory(uploadPath);
-
-            var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.Name)}";
-            var filePath = Path.Combine(uploadPath, fileName);
-
+            var fileName = $"shops/{Guid.NewGuid()}{Path.GetExtension(file.Name)}";
             using var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024); // 5MB limit
-            using var fs = new FileStream(filePath, FileMode.Create);
-            await stream.CopyToAsync(fs);
+            var publicUrl = await StorageService.UploadImageAsync(stream, fileName, file.ContentType);
 
-            _editShop.ImageUrl = $"/uploads/shops/{fileName}";
+            _editShop.ImageUrl = publicUrl;
             StateHasChanged();
             Snackbar.Add("Đã tải ảnh lên thành công!", Severity.Success);
         }
