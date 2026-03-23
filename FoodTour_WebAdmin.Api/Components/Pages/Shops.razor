@@ -116,7 +116,9 @@
                     <MudStack Row AlignItems="AlignItems.Center" Spacing="3">
                         @if (!string.IsNullOrEmpty(context.ImageUrl) && (context.ImageUrl.Contains("/") || context.ImageUrl.StartsWith("data:image", StringComparison.OrdinalIgnoreCase)))
                         {
-                            <MudAvatar Size="Size.Medium" Image="@context.ImageUrl" Style="background: transparent;" />
+                            <MudAvatar Size="Size.Medium" Style="background: transparent;">
+                                <MudImage Src="@context.ImageUrl" Width="40" Height="40" ObjectFit="ObjectFit.Cover" />
+                            </MudAvatar>
                         }
                         else
                         {
@@ -217,6 +219,16 @@
                                          Format="F5" Step="0.0001" Immediate="true" />
                     </MudItem>
                 </MudGrid>
+                <MudGrid Spacing="2">
+                    <MudItem xs="6">
+                        <MudNumericField @bind-Value="_editShop.Radius" Label="Bán kính (m)" Variant="Variant.Outlined"
+                                         Min="0.0" Step="10.0" Immediate="true" />
+                    </MudItem>
+                    <MudItem xs="6">
+                        <MudNumericField @bind-Value="_editShop.Priority" Label="Ưu tiên" Variant="Variant.Outlined"
+                                         Min="0" Step="1" Immediate="true" />
+                    </MudItem>
+                </MudGrid>
                 <MudNumericField @bind-Value="_editShop.Rating" Label="Đánh giá (0-5)" Variant="Variant.Outlined"
                                  Min="0.0" Max="5.0" Step="0.1" Immediate="true" />
                 <MudSwitch @bind-Value="_editShop.IsVisited" Label="Đã ghé thăm" Color="Color.Primary" />
@@ -298,6 +310,8 @@
             ImageUrl = ShopModel.ImageUrl,
             Latitude = ShopModel.Latitude,
             Longitude = ShopModel.Longitude,
+            Radius = ShopModel.Radius,
+            Priority = ShopModel.Priority,
             IsVisited = ShopModel.IsVisited,
             Rating = ShopModel.Rating,
         };

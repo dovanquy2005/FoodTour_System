@@ -41,6 +41,8 @@ public class ManageFoodTourService
                 ImageUrl = request.ImageUrl,
                 Latitude = request.Latitude,
                 Longitude = request.Longitude,
+                Radius = request.Radius,
+                Priority = request.Priority,
                 Rating = request.Rating,
                 IsVisited = request.IsVisited,
                 ShopTranslations = new List<ShopTranslationModel>()
@@ -179,6 +181,8 @@ public class ManageFoodTourService
             shop.ImageUrl = request.ImageUrl;
             shop.Latitude = request.Latitude;
             shop.Longitude = request.Longitude;
+            shop.Radius = request.Radius;
+            shop.Priority = request.Priority;
             shop.Rating = request.Rating;
             shop.IsVisited = request.IsVisited;
             shop.UpdatedAt = DateTime.UtcNow;

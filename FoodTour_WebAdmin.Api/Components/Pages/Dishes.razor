@@ -114,7 +114,9 @@
                     <MudStack Row AlignItems="AlignItems.Center" Spacing="3">
                         @if (!string.IsNullOrEmpty(context.ImageUrl) && (context.ImageUrl.Contains("/") || context.ImageUrl.StartsWith("data:image", StringComparison.OrdinalIgnoreCase)))
                         {
-                            <MudAvatar Size="Size.Medium" Image="@context.ImageUrl" Style="background: transparent;" />
+                            <MudAvatar Size="Size.Medium" Style="background: transparent;">
+                                <MudImage Src="@context.ImageUrl" Width="40" Height="40" ObjectFit="ObjectFit.Cover" />
+                            </MudAvatar>
                         }
                         else
                         {
