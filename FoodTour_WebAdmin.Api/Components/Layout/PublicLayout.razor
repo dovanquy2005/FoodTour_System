@@ -1,0 +1,23 @@
+@inherits LayoutComponentBase
+
+<MudThemeProvider DefaultScrollbar="true" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<div class="public-layout-container">
+    @Body
+</div>
+
+<style>
+    /* Reset basic cho mobile-first container */
+    .public-layout-container {
+        min-height: 100vh;
+        width: 100%;
+        max-width: 100vw;
+        overflow-x: hidden;
+        margin: 0;
+        padding: 0;
+        background-color: var(--ft-background, #FBF7F2);
+    }
+</style>
