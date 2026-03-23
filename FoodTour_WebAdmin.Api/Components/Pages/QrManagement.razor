@@ -162,6 +162,7 @@
 @code {
     private List<ShopModel> _shops = new();
     private bool _loading = true;
+    private bool _qrGenerated = false;
     private string _searchString = "";
     private int _qrSize = 200;
     private string _baseUrl = "";
@@ -188,8 +189,11 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!_loading)
+        if (!_loading && !_qrGenerated)
         {
+            _qrGenerated = true;
+            // Delay nhỏ để đảm bảo DOM đã render xong
+            await Task.Delay(100);
             await GenerateAllQrCodes();
         }
     }
@@ -212,7 +216,11 @@
     private async Task RegenerateAll()
     {
         Snackbar.Add("Đang tạo lại mã QR...", Severity.Info);
+        _qrGenerated = false;
+        StateHasChanged();
+        await Task.Delay(100);
         await GenerateAllQrCodes();
+        _qrGenerated = true;
         Snackbar.Add("Đã tạo lại tất cả mã QR!", Severity.Success);
     }
 
@@ -235,7 +243,7 @@
         try
         {
             var content = GetQrContent(shop);
-            await JS.InvokeVoidAsync("navigator.clipboard.writeText", content);
+            await JS.InvokeVoidAsync("copyToClipboard", content);
             Snackbar.Add("Đã sao chép liên kết!", Severity.Success);
         }
         catch
