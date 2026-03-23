@@ -9,9 +9,6 @@ public class DishTranslationModel
     public string LanguageCode { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
 
-    public string? AudioUrl { get; set; } // Link file .mp3
-    public bool IsAudioGenerated { get; set; } = false; // Trạng thái xử lý Audio
-
     [JsonIgnore]
     public DishModel Dish { get; set; } = null!;
 }

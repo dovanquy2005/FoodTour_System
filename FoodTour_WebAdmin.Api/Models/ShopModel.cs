@@ -19,7 +19,7 @@ public class ShopModel
     public ICollection<DishModel> Dishes { get; set; } = new List<DishModel>();
 
     [NotMapped]
-    public string QrNavigationUrl => $"/foodtour/{Id}";
+    public string QrNavigationUrl => $"https://foodtour-admin-api.onrender.com/foodtour/{Id}";
 
     // --- THÊM LẠI CÁC DÒNG NÀY ĐỂ FIX LỖI UI ---
     [NotMapped]

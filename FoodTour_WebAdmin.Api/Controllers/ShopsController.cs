@@ -10,8 +10,13 @@ namespace FoodTour_WebAdmin.Api.Controllers;
 public class ShopsController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly FoodTour_WebAdmin.Api.Services.ManageFoodTourService _manageService;
 
-    public ShopsController(AppDbContext db) => _db = db;
+    public ShopsController(AppDbContext db, FoodTour_WebAdmin.Api.Services.ManageFoodTourService manageService)
+    {
+        _db = db;
+        _manageService = manageService;
+    }
 
     // GET: api/shops
     [HttpGet]
@@ -41,46 +46,32 @@ public class ShopsController : ControllerBase
 
     // POST: api/shops
     [HttpPost]
-    public async Task<ActionResult<ShopModel>> Create([FromBody] ShopModel ShopModel)
+    public async Task<ActionResult<ShopModel>> Create([FromBody] FoodTour_WebAdmin.Api.DTOs.CreateShopRequest request)
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        if (string.IsNullOrEmpty(ShopModel.Id))
-            ShopModel.Id = Guid.NewGuid().ToString();
+        var shop = await _manageService.CreateShopWithTranslationAsync(request);
 
-        ShopModel.CreatedAt = DateTime.UtcNow;
-        ShopModel.UpdatedAt = DateTime.UtcNow;
-
-        _db.Shops.Add(ShopModel);
-        await _db.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(GetById), new { id = ShopModel.Id }, ShopModel);
+        return CreatedAtAction(nameof(GetById), new { id = shop.Id }, shop);
     }
 
     // PUT: api/shops/{id}
     [HttpPut("{id}")]
-    public async Task<ActionResult<ShopModel>> Update(string id, [FromBody] ShopModel ShopModel)
+    public async Task<ActionResult> Update(string id, [FromBody] FoodTour_WebAdmin.Api.DTOs.CreateShopRequest request)
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        var existing = await _db.Shops.Include(s => s.ShopTranslations).FirstOrDefaultAsync(s => s.Id == id);
-        if (existing is null)
-            return NotFound(new { message = $"ShopModel with id '{id}' not found." });
-
-        existing.Name = ShopModel.Name;
-        existing.Address = ShopModel.Address;
-        existing.Description = ShopModel.Description;
-        existing.ImageUrl = ShopModel.ImageUrl;
-        existing.Latitude = ShopModel.Latitude;
-        existing.Longitude = ShopModel.Longitude;
-        existing.IsVisited = ShopModel.IsVisited;
-        existing.Rating = ShopModel.Rating;
-        existing.UpdatedAt = DateTime.UtcNow;
-
-        await _db.SaveChangesAsync();
-        return Ok(existing);
+        try
+        {
+            await _manageService.UpdateShopWithTranslationAsync(id, request);
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi cập nhật Shop: " + ex.Message });
+        }
     }
 
     // DELETE: api/shops/{id}

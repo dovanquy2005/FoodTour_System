@@ -11,6 +11,7 @@ public class ManageFoodTourService
     private readonly LangblyTranslateService _translateService;
     private readonly ITtsService _ttsService;
     private readonly ISupabaseStorageService _storageService;
+    private readonly ILogger<ManageFoodTourService> _logger;
     
     // Cấu hình ngôn ngữ đích
     private readonly string[] _targetLanguages = { "en", "ja", "ru", "zh" };
@@ -21,12 +22,14 @@ public class ManageFoodTourService
         AppDbContext context,
         LangblyTranslateService translateService,
         ITtsService ttsService,
-        ISupabaseStorageService storageService)
+        ISupabaseStorageService storageService,
+        ILogger<ManageFoodTourService> logger)
     {
         _context = context;
         _translateService = translateService;
         _ttsService = ttsService;
         _storageService = storageService;
+        _logger = logger;
     }
 
     public async Task<ShopModel> CreateShopWithTranslationAsync(CreateShopRequest request)
@@ -144,13 +147,6 @@ public class ManageFoodTourService
 
             var allTranslations = new List<DishTranslationModel> { viTranslation };
             allTranslations.AddRange(translatedResults);
-
-            // TTS + Upload Audio song song
-            var ttsUploadTasks = allTranslations.Select(async t =>
-            {
-                await GenerateAndUploadDishAudioAsync(t, dishId);
-            });
-            await Task.WhenAll(ttsUploadTasks);
 
             foreach (var t in allTranslations)
             {
@@ -310,13 +306,6 @@ public class ManageFoodTourService
                 }
             }
 
-            // TTS + Upload Audio cho tất cả languages
-            var ttsUploadTasks = dish.DishTranslations.Select(async t =>
-            {
-                await GenerateAndUploadDishAudioAsync(t, dishId);
-            });
-            await Task.WhenAll(ttsUploadTasks);
-
             _context.Dishes.Update(dish);
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
@@ -350,33 +339,13 @@ public class ManageFoodTourService
             translation.AudioUrl = audioUrl;
             translation.IsAudioGenerated = true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Ghi log nhưng không throw — TTS lỗi không nên block toàn bộ flow
+            // Ghi log lỗi chi tiết để dễ debug (VD: thiếu bucket 'audios', API key Google sai...)
+            _logger.LogError(ex, "Lỗi khi tạo Audio TTS hoặc Upload lên Supabase cho Shop '{ShopId}', ngôn ngữ '{Lang}'", shopId, translation.LanguageCode);
             translation.IsAudioGenerated = false;
         }
     }
 
-    // ═══════ HELPER: TTS + Upload cho Dish ═══════
-    private async Task GenerateAndUploadDishAudioAsync(DishTranslationModel translation, string dishId)
-    {
-        try
-        {
-            var ttsText = translation.Name;
-            if (string.IsNullOrWhiteSpace(ttsText)) return;
 
-            var audioBytes = await _ttsService.SynthesizeSpeechAsync(ttsText, translation.LanguageCode);
-            if (audioBytes.Length == 0) return;
-
-            var fileName = $"dishes/{dishId}/{translation.LanguageCode}_{Guid.NewGuid():N}.mp3";
-            var audioUrl = await _storageService.UploadAudioAsync(audioBytes, fileName);
-
-            translation.AudioUrl = audioUrl;
-            translation.IsAudioGenerated = true;
-        }
-        catch (Exception)
-        {
-            translation.IsAudioGenerated = false;
-        }
-    }
 }

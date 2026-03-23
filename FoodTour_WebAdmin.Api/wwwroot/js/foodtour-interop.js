@@ -42,3 +42,22 @@ window.printQrCodes = function () {
 window.copyToClipboard = function (text) {
     return navigator.clipboard.writeText(text);
 };
+
+// ═══════ Landing Page Interop ═══════
+
+window.getBrowserLanguage = function () {
+    return navigator.language || navigator.userLanguage || 'en';
+};
+
+window.playAudio = function (elementId) {
+    var audio = document.getElementById(elementId);
+    if (audio) {
+        audio.currentTime = 0;
+        audio.play();
+    }
+};
+
+window.pauseAudio = function (elementId) {
+    var audio = document.getElementById(elementId);
+    if (audio) audio.pause();
+};

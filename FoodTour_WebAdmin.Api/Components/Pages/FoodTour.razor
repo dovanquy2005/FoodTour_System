@@ -1,0 +1,309 @@
+@page "/foodtour/{Id}"
+@inject AppDbContext Db
+@inject IJSRuntime JS
+
+<PageTitle>FoodTour — Vĩnh Khánh Street Eats</PageTitle>
+
+<style>
+    .ft-landing {
+        min-height: 100vh;
+        background: linear-gradient(180deg, #FBF7F2 0%, #FFF0E6 100%);
+        padding: 0;
+        margin: 0;
+    }
+    .ft-hero {
+        position: relative;
+        width: 100%;
+        height: 220px;
+        overflow: hidden;
+        border-radius: 0 0 24px 24px;
+    }
+    .ft-hero img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .ft-hero-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 80px;
+        background: linear-gradient(transparent, rgba(45,31,20,0.7));
+    }
+    .ft-content {
+        max-width: 480px;
+        margin: -32px auto 0;
+        padding: 0 16px 32px;
+        position: relative;
+        z-index: 1;
+    }
+    .ft-card {
+        background: white;
+        border-radius: 20px;
+        padding: 24px;
+        box-shadow: 0 8px 32px rgba(45,31,20,0.08);
+        margin-bottom: 16px;
+    }
+    .ft-shop-name {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: #2D1F14;
+        margin: 0 0 4px;
+    }
+    .ft-address {
+        font-size: 0.9rem;
+        color: #8C7B6B;
+        margin: 0 0 16px;
+        line-height: 1.4;
+    }
+    .ft-rating {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: #FFF0E6;
+        color: #E8672A;
+        font-weight: 700;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+    }
+    .ft-desc {
+        font-size: 0.95rem;
+        color: #5C4A3D;
+        line-height: 1.6;
+        margin: 0;
+    }
+    .ft-audio-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        padding: 14px;
+        border: none;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #E8672A, #C85520);
+        color: white;
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 4px 16px rgba(232,103,42,0.3);
+    }
+    .ft-audio-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(232,103,42,0.4); }
+    .ft-audio-btn:active { transform: translateY(0); }
+    .ft-audio-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .ft-section-title {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #B5A899;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin: 0 0 12px;
+    }
+    .ft-lang-chip {
+        display: inline-block;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        background: #F0E8E0;
+        color: #5C4A3D;
+    }
+    .ft-lang-chip.active {
+        background: #E8672A;
+        color: white;
+    }
+    .ft-lang-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+    }
+    .ft-not-found {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        text-align: center;
+        padding: 32px;
+    }
+    .ft-footer {
+        text-align: center;
+        padding: 16px;
+        font-size: 0.75rem;
+        color: #B5A899;
+    }
+</style>
+
+<div class="ft-landing">
+    @if (_loading)
+    {
+        <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh;">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" StrokeWidth="4" />
+        </div>
+    }
+    else if (_shop == null)
+    {
+        <div class="ft-not-found">
+            <MudIcon Icon="@Icons.Material.Filled.SearchOff" Style="font-size: 64px; color: #E0D5CB; margin-bottom: 16px;" />
+            <h2 style="color: #2D1F14; font-weight: 800; margin: 0 0 8px;">Không tìm thấy quán</h2>
+            <p style="color: #8C7B6B; margin: 0;">Mã QR không hợp lệ hoặc quán ăn đã bị xóa.</p>
+        </div>
+    }
+    else
+    {
+        <!-- Hero Image -->
+        <div class="ft-hero">
+            @if (!string.IsNullOrEmpty(_shop.ImageUrl) && _shop.ImageUrl.Contains("/"))
+            {
+                <img src="@_shop.ImageUrl" alt="@_currentTranslation?.Name" />
+            }
+            else
+            {
+                <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #E8672A, #F4A574); display: flex; align-items: center; justify-content: center;">
+                    <span style="font-size: 64px;">🍜</span>
+                </div>
+            }
+            <div class="ft-hero-overlay"></div>
+        </div>
+
+        <!-- Content -->
+        <div class="ft-content">
+            <!-- Main Card -->
+            <div class="ft-card">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                    <h1 class="ft-shop-name">@(_currentTranslation?.Name ?? "N/A")</h1>
+                    <span class="ft-rating">★ @_shop.Rating.ToString("0.0")</span>
+                </div>
+                <p class="ft-address">📍 @(_currentTranslation?.Address ?? "")</p>
+
+                <!-- Language Selector -->
+                <p class="ft-section-title">🌐 Ngôn ngữ / Language</p>
+                <div class="ft-lang-row">
+                    @foreach (var t in _shop.ShopTranslations)
+                    {
+                        var langLabel = t.LanguageCode switch
+                        {
+                            "vi" => "🇻🇳 Tiếng Việt",
+                            "en" => "🇬🇧 English",
+                            "ja" => "🇯🇵 日本語",
+                            "zh" => "🇨🇳 中文",
+                            "ru" => "🇷🇺 Русский",
+                            _ => t.LanguageCode.ToUpper()
+                        };
+                        <button class="ft-lang-chip @(t.LanguageCode == _selectedLang ? "active" : "")"
+                                @onclick="() => SwitchLanguage(t.LanguageCode)"
+                                style="border: none; cursor: pointer;">
+                            @langLabel
+                        </button>
+                    }
+                </div>
+            </div>
+
+            <!-- Description Card -->
+            @if (!string.IsNullOrWhiteSpace(_currentTranslation?.Description))
+            {
+                <div class="ft-card">
+                    <p class="ft-section-title">📖 Giới thiệu</p>
+                    <p class="ft-desc">@_currentTranslation.Description</p>
+                </div>
+            }
+
+            <!-- Audio Card -->
+            <div class="ft-card">
+                <p class="ft-section-title">🎧 Audio Guide</p>
+                @if (!string.IsNullOrEmpty(_currentTranslation?.AudioUrl) && _currentTranslation.IsAudioGenerated)
+                {
+                    <audio id="ft-audio-player" src="@_currentTranslation.AudioUrl" preload="auto"></audio>
+                    <button class="ft-audio-btn" @onclick="ToggleAudio">
+                        <span style="font-size: 1.2rem;">@(_isPlaying ? "⏸" : "▶")</span>
+                        @(_isPlaying ? "Đang phát..." : "Nghe giới thiệu")
+                    </button>
+                }
+                else
+                {
+                    <button class="ft-audio-btn" disabled>
+                        <span>🔇</span>
+                        Audio chưa sẵn sàng
+                    </button>
+                }
+            </div>
+
+            <!-- Footer -->
+            <div class="ft-footer">
+                FoodTour Vĩnh Khánh — Powered by FoodTour System
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Id { get; set; } = "";
+
+    private ShopModel? _shop;
+    private ShopTranslationModel? _currentTranslation;
+    private string _selectedLang = "en";
+    private bool _loading = true;
+    private bool _isPlaying = false;
+
+    // Danh sách ngôn ngữ hỗ trợ
+    private static readonly HashSet<string> SupportedLanguages = new() { "vi", "en", "ja", "zh", "ru" };
+
+    protected override async Task OnInitializedAsync()
+    {
+        _shop = await Db.Shops
+            .Include(s => s.ShopTranslations)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.Id == Id);
+
+        _loading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _shop != null)
+        {
+            // Nhận diện ngôn ngữ trình duyệt
+            var browserLang = await JS.InvokeAsync<string>("getBrowserLanguage");
+            var detectedLang = MapBrowserLanguage(browserLang);
+            SwitchLanguage(detectedLang);
+            StateHasChanged();
+        }
+    }
+
+    private string MapBrowserLanguage(string browserLang)
+    {
+        if (string.IsNullOrEmpty(browserLang)) return "en";
+
+        // Lấy 2 ký tự đầu (ví dụ: "vi-VN" → "vi", "ja" → "ja", "zh-TW" → "zh")
+        var shortCode = browserLang.Length >= 2 ? browserLang[..2].ToLower() : browserLang.ToLower();
+
+        return SupportedLanguages.Contains(shortCode) ? shortCode : "en";
+    }
+
+    private void SwitchLanguage(string langCode)
+    {
+        _selectedLang = langCode;
+        _currentTranslation = _shop?.ShopTranslations
+            .FirstOrDefault(t => t.LanguageCode == langCode)
+            ?? _shop?.ShopTranslations.FirstOrDefault(t => t.LanguageCode == "en")
+            ?? _shop?.ShopTranslations.FirstOrDefault();
+        _isPlaying = false;
+    }
+
+    private async Task ToggleAudio()
+    {
+        _isPlaying = !_isPlaying;
+        if (_isPlaying)
+        {
+            await JS.InvokeVoidAsync("playAudio", "ft-audio-player");
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("pauseAudio", "ft-audio-player");
+        }
+    }
+}
