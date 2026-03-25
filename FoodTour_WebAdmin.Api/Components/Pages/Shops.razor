@@ -1,5 +1,5 @@
 @page "/shops"
-@inject AppDbContext Db
+@inject IDbContextFactory<AppDbContext> DbFactory
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject FoodTour_WebAdmin.Api.Services.ISupabaseStorageService StorageService
@@ -281,6 +281,7 @@
     {
         _loading = true;
         StateHasChanged();
+        using var Db = await DbFactory.CreateDbContextAsync();
         _shops = await Db.Shops.Include(s => s.ShopTranslations).AsNoTracking().OrderByDescending(s => s.Rating).ToListAsync();
         _loading = false;
         StateHasChanged();
@@ -361,6 +362,7 @@
 
         if (result == true)
         {
+            using var Db = await DbFactory.CreateDbContextAsync();
             var toDelete = await Db.Shops.FindAsync(ShopModel.Id);
             if (toDelete != null)
             {

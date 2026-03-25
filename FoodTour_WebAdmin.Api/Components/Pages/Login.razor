@@ -1,0 +1,349 @@
+@page "/login"
+@layout FoodTour_WebAdmin.Api.Components.Layout.PublicLayout
+@inject FoodTour_WebAdmin.Api.Services.AuthService AuthService
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<PageTitle>Đăng nhập — FoodTour Admin</PageTitle>
+
+<div class="login-container">
+    <div class="glass-card">
+        <!-- Logo / Header -->
+        <div class="text-center mb-8">
+            <div class="logo-circle mx-auto mb-4">
+                <MudIcon Icon="@Icons.Material.Filled.Restaurant" Style="font-size: 40px; color: white;" />
+            </div>
+            <h1 class="ft-title">FoodTour Workspace</h1>
+            <p class="ft-subtitle">Hệ thống quản trị phố ẩm thực Vĩnh Khánh</p>
+        </div>
+
+        <!-- Form -->
+        <MudForm @ref="_form" @bind-IsValid="_isFormValid">
+            <MudStack Spacing="5">
+                <!-- Email -->
+                <div class="input-group">
+                    <label class="input-label">Email quản trị</label>
+                    <MudTextField @bind-Value="_email" Variant="Variant.Outlined" 
+                                  Required="true" RequiredError="Vui lòng nhập Email" InputType="InputType.Email"
+                                  Placeholder="admin@foodtour.com" Class="custom-input" Underline="false" />
+                </div>
+                
+                <!-- Password -->
+                <div class="input-group">
+                    <div class="d-flex justify-space-between w-100">
+                        <label class="input-label">Mật khẩu</label>
+                        <a href="javascript:void(0)" class="forgot-link">Quên mật khẩu?</a>
+                    </div>
+                    
+                    <MudTextField @bind-Value="_password" Variant="Variant.Outlined" 
+                                  Required="true" RequiredError="Vui lòng nhập mật khẩu" InputType="@_passwordInput"
+                                  Placeholder="••••••••" Class="custom-input" Underline="false"
+                                  Adornment="Adornment.End" AdornmentIcon="@_passwordInputIcon" OnAdornmentClick="TogglePasswordVisibility" />
+                </div>
+                
+                @if (!string.IsNullOrEmpty(_errorMessage))
+                {
+                    <div class="error-box">
+                        <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Small" />
+                        <span>@_errorMessage</span>
+                    </div>
+                }
+
+                <!-- Submit Button -->
+                <button type="button" class="ft-btn-primary" disabled="@(!_isFormValid || _isLoading)" @onclick="HandleLogin">
+                    @if (_isLoading)
+                    {
+                        <div class="spinner"></div>
+                        <span>Đang xác thực...</span>
+                    }
+                    else
+                    {
+                        <span>Đăng nhập hệ thống</span>
+                        <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Size="Size.Small" Class="ml-2" />
+                    }
+                </button>
+            </MudStack>
+        </MudForm>
+
+        <div class="footer-text">
+            Bằng việc đăng nhập, bạn đồng ý với <a href="#">Điều khoản sử dụng</a> của hệ thống.
+        </div>
+    </div>
+</div>
+
+<style>
+    /* ═══════ MÀU SẮC & NỀN ═══════ */
+    .login-container {
+        min-height: 100vh;
+        width: 100vw;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background-color: #0f172a;
+        background-image: 
+            radial-gradient(at 0% 0%, hsla(28,100%,74%,1) 0, transparent 50%), 
+            radial-gradient(at 50% 0%, hsla(11,100%,66%,1) 0, transparent 50%), 
+            radial-gradient(at 100% 0%, hsla(355,100%,73%,1) 0, transparent 50%);
+        box-sizing: border-box;
+        overflow: hidden;
+        position: relative;
+    }
+
+    /* Pattern chìm cho nền */
+    .login-container::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        z-index: 1;
+    }
+
+    /* ═══════ GLASSMORPHISM CARD ═══════ */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        border-radius: 24px;
+        padding: 48px;
+        width: 100%;
+        max-width: 460px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255,255,255,0.2) inset;
+        z-index: 2;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    
+    .logo-circle {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #E8672A, #C85520);
+        border-radius: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 12px 24px rgba(232,103,42,0.3), inset 0 2px 0 rgba(255,255,255,0.2);
+        transform: rotate(-10deg);
+        transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .glass-card:hover .logo-circle {
+        transform: rotate(0deg) scale(1.05);
+    }
+
+    /* ═══════ TYPOGRAPHY ═══════ */
+    .ft-title {
+        font-size: 2rem;
+        font-weight: 800;
+        color: #1e293b;
+        margin: 0;
+        letter-spacing: -0.5px;
+    }
+    .ft-subtitle {
+        color: #64748b;
+        font-size: 0.95rem;
+        margin-top: 8px;
+    }
+
+    /* ═══════ FORM INPUTS ═══════ */
+    .input-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    .input-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #334155;
+        margin-left: 2px;
+    }
+    .forgot-link {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #E8672A;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+    .forgot-link:hover {
+        color: #C85520;
+        text-decoration: underline;
+    }
+
+    /* Tùy chỉnh TextField của MudBlazor */
+    ::deep .custom-input .mud-input-control-input-container {
+        pointer-events: none; /* fix issue where placeholder takes pointer events */
+    }
+    ::deep .custom-input .mud-input {
+        background-color: #f8fafc !important;
+        border-radius: 12px;
+        transition: all 0.2s ease;
+        pointer-events: auto;
+    }
+    ::deep .custom-input .mud-input-outlined-border {
+        border-color: #e2e8f0;
+        border-radius: 12px;
+    }
+    ::deep .custom-input .mud-input:focus-within {
+        background-color: #ffffff !important;
+        box-shadow: 0 0 0 4px rgba(232, 103, 42, 0.1);
+    }
+    ::deep .custom-input .mud-input-outlined.mud-input:focus-within .mud-input-outlined-border {
+        border-color: #E8672A;
+        border-width: 2px;
+    }
+
+    /* ═══════ ALERT & BUTTON ═══════ */
+    .error-box {
+        background: #fef2f2;
+        color: #b91c1c;
+        padding: 12px 16px;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid #fecaca;
+        animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+    }
+
+    .ft-btn-primary {
+        background: linear-gradient(135deg, #f97316, #ea580c);
+        color: white;
+        border: none;
+        padding: 16px;
+        border-radius: 12px;
+        font-size: 1.05rem;
+        font-weight: 700;
+        width: 100%;
+        margin-top: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 10px 25px -5px rgba(234, 88, 12, 0.4);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .ft-btn-primary:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 20px 30px -10px rgba(234, 88, 12, 0.5);
+    }
+    .ft-btn-primary:active:not(:disabled) {
+        transform: translateY(0);
+    }
+    .ft-btn-primary:disabled {
+        background: #cbd5e1;
+        box-shadow: none;
+        cursor: not-allowed;
+        opacity: 0.7;
+    }
+
+    .spinner {
+        width: 18px;
+        height: 18px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-radius: 50%;
+        border-top-color: white;
+        animation: spin 0.8s linear infinite;
+        margin-right: 8px;
+    }
+
+    .footer-text {
+        text-align: center;
+        margin-top: 32px;
+        font-size: 0.8rem;
+        color: #94a3b8;
+    }
+    .footer-text a {
+        color: #64748b;
+        font-weight: 500;
+    }
+
+    /* ═══════ ANIMATIONS ═══════ */
+    @@keyframes slideUpFade {
+        from { opacity: 0; transform: translateY(40px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    @@keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    @@keyframes shake {
+        10%, 90% { transform: translate3d(-1px, 0, 0); }
+        20%, 80% { transform: translate3d(2px, 0, 0); }
+        30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+        40%, 60% { transform: translate3d(4px, 0, 0); }
+    }
+</style>
+
+@code {
+    private MudForm? _form;
+    private bool _isFormValid;
+    private string _email = "";
+    private string _password = "";
+    private string _errorMessage = "";
+    private bool _isLoading = false;
+
+    private bool _isShowPassword = false;
+    private InputType _passwordInput = InputType.Password;
+    private string _passwordInputIcon = Icons.Material.Filled.VisibilityOff;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Nếu đã đăng nhập thì đá về admin luôn
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated == true)
+        {
+            Navigation.NavigateTo("/shops");
+        }
+    }
+
+    private void TogglePasswordVisibility()
+    {
+        if (_isShowPassword)
+        {
+            _isShowPassword = false;
+            _passwordInputIcon = Icons.Material.Filled.VisibilityOff;
+            _passwordInput = InputType.Password;
+        }
+        else
+        {
+            _isShowPassword = true;
+            _passwordInputIcon = Icons.Material.Filled.Visibility;
+            _passwordInput = InputType.Text;
+        }
+    }
+
+    private async Task HandleLogin()
+    {
+        _errorMessage = "";
+        _isLoading = true;
+        
+        try
+        {
+            var user = await AuthService.CheckLogin(_email, _password);
+            if (user != null)
+            {
+                var customAuthStateProvider = (FoodTour_WebAdmin.Api.Services.CustomAuthStateProvider)AuthStateProvider;
+                customAuthStateProvider.MarkUserAsAuthenticated(user);
+
+                Snackbar.Add($"Đăng nhập thành công! Xin chào {user.FullName}", Severity.Success);
+                
+                // Điều hướng sang trang Tổng quan (/dashboard)
+                Navigation.NavigateTo("/dashboard");
+            }
+            else
+            {
+                _errorMessage = "Email hoặc mật khẩu không chính xác.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Lỗi hệ thống: " + ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}

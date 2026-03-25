@@ -9,12 +9,12 @@ namespace FoodTour_WebAdmin.Api.Controllers;
 [Route("api/[controller]")]
 public class ShopsController : ControllerBase
 {
-    private readonly AppDbContext _db;
+    private readonly IDbContextFactory<AppDbContext> _dbFactory;
     private readonly FoodTour_WebAdmin.Api.Services.ManageFoodTourService _manageService;
 
-    public ShopsController(AppDbContext db, FoodTour_WebAdmin.Api.Services.ManageFoodTourService manageService)
+    public ShopsController(IDbContextFactory<AppDbContext> dbFactory, FoodTour_WebAdmin.Api.Services.ManageFoodTourService manageService)
     {
-        _db = db;
+        _dbFactory = dbFactory;
         _manageService = manageService;
     }
 
@@ -22,6 +22,7 @@ public class ShopsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ShopModel>>> GetAll()
     {
+        using var _db = await _dbFactory.CreateDbContextAsync();
         var shops = await _db.Shops
             .Include(s => s.ShopTranslations)
             .OrderByDescending(s => s.Rating)
@@ -33,6 +34,7 @@ public class ShopsController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<ShopModel>> GetById(string id)
     {
+        using var _db = await _dbFactory.CreateDbContextAsync();
         var ShopModel = await _db.Shops
             .Include(s => s.ShopTranslations)
             .Include(s => s.Dishes)
@@ -78,6 +80,7 @@ public class ShopsController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(string id)
     {
+        using var _db = await _dbFactory.CreateDbContextAsync();
         var ShopModel = await _db.Shops.FindAsync(id);
         if (ShopModel is null)
             return NotFound(new { message = $"ShopModel with id '{id}' not found." });
@@ -92,6 +95,7 @@ public class ShopsController : ControllerBase
     [HttpGet("stats")]
     public async Task<ActionResult> GetStats()
     {
+        using var _db = await _dbFactory.CreateDbContextAsync();
         var totalShops = await _db.Shops.CountAsync();
         var totalDishes = await _db.Dishes.CountAsync();
         var avgRating = totalShops > 0 ? await _db.Shops.AverageAsync(s => s.Rating) : 0;

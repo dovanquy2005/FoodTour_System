@@ -11,6 +11,7 @@ public class AppDbContext : DbContext
     public DbSet<ShopTranslationModel> ShopTranslations => Set<ShopTranslationModel>();
     public DbSet<DishModel> Dishes => Set<DishModel>();
     public DbSet<DishTranslationModel> DishTranslations => Set<DishTranslationModel>();
+    public DbSet<UserModel> Users => Set<UserModel>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

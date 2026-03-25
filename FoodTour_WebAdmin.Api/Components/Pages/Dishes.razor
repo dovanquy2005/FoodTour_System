@@ -1,5 +1,5 @@
 @page "/dishes"
-@inject AppDbContext Db
+@inject IDbContextFactory<AppDbContext> DbFactory
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject FoodTour_WebAdmin.Api.Services.ISupabaseStorageService StorageService
@@ -248,6 +248,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        using var Db = await DbFactory.CreateDbContextAsync();
         var allShops = await Db.Shops.Include(s => s.ShopTranslations).AsNoTracking().ToListAsync();
         _shops = allShops.OrderBy(s => s.Name).ToList();
         _shopNames = _shops.ToDictionary(s => s.Id, s => s.Name);
@@ -258,6 +259,7 @@
     {
         _loading = true;
         StateHasChanged();
+        using var Db = await DbFactory.CreateDbContextAsync();
         var allDishes = await Db.Dishes.Include(d => d.DishTranslations).AsNoTracking().ToListAsync();
         _dishes = allDishes.OrderBy(d => d.ShopId).ThenBy(d => d.Name).ToList();
         _loading = false;
@@ -329,6 +331,7 @@
 
         if (result == true)
         {
+            using var Db = await DbFactory.CreateDbContextAsync();
             var toDelete = await Db.Dishes.FindAsync(DishModel.Id);
             if (toDelete != null)
             {

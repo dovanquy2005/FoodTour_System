@@ -9,14 +9,15 @@ namespace FoodTour_WebAdmin.Api.Controllers;
 [Route("api/[controller]")]
 public class DishesController : ControllerBase
 {
-    private readonly AppDbContext _db;
+    private readonly IDbContextFactory<AppDbContext> _dbFactory;
 
-    public DishesController(AppDbContext db) => _db = db;
+    public DishesController(IDbContextFactory<AppDbContext> dbFactory) => _dbFactory = dbFactory;
 
     // GET: api/dishes
     [HttpGet]
     public async Task<ActionResult<IEnumerable<DishModel>>> GetAll([FromQuery] string? shopId = null)
     {
+        using var _db = await _dbFactory.CreateDbContextAsync();
         var query = _db.Dishes.AsQueryable();
 
         if (!string.IsNullOrEmpty(shopId))
@@ -31,6 +32,7 @@ public class DishesController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<DishModel>> GetById(string id)
     {
+        using var _db = await _dbFactory.CreateDbContextAsync();
         var DishModel = await _db.Dishes.Include(d => d.DishTranslations).FirstOrDefaultAsync(d => d.Id == id);
 
         if (DishModel is null)
@@ -43,6 +45,7 @@ public class DishesController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<DishModel>> Create([FromBody] DishModel DishModel)
     {
+        using var _db = await _dbFactory.CreateDbContextAsync();
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
@@ -64,6 +67,7 @@ public class DishesController : ControllerBase
     [HttpPut("{id}")]
     public async Task<ActionResult<DishModel>> Update(string id, [FromBody] DishModel DishModel)
     {
+        using var _db = await _dbFactory.CreateDbContextAsync();
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
@@ -92,6 +96,7 @@ public class DishesController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(string id)
     {
+        using var _db = await _dbFactory.CreateDbContextAsync();
         var DishModel = await _db.Dishes.FindAsync(id);
         if (DishModel is null)
             return NotFound(new { message = $"DishModel with id '{id}' not found." });

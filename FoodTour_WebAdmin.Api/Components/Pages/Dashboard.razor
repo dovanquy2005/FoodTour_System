@@ -1,5 +1,5 @@
-@page "/"
-@inject AppDbContext Db
+@page "/dashboard"
+@inject IDbContextFactory<AppDbContext> DbFactory
 
 <PageTitle>Dashboard — FoodTour Admin</PageTitle>
 
@@ -208,6 +208,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        using var Db = await DbFactory.CreateDbContextAsync();
         _totalShops = await Db.Shops.CountAsync();
         _totalDishes = await Db.Dishes.CountAsync();
         var avg = _totalShops > 0 ? await Db.Shops.AverageAsync(s => s.Rating) : 0;

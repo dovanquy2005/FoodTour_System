@@ -1,6 +1,6 @@
 @page "/foodtour/{Id}"
 @layout FoodTour_WebAdmin.Api.Components.Layout.PublicLayout
-@inject AppDbContext Db
+@inject IDbContextFactory<AppDbContext> DbFactory
 @inject IJSRuntime JS
 
 <PageTitle>FoodTour — Vĩnh Khánh Street Eats</PageTitle>
@@ -255,6 +255,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        using var Db = await DbFactory.CreateDbContextAsync();
         _shop = await Db.Shops
             .Include(s => s.ShopTranslations)
             .AsNoTracking()

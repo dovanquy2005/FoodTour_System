@@ -1,12 +1,7 @@
 @inherits LayoutComponentBase
-
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
 <MudThemeProvider Theme="_foodTourTheme" IsDarkMode="false" />
-<MudPopoverProvider />
-<MudDialogProvider FullWidth="true" MaxWidth="MaxWidth.Small"
-                   CloseButton="true"
-                   BackdropClick="false"
-                   Position="DialogPosition.Center" />
-<MudSnackbarProvider />
 
 <MudLayout>
     <!-- ═══════ APP BAR ═══════ -->
@@ -30,9 +25,48 @@
             Online
         </MudChip>
         <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Inherit" />
-        <MudAvatar Size="Size.Small" Style="background: rgba(255,255,255,0.2); margin-left: 8px;">
-            <MudIcon Icon="@Icons.Material.Filled.Person" />
-        </MudAvatar>
+        
+        <!-- User Dropdown Menu -->
+        <AuthorizeView Context="authState">
+            <Authorized>
+                <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true" Class="ml-2">
+                    <ActivatorContent>
+                        <MudButton Variant="Variant.Text" Color="Color.Inherit" 
+                                   OnClick="@context.ToggleAsync"
+                                   Style="text-transform: none; padding: 4px 12px; border-radius: 20px; background: rgba(255,255,255,0.1);">
+                            <MudAvatar Size="Size.Small" Style="background: rgba(255,255,255,0.2); margin-right: 8px;">
+                                @if (!string.IsNullOrEmpty(authState.User.Identity?.Name))
+                                {
+                                    <span>@authState.User.Identity.Name.Substring(0, 1).ToUpper()</span>
+                                }
+                                else
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.Person" />
+                                }
+                            </MudAvatar>
+                            <span style="font-weight: 600;">@authState.User.Identity?.Name</span>
+                            <MudIcon Icon="@Icons.Material.Filled.ArrowDropDown" Size="Size.Small" Class="ml-1" />
+                        </MudButton>
+                    </ActivatorContent>
+                    <ChildContent>
+                        <div style="padding: 16px; border-bottom: 1px solid #F0E8E0; min-width: 200px;">
+                            <MudText Typo="Typo.subtitle2" Style="font-weight: 700; color: #2D1F14;">@authState.User.Identity?.Name</MudText>
+                            <MudText Typo="Typo.caption" Style="color: #8C7B6B;">@authState.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value</MudText>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Style="margin-top: 8px; font-size: 0.65rem; height: 20px;">
+                                @authState.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value
+                            </MudChip>
+                        </div>
+                        <MudMenuItem Icon="@Icons.Material.Filled.Person" Style="font-size: 0.9rem; font-weight: 500;">Hồ sơ (Profile)</MudMenuItem>
+                        <MudMenuItem Icon="@Icons.Material.Filled.Settings" Style="font-size: 0.9rem; font-weight: 500;">Cài đặt (Settings)</MudMenuItem>
+                        <MudDivider />
+                        <MudMenuItem Icon="@Icons.Material.Filled.Logout" IconColor="Color.Error" OnClick="Logout" Style="font-size: 0.9rem; font-weight: 500; color: #D94F4F;">Đăng xuất</MudMenuItem>
+                    </ChildContent>
+                </MudMenu>
+            </Authorized>
+            <NotAuthorized>
+                <MudButton Href="/login" Variant="Variant.Text" Color="Color.Inherit" Style="text-transform: none; margin-left: 8px;">Đăng nhập</MudButton>
+            </NotAuthorized>
+        </AuthorizeView>
     </MudAppBar>
 
     <!-- ═══════ SIDE DRAWER ═══════ -->
@@ -85,4 +119,20 @@
     };
 
     private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated != true)
+        {
+            Navigation.NavigateTo("/login");
+        }
+    }
+
+    private void Logout()
+    {
+        var customAuthStateProvider = (FoodTour_WebAdmin.Api.Services.CustomAuthStateProvider)AuthStateProvider;
+        customAuthStateProvider.MarkUserAsLoggedOut();
+        Navigation.NavigateTo("/login");
+    }
 }

@@ -1,5 +1,5 @@
 @page "/qr-management"
-@inject AppDbContext Db
+@inject IDbContextFactory<AppDbContext> DbFactory
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
@@ -179,6 +179,7 @@
     protected override async Task OnInitializedAsync()
     {
         _baseUrl = Navigation.BaseUri.TrimEnd('/');
+        using var Db = await DbFactory.CreateDbContextAsync();
         _shops = await Db.Shops
             .Include(s => s.ShopTranslations)
             .AsNoTracking()

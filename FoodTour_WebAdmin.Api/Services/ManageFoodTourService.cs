@@ -7,7 +7,7 @@ namespace FoodTour_WebAdmin.Api.Services;
 
 public class ManageFoodTourService
 {
-    private readonly AppDbContext _context;
+    private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly LangblyTranslateService _translateService;
     private readonly ITtsService _ttsService;
     private readonly ISupabaseStorageService _storageService;
@@ -19,13 +19,13 @@ public class ManageFoodTourService
     private readonly string[] _allLanguages = { "vi", "en", "ja", "ru", "zh" };
 
     public ManageFoodTourService(
-        AppDbContext context,
+        IDbContextFactory<AppDbContext> contextFactory,
         LangblyTranslateService translateService,
         ITtsService ttsService,
         ISupabaseStorageService storageService,
         ILogger<ManageFoodTourService> logger)
     {
-        _context = context;
+        _contextFactory = contextFactory;
         _translateService = translateService;
         _ttsService = ttsService;
         _storageService = storageService;
@@ -34,6 +34,7 @@ public class ManageFoodTourService
 
     public async Task<ShopModel> CreateShopWithTranslationAsync(CreateShopRequest request)
     {
+        using var _context = await _contextFactory.CreateDbContextAsync();
         using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
@@ -112,6 +113,7 @@ public class ManageFoodTourService
 
     public async Task<DishModel> CreateDishWithTranslationAsync(CreateDishRequest request)
     {
+        using var _context = await _contextFactory.CreateDbContextAsync();
         using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
@@ -168,6 +170,7 @@ public class ManageFoodTourService
 
     public async Task UpdateShopWithTranslationAsync(string shopId, CreateShopRequest request)
     {
+        using var _context = await _contextFactory.CreateDbContextAsync();
         using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
@@ -256,6 +259,7 @@ public class ManageFoodTourService
 
     public async Task UpdateDishWithTranslationAsync(string dishId, CreateDishRequest request)
     {
+        using var _context = await _contextFactory.CreateDbContextAsync();
         using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {

@@ -1,13 +1,16 @@
 using Microsoft.EntityFrameworkCore;
 using FoodTour_WebAdmin.Api.Data;
 using MudBlazor.Services;
+// Thêm 2 namespace này để sử dụng PasswordHasher và UserModel
+using Microsoft.AspNetCore.Identity;
+using FoodTour_WebAdmin.Api.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // ═══════ SERVICES ═══════
 
-// EF Core + PostgreSQL (Supabase)
-builder.Services.AddDbContext<AppDbContext>(options =>
+// EF Core + PostgreSQL (Supabase) via IDbContextFactory (tránh lỗi ObjectDisposedException trong Blazor Server)
+builder.Services.AddDbContextFactory<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Register Services
@@ -16,13 +19,16 @@ builder.Services.AddSingleton<FoodTour_WebAdmin.Api.Services.ISupabaseStorageSer
 builder.Services.AddHttpClient<FoodTour_WebAdmin.Api.Services.ITtsService, FoodTour_WebAdmin.Api.Services.GoogleTtsService>();
 builder.Services.AddSingleton<FoodTour_WebAdmin.Api.Services.IQrCodeService, FoodTour_WebAdmin.Api.Services.QrCodeService>();
 builder.Services.AddScoped<FoodTour_WebAdmin.Api.Services.ManageFoodTourService>();
+builder.Services.AddScoped<FoodTour_WebAdmin.Api.Services.AuthService>();
 
 // API Controllers
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Blazor Server
+// Blazor Server Auth & Components
+builder.Services.AddAuthorizationCore();
+builder.Services.AddScoped<Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider, FoodTour_WebAdmin.Api.Services.CustomAuthStateProvider>();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
@@ -51,6 +57,20 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// ═══════ ĐOẠN MÃ TẠO MÃ HASH (Tạm thời) ═══════
+// Đoạn này sẽ in mã Hash ra Console khi bạn chạy project
+// using (var scope = app.Services.CreateScope())
+// {
+//     var hasher = new PasswordHasher<UserModel>();
+//     var dummyUser = new UserModel { Email = "admin@foodtour.com" };
+//     string secureHash = hasher.HashPassword(dummyUser, "Admin123");
+
+//     Console.WriteLine("\n========================================");
+//     Console.WriteLine("--- COPY MA HASH NAY CHO SUPABASE ---");
+//     Console.WriteLine(secureHash);
+//     Console.WriteLine("========================================\n");
+// }
 
 if (app.Environment.IsDevelopment())
 {
