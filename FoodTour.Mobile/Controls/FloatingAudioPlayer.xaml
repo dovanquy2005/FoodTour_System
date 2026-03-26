@@ -85,21 +85,6 @@
                                            VerticalOptions="Center"
                                            Margin="0,0,0,0">
 
-                        <!-- Previous button -->
-                        <Border StrokeThickness="0"
-                                BackgroundColor="Transparent"
-                                WidthRequest="36"
-                                HeightRequest="44">
-                            <Border.GestureRecognizers>
-                                <TapGestureRecognizer Command="{Binding SkipPreviousCommand}"/>
-                            </Border.GestureRecognizers>
-                            <Label Text="⏮"
-                                   TextColor="#C0AEAE"
-                                   FontSize="18"
-                                   HorizontalOptions="Center"
-                                   VerticalOptions="Center"/>
-                        </Border>
-
                         <!-- Play/Pause button (Red circle) -->
                         <Border StrokeThickness="0"
                                 BackgroundColor="#E53935"
@@ -112,21 +97,6 @@
                             <Image Source="{Binding PlayIcon}"
                                    WidthRequest="22"
                                    HeightRequest="22"
-                                   HorizontalOptions="Center"
-                                   VerticalOptions="Center"/>
-                        </Border>
-
-                        <!-- Next button -->
-                        <Border StrokeThickness="0"
-                                BackgroundColor="Transparent"
-                                WidthRequest="36"
-                                HeightRequest="44">
-                            <Border.GestureRecognizers>
-                                <TapGestureRecognizer Command="{Binding SkipNextCommand}"/>
-                            </Border.GestureRecognizers>
-                            <Label Text="⏭"
-                                   TextColor="#C0AEAE"
-                                   FontSize="18"
                                    HorizontalOptions="Center"
                                    VerticalOptions="Center"/>
                         </Border>

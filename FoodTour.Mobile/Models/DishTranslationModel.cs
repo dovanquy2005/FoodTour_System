@@ -4,8 +4,8 @@ namespace FoodTour.Mobile.Models
 {
     public class DishTranslationModel
     {
-        [PrimaryKey, AutoIncrement]
-        public int LocalId { get; set; }
+        [PrimaryKey]
+        public int Id { get; set; } // Server-assigned PK — enables proper InsertOrReplace upsert
 
         [Indexed]
         public string DishId { get; set; } = string.Empty;

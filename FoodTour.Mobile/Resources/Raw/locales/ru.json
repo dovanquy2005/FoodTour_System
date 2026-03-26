@@ -54,5 +54,19 @@
     "Settings_ClearImageCache": "Очистить кэш изображений",
     "Settings_ClearCacheConfirmMsg": "Вы уверены, что хотите удалить все кэшированные изображения?",
     "Settings_ClearCacheDone": "Кэш изображений очищен",
-    "Settings_ClearCacheOfflineWarning": "Вы офлайн. Очистка кэша изображений приведёт к тому, что изображения не будут отображаться до повторного подключения."
+    "Settings_ClearCacheOfflineWarning": "Вы офлайн. Очистка кэша изображений приведёт к тому, что изображения не будут отображаться до повторного подключения.",
+    "Onboarding_OfflineTitle": "Автономный режим (рекомендуется)",
+    "Onboarding_OfflineDesc": "Загрузите все аудио и изображения. Наслаждайтесь плавной работой без прерываний сети.",
+    "Onboarding_OnlineTitle": "Слушать онлайн",
+    "Onboarding_OnlineDesc": "Всегда актуальные данные. Требуется стабильное подключение 4G/Wi-Fi.",
+    "Onboarding_StartingDownload": "Начало загрузки...",
+    "Onboarding_ErrorConn": "Ошибка подключения к серверу. Пожалуйста, убедитесь, что сервер включен.",
+    "Settings_ClearCacheResult": "Удалено изображений: {0}",
+    "Audio_Preparing": "Подготовка аудио...",
+    "Audio_Downloading": "Загрузка аудио...",
+    "Audio_Playing": "Воспроизведение аудио...",
+    "Audio_Error": "Ошибка воспроизведения аудио",
+    "Audio_Paused": "Пауза",
+    "Audio_Ended": "Завершено",
+    "Audio_NoExplanation": "Нет пояснений"
 }

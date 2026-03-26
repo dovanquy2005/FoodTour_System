@@ -5,10 +5,10 @@ namespace FoodTour.Mobile.Models
     public class DishModel
     {
         [PrimaryKey]
-        public string Id { get; set; } = Guid.NewGuid().ToString();
+        public string Id { get; set; } = string.Empty;
 
-        [Indexed] // Đánh chỉ mục để tìm kiếm theo Shop nhanh hơn
-        public string ShopId { get; set; } = string.Empty; // Khóa ngoại liên kết với ShopModel.Id
+        [Indexed]
+        public string ShopId { get; set; } = string.Empty;
 
         public double Price { get; set; }
         public string ImageUrl { get; set; } = string.Empty;

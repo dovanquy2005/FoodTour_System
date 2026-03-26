@@ -1,31 +1,31 @@
 using FoodTour.Mobile.Models;
-using Microsoft.Maui.Media;
+using FoodTour.Mobile.Helpers;
+using Plugin.Maui.Audio;
 
 namespace FoodTour.Mobile.Services;
 
-public class AudioPlayerService : IAudioPlayerService
+public class AudioPlayerService : IAudioPlayerService, IDisposable
 {
-    private CancellationTokenSource _ttsCts = new();
-    private CancellationTokenSource _playCts = new();
+    private readonly ILocalizationService _localizationService;
     private ShopModel? _currentShop;
     private bool _isPlayerVisible;
     private bool _isPlaying;
     private string _playerStatus = "";
 
-    // Hỗ trợ thanh tiến trình và pause/resume
+    private IAudioPlayer? _player;
     private IDispatcherTimer? _progressTimer;
-    private List<string> _sentences = new();
-    private int _currentSentenceIndex = 0;
-    private double _estimatedDuration = 0;
-    private double _currentPosition = 0;
-    private const double CharsPerSecond = 14.0; // Tốc độ đọc ước tính (ký tự/giây)
+
+    public AudioPlayerService(ILocalizationService localizationService)
+    {
+        _localizationService = localizationService;
+    }
 
     public bool IsPlaying => _isPlaying;
     public ShopModel? CurrentShop => _currentShop;
     public string PlayerStatus => _playerStatus;
     
-    public double CurrentPosition => _currentPosition;
-    public double Duration => _estimatedDuration;
+    public double CurrentPosition => _player?.CurrentPosition ?? 0;
+    public double Duration => _player?.Duration ?? 1;
 
     public bool IsPlayerVisible
     {
@@ -48,94 +48,98 @@ public class AudioPlayerService : IAudioPlayerService
 
         _currentShop = shop;
         IsPlayerVisible = true;
+        
+        string? audioUrlOrPath = shop.AudioUrl;
+        if (string.IsNullOrEmpty(audioUrlOrPath))
+        {
+            _playerStatus = _localizationService["Audio_NoExplanation"] ?? "Không có thuyết minh";
+            _isPlaying = false;
+            StateChanged?.Invoke();
+            return;
+        }
+
+        _playerStatus = _localizationService["Audio_Preparing"] ?? "Đang chuẩn bị audio...";
         _isPlaying = true;
-        _playerStatus = "Đang thuyết minh...";
-        
-        PrepareContent(shop);
-        
         StateChanged?.Invoke();
 
-        await StartReading();
-    }
-
-    private void PrepareContent(ShopModel shop)
-    {
-        string name = shop.Name ?? "";
-        string desc = shop.Description ?? "Mời bạn ghé thăm.";
-        string fullContent = $"{name}. {desc}".Replace("\n", ". ").Replace("  ", " ");
-        
-        // Tách thành các đoạn câu nhỏ trước
-        var rawSentences = fullContent.Split(new[] { ". ", "? ", "! " }, StringSplitOptions.RemoveEmptyEntries)
-                                      .Select(s => s.Trim() + ". ")
-                                      .Where(s => s.Length > 2)
-                                      .ToList();
-                                      
-        // Gom lại thành các đoạn lớn (tối thiểu 250 ký tự) để tránh lỗi ngắt quãng delay quá lâu của trình đọc TTS
-        _sentences = new List<string>();
-        string currentChunk = "";
-        
-        foreach (var s in rawSentences)
+        try
         {
-            currentChunk += s;
-            if (currentChunk.Length >= 250)
+            _player?.Dispose();
+            
+            // Lấy Audio file: ưu tiên cache cục bộ, nếu không thì tải từ mạng
+            string resolvedPath = ImagePathHelper.ResolveImageUrl(audioUrlOrPath);
+            
+            if (resolvedPath.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             {
-                _sentences.Add(currentChunk.TrimEnd());
-                currentChunk = "";
+                _playerStatus = _localizationService["Audio_Downloading"] ?? "Đang tải audio...";
+                StateChanged?.Invoke();
+                
+                using var httpClient = new HttpClient();
+                var bytes = await httpClient.GetByteArrayAsync(resolvedPath);
+                
+                string fileName = Path.GetFileName(new Uri(resolvedPath).LocalPath);
+                resolvedPath = Path.Combine(FileSystem.AppDataDirectory, fileName);
+                await File.WriteAllBytesAsync(resolvedPath, bytes);
             }
+
+            var audioStream = File.OpenRead(resolvedPath);
+            _player = AudioManager.Current.CreatePlayer(audioStream);
+            _player.PlaybackEnded += OnPlaybackEnded;
+            _player.Play();
+            
+            _playerStatus = _localizationService["Audio_Playing"] ?? "Đang phát audio...";
+            _isPlaying = true;
+            StartTimer();
+            StateChanged?.Invoke();
         }
-        if (!string.IsNullOrWhiteSpace(currentChunk))
+        catch (Exception ex)
         {
-            _sentences.Add(currentChunk.TrimEnd());
+            System.Diagnostics.Debug.WriteLine($"Lỗi phát Audio: {ex.Message}");
+            _playerStatus = _localizationService["Audio_Error"] ?? "Lỗi phát audio";
+            _isPlaying = false;
+            StateChanged?.Invoke();
         }
-                                
-        _currentSentenceIndex = 0;
-        _currentPosition = 0;
-        
-        // Ước tính tổng thời lượng dựa trên số ký tự
-        int totalChars = _sentences.Sum(s => s.Length);
-        _estimatedDuration = totalChars / CharsPerSecond;
-        if (_estimatedDuration < 1) _estimatedDuration = 1;
     }
 
     public async Task PlayPauseAsync()
     {
+        if (_player == null) return;
+
         if (_isPlaying)
         {
-            // Đang chạy → dừng lại
-            _ttsCts.Cancel();
-            _playCts.Cancel();
+            _player.Pause();
             _isPlaying = false;
-            _playerStatus = "Đã tạm dừng";
+            _playerStatus = _localizationService["Audio_Paused"] ?? "Đã tạm dừng";
         }
         else
         {
-            // Đang dừng → phát lại
-            _playCts = new CancellationTokenSource();
+            _player.Play();
             _isPlaying = true;
-            _playerStatus = "Đang thuyết minh...";
-            await StartReading();
+            _playerStatus = _localizationService["Audio_Playing"] ?? "Đang phát audio...";
         }
+        
         StateChanged?.Invoke();
+        await Task.CompletedTask;
     }
 
     public void Stop()
     {
         try
         {
-            _ttsCts.Cancel();
-            _ttsCts = new CancellationTokenSource();
-
-            _playCts.Cancel();
-            _playCts = new CancellationTokenSource();
-            
             StopTimer();
+
+            if (_player != null)
+            {
+                _player.PlaybackEnded -= OnPlaybackEnded;
+                _player.Stop();
+                _player.Dispose();
+                _player = null;
+            }
 
             _isPlayerVisible = false;
             _isPlaying = false;
             _playerStatus = "";
             _currentShop = null;
-            _currentPosition = 0;
-            _currentSentenceIndex = 0;
             StateChanged?.Invoke();
         }
         catch { }
@@ -143,75 +147,22 @@ public class AudioPlayerService : IAudioPlayerService
 
     public void Seek(double positionInSeconds)
     {
-        if (_sentences.Count == 0) return;
-        
-        positionInSeconds = Math.Clamp(positionInSeconds, 0, _estimatedDuration);
-        _currentPosition = positionInSeconds;
-        
-        // Cập nhật lại câu đang đọc dựa trên thời gian
-        double targetCharCount = positionInSeconds * CharsPerSecond;
-        int accumulated = 0;
-        
-        for (int i = 0; i < _sentences.Count; i++)
+        if (_player != null && positionInSeconds >= 0 && positionInSeconds <= _player.Duration)
         {
-            accumulated += _sentences[i].Length;
-            if (accumulated >= targetCharCount)
-            {
-                _currentSentenceIndex = i;
-                break;
-            }
-        }
-        
-        // Nếu đang phát thì phải huỷ dòng text hiện tại để đọc từ câu mới
-        if (_isPlaying)
-        {
-            _ttsCts.Cancel();
-            _ttsCts = new CancellationTokenSource();
-            _ = StartReading();
-        }
-        
-        StateChanged?.Invoke();
-    }
-
-    private async Task StartReading()
-    {
-        _ttsCts.Cancel();
-        _ttsCts = new CancellationTokenSource();
-
-        using var linked = CancellationTokenSource.CreateLinkedTokenSource(_ttsCts.Token, _playCts.Token);
-        StartTimer();
-
-        try
-        {
-            var options = await BuildSpeechOptions();
-
-            // Lặp qua các câu từ vị trí lưu trữ gần nhất
-            while (_currentSentenceIndex < _sentences.Count)
-            {
-                linked.Token.ThrowIfCancellationRequested();
-                
-                string sentenceToSpeak = _sentences[_currentSentenceIndex];
-                await TextToSpeech.Default.SpeakAsync(sentenceToSpeak, options, linked.Token);
-                
-                _currentSentenceIndex++;
-            }
-
-            // Hoàn thành hết văn bản
-            _isPlaying = false;
-            _playerStatus = "Đã kết thúc";
-            _currentPosition = _estimatedDuration;
-            StopTimer();
+            _player.Seek(positionInSeconds);
             StateChanged?.Invoke();
         }
-        catch (OperationCanceledException)
+    }
+
+    private void OnPlaybackEnded(object? sender, EventArgs e)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
         {
-            // Bị dừng giữa chừng (User ấn pause hoặc stop)
+            _isPlaying = false;
+            _playerStatus = _localizationService["Audio_Ended"] ?? "Đã kết thúc";
             StopTimer();
-        }
-        catch
-        {
-            StopTimer();
-        }
+            StateChanged?.Invoke();
+        });
     }
     
     private void StartTimer()
@@ -226,15 +177,12 @@ public class AudioPlayerService : IAudioPlayerService
                 {
                     if (_isPlaying)
                     {
-                        _currentPosition += 0.5;
-                        if (_currentPosition > _estimatedDuration)
-                            _currentPosition = _estimatedDuration;
                         StateChanged?.Invoke();
                     }
                 };
             }
         }
-        _progressTimer?.Start();
+         _progressTimer?.Start();
     }
 
     private void StopTimer()
@@ -242,21 +190,8 @@ public class AudioPlayerService : IAudioPlayerService
         _progressTimer?.Stop();
     }
 
-    private async Task<SpeechOptions> BuildSpeechOptions()
+    public void Dispose()
     {
-        var currentLang = Microsoft.Maui.Storage.Preferences.Default.Get("AppLanguage", "vi"); // Default "vi"
-        var locales = await TextToSpeech.Default.GetLocalesAsync();
-
-        // Cố gắng tìm locale khớp với language (vd: "vi", "en") hoặc language đầu tiên của locale (vd: "en-US")
-        var selectedLocale = locales.FirstOrDefault(l => l.Language.Equals(currentLang, StringComparison.OrdinalIgnoreCase) 
-                                                      || l.Language.StartsWith(currentLang + "-", StringComparison.OrdinalIgnoreCase))
-                          ?? locales.FirstOrDefault(l => l.Language.StartsWith("vi", StringComparison.OrdinalIgnoreCase));
-
-        return new SpeechOptions
-        {
-            Locale = selectedLocale,
-            Pitch = 0.9f,
-            Volume = 1.0f
-        };
+        Stop();
     }
 }

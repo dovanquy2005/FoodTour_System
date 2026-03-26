@@ -16,12 +16,15 @@ namespace FoodTour.Mobile.Services
             var dbPath = Path.Combine(FileSystem.AppDataDirectory, "FoodTour.db3");
             _database = new SQLiteAsyncConnection(dbPath);
 
-            // Xóa bảng cũ 1 lần để đảm bảo chuẩn schema mới (Migration)
-            if (!Preferences.Default.ContainsKey("DatabaseMigratedV2"))
+            // Migration V3: Reset bảng cũ để đảm bảo chuẩn schema mới
+            // (thêm Radius, Priority, CreatedAt, UpdatedAt, AudioUrl, IsAudioGenerated; đổi PK Translation)
+            if (!Preferences.Default.ContainsKey("DatabaseMigratedV3"))
             {
+                await _database.DropTableAsync<ShopTranslationModel>();
+                await _database.DropTableAsync<DishTranslationModel>();
                 await _database.DropTableAsync<ShopModel>();
                 await _database.DropTableAsync<DishModel>();
-                Preferences.Default.Set("DatabaseMigratedV2", true);
+                Preferences.Default.Set("DatabaseMigratedV3", true);
             }
 
             await _database.CreateTableAsync<ShopModel>();
@@ -30,7 +33,9 @@ namespace FoodTour.Mobile.Services
             await _database.CreateTableAsync<DishTranslationModel>();
         }
 
-        private async Task<string> DownloadAndCacheImageAsync(HttpClient httpClient, string apiUrl, string relativeUrl)
+        // ═══════ IMAGE & AUDIO CACHING ═══════
+
+        private async Task<string> DownloadAndCacheFileAsync(HttpClient httpClient, string apiUrl, string relativeUrl)
         {
             if (string.IsNullOrEmpty(relativeUrl)) return relativeUrl;
             
@@ -42,24 +47,24 @@ namespace FoodTour.Mobile.Services
                 if (!File.Exists(localPath))
                 {
                     var fullUrl = apiUrl.TrimEnd('/') + relativeUrl;
-                    var imageBytes = await httpClient.GetByteArrayAsync(fullUrl);
-                    await File.WriteAllBytesAsync(localPath, imageBytes);
+                    var fileBytes = await httpClient.GetByteArrayAsync(fullUrl);
+                    await File.WriteAllBytesAsync(localPath, fileBytes);
                 }
                 return localPath;
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Download image error: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Download file error ({relativeUrl}): {ex.Message}");
                 return relativeUrl;
             }
         }
+
+        // ═══════ SYNC ═══════
 
         public async Task<bool> SyncDataFromApiAsync(string apiUrl)
         {
             await Init();
 
-            // Kiểm tra kết nối mạng: nếu không có Internet, trả về false ngay lập tức (Fast-Fail)
-            // Tránh chờ đợi 30 giây timeout của HttpClient khi không có mạng
             if (Connectivity.Current.NetworkAccess != NetworkAccess.Internet)
             {
                 System.Diagnostics.Debug.WriteLine("SyncDataFromApiAsync: Không có kết nối mạng, bỏ qua đồng bộ.");
@@ -69,59 +74,110 @@ namespace FoodTour.Mobile.Services
             try
             {
                 using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
-                
-                // 1. Fetch Shops
+
+                // ──── 1. Sync Shops ────
                 var shopsResponse = await httpClient.GetAsync($"{apiUrl}/api/shops");
                 if (shopsResponse.IsSuccessStatusCode)
                 {
                     var shops = await shopsResponse.Content.ReadFromJsonAsync<List<ShopModel>>();
-                    if (shops != null)
+                    if (shops != null && shops.Count > 0)
                     {
+                        // Pre-fetch existing shops để so sánh UpdatedAt
+                        var existingShops = await _database!.Table<ShopModel>().ToListAsync();
+                        var existingShopDict = existingShops.ToDictionary(s => s.Id);
+
+                        await _database.RunInTransactionAsync(db =>
+                        {
+                            foreach (var shop in shops)
+                            {
+                                if (existingShopDict.TryGetValue(shop.Id, out var existing))
+                                {
+                                    // Chỉ update nếu dữ liệu server mới hơn
+                                    if (shop.UpdatedAt > existing.UpdatedAt)
+                                    {
+                                        db.InsertOrReplace(shop);
+                                    }
+                                }
+                                else
+                                {
+                                    db.Insert(shop);
+                                }
+                            }
+                        });
+
+                        // Upsert translations (dùng server PK nên InsertOrReplace là đúng)
+                        await _database.RunInTransactionAsync(db =>
+                        {
+                            foreach (var shop in shops)
+                            {
+                                if (shop.ShopTranslations != null)
+                                {
+                                    foreach (var trans in shop.ShopTranslations)
+                                    {
+                                        db.InsertOrReplace(trans);
+                                    }
+                                }
+                            }
+                        });
+
+                        // Tải ảnh và audio về cache (ngoài transaction, vì là I/O network)
                         foreach (var shop in shops)
                         {
-                            // Tải ảnh về cache cục bộ nhưng KHÔNG ghi đè ImageUrl trong model
-                            // SQLite luôn lưu đường dẫn tương đối từ server (ví dụ: /uploads/shops/123.jpg)
                             if (!string.IsNullOrEmpty(shop.ImageUrl) && shop.ImageUrl.StartsWith("/"))
                             {
-                                await DownloadAndCacheImageAsync(httpClient, apiUrl, shop.ImageUrl);
+                                await DownloadAndCacheFileAsync(httpClient, apiUrl, shop.ImageUrl);
                             }
-
-                            await _database!.InsertOrReplaceAsync(shop);
                             if (shop.ShopTranslations != null)
                             {
-                                // Xóa translation cũ của shop này để tránh duplicate (Upsert mechanism)
-                                var oldTrans = await _database.Table<ShopTranslationModel>().Where(t => t.ShopId == shop.Id).ToListAsync();
-                                foreach (var t in oldTrans) await _database.DeleteAsync(t);
-                                
-                                await _database.InsertAllAsync(shop.ShopTranslations);
+                                foreach (var trans in shop.ShopTranslations)
+                                {
+                                    if (!string.IsNullOrEmpty(trans.AudioUrl) && trans.AudioUrl.StartsWith("/"))
+                                    {
+                                        await DownloadAndCacheFileAsync(httpClient, apiUrl, trans.AudioUrl);
+                                    }
+                                }
                             }
                         }
                     }
                 }
 
-                // 2. Fetch Dishes
+                // ──── 2. Sync Dishes ────
                 var dishesResponse = await httpClient.GetAsync($"{apiUrl}/api/dishes");
                 if (dishesResponse.IsSuccessStatusCode)
                 {
                     var dishes = await dishesResponse.Content.ReadFromJsonAsync<List<DishModel>>();
-                    if (dishes != null)
+                    if (dishes != null && dishes.Count > 0)
                     {
+                        // Dishes không có UpdatedAt trên server, dùng InsertOrReplace trực tiếp
+                        await _database!.RunInTransactionAsync(db =>
+                        {
+                            foreach (var dish in dishes)
+                            {
+                                db.InsertOrReplace(dish);
+                            }
+                        });
+
+                        // Upsert dish translations
+                        await _database.RunInTransactionAsync(db =>
+                        {
+                            foreach (var dish in dishes)
+                            {
+                                if (dish.DishTranslations != null)
+                                {
+                                    foreach (var trans in dish.DishTranslations)
+                                    {
+                                        db.InsertOrReplace(trans);
+                                    }
+                                }
+                            }
+                        });
+
+                        // Tải ảnh Dish về cache
                         foreach (var dish in dishes)
                         {
-                            // Tải ảnh về cache cục bộ nhưng KHÔNG ghi đè ImageUrl trong model
-                            // SQLite luôn lưu đường dẫn tương đối từ server
                             if (!string.IsNullOrEmpty(dish.ImageUrl) && dish.ImageUrl.StartsWith("/"))
                             {
-                                await DownloadAndCacheImageAsync(httpClient, apiUrl, dish.ImageUrl);
-                            }
-
-                            await _database!.InsertOrReplaceAsync(dish);
-                            if (dish.DishTranslations != null)
-                            {
-                                var oldTrans = await _database.Table<DishTranslationModel>().Where(t => t.DishId == dish.Id).ToListAsync();
-                                foreach (var t in oldTrans) await _database.DeleteAsync(t);
-
-                                await _database.InsertAllAsync(dish.DishTranslations);
+                                await DownloadAndCacheFileAsync(httpClient, apiUrl, dish.ImageUrl);
                             }
                         }
                     }
@@ -138,10 +194,8 @@ namespace FoodTour.Mobile.Services
 
         public async Task<bool> FullSyncAsync(string apiUrl, ILocalizationService localizationService)
         {
-            // 1. Sync Data (Shops, Dishes, Images)
             bool dataSuccess = await SyncDataFromApiAsync(apiUrl);
             
-            // 2. Sync All Languages
             try
             {
                 await localizationService.PreloadAllLanguagesAsync();
@@ -149,13 +203,13 @@ namespace FoodTour.Mobile.Services
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Language Sync Error: {ex.Message}");
-                // We might still consider it a partial success if data sync worked
             }
 
             return dataSuccess;
         }
 
-        // --- CÁC HÀM GET & BINDING ---
+        // ═══════ GET & BINDING ═══════
+
         public async Task<List<ShopModel>> GetShopsAsync()
         {
             await Init();
@@ -173,6 +227,7 @@ namespace FoodTour.Mobile.Services
                     shop.Name = trans.Name;
                     shop.Address = trans.Address;
                     shop.Description = trans.Description;
+                    shop.AudioUrl = trans.AudioUrl;
                 }
             }
             return shops;
@@ -194,6 +249,7 @@ namespace FoodTour.Mobile.Services
                     shop.Name = trans.Name;
                     shop.Address = trans.Address;
                     shop.Description = trans.Description;
+                    shop.AudioUrl = trans.AudioUrl;
                 }
             }
             return shop;
@@ -232,16 +288,16 @@ namespace FoodTour.Mobile.Services
             return await _database!.DeleteAsync(shop);
         }
 
+        // ═══════ IMAGE MANAGEMENT ═══════
+
         /// <summary>
-        /// Tải tất cả ảnh của Shops và Dishes từ server về cache cục bộ.
-        /// Dùng cho nút "Tải ảnh offline" trong trang Cài đặt.
-        /// Chỉ tải những ảnh chưa có trong cache.
+        /// Tải tất cả ảnh và audio của Shops và Dishes từ server về cache cục bộ.
+        /// Chỉ tải những asset chưa có trong cache.
         /// </summary>
-        public async Task<bool> DownloadAllImagesAsync(string apiUrl)
+        public async Task<bool> DownloadAllAssetsAsync(string apiUrl)
         {
             await Init();
 
-            // Kiểm tra kết nối mạng trước khi tải ảnh
             if (Connectivity.Current.NetworkAccess != NetworkAccess.Internet)
             {
                 System.Diagnostics.Debug.WriteLine("DownloadAllImagesAsync: Không có kết nối mạng.");
@@ -252,23 +308,31 @@ namespace FoodTour.Mobile.Services
             {
                 using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
 
-                // Tải ảnh của tất cả Shops
                 var shops = await _database!.Table<ShopModel>().ToListAsync();
                 foreach (var shop in shops)
                 {
                     if (!string.IsNullOrEmpty(shop.ImageUrl) && shop.ImageUrl.StartsWith("/"))
                     {
-                        await DownloadAndCacheImageAsync(httpClient, apiUrl, shop.ImageUrl);
+                        await DownloadAndCacheFileAsync(httpClient, apiUrl, shop.ImageUrl);
                     }
                 }
 
-                // Tải ảnh của tất cả Dishes
+                // Tải audio files cho tất cả translation
+                var shopTranslations = await _database.Table<ShopTranslationModel>().ToListAsync();
+                foreach (var trans in shopTranslations)
+                {
+                    if (!string.IsNullOrEmpty(trans.AudioUrl) && trans.AudioUrl.StartsWith("/"))
+                    {
+                        await DownloadAndCacheFileAsync(httpClient, apiUrl, trans.AudioUrl);
+                    }
+                }
+
                 var dishes = await _database.Table<DishModel>().ToListAsync();
                 foreach (var dish in dishes)
                 {
                     if (!string.IsNullOrEmpty(dish.ImageUrl) && dish.ImageUrl.StartsWith("/"))
                     {
-                        await DownloadAndCacheImageAsync(httpClient, apiUrl, dish.ImageUrl);
+                        await DownloadAndCacheFileAsync(httpClient, apiUrl, dish.ImageUrl);
                     }
                 }
 
@@ -282,26 +346,25 @@ namespace FoodTour.Mobile.Services
         }
 
         /// <summary>
-        /// Xóa tất cả file ảnh đã cache trong AppDataDirectory.
-        /// Dùng cho nút "Xóa cache ảnh" trong trang Cài đặt.
+        /// Xóa tất cả file ảnh và audio đã cache trong AppDataDirectory.
         /// </summary>
         public Task<int> ClearImageCacheAsync()
         {
             int deletedCount = 0;
-            var imageExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
+            var cachedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif", ".mp3", ".wav", ".ogg" };
             var files = Directory.GetFiles(FileSystem.AppDataDirectory);
 
             foreach (var file in files)
             {
                 var ext = Path.GetExtension(file).ToLowerInvariant();
-                if (imageExtensions.Contains(ext))
+                if (cachedExtensions.Contains(ext))
                 {
                     File.Delete(file);
                     deletedCount++;
                 }
             }
 
-            System.Diagnostics.Debug.WriteLine($"ClearImageCacheAsync: Đã xóa {deletedCount} file ảnh cache.");
+            System.Diagnostics.Debug.WriteLine($"ClearImageCacheAsync: Đã xóa {deletedCount} file cache.");
             return Task.FromResult(deletedCount);
         }
     }

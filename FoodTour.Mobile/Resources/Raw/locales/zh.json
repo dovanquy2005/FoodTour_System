@@ -54,5 +54,19 @@
     "Settings_ClearImageCache": "清除图片缓存",
     "Settings_ClearCacheConfirmMsg": "您确定要删除所有已缓存的图片吗？",
     "Settings_ClearCacheDone": "图片缓存已清除",
-    "Settings_ClearCacheOfflineWarning": "您当前离线。清除图片缓存后，图片将无法显示，直到重新连接网络。"
+    "Settings_ClearCacheOfflineWarning": "您当前离线。清除图片缓存后，图片将无法显示，直到重新连接网络。",
+    "Onboarding_OfflineTitle": "离线模式（推荐）",
+    "Onboarding_OfflineDesc": "下载所有音频和图片。无需担心网络中断，享受流畅体验。",
+    "Onboarding_OnlineTitle": "在线收听",
+    "Onboarding_OnlineDesc": "始终获取最新数据。需要稳定的4G/Wifi连接。",
+    "Onboarding_StartingDownload": "正在开始下载...",
+    "Onboarding_ErrorConn": "服务器连接错误。请确保服务器已联机。",
+    "Settings_ClearCacheResult": "已删除 {0} 张图片",
+    "Audio_Preparing": "正在准备音频...",
+    "Audio_Downloading": "正在下载音频...",
+    "Audio_Playing": "正在播放音频...",
+    "Audio_Error": "音频播放错误",
+    "Audio_Paused": "已暂停",
+    "Audio_Ended": "已结束",
+    "Audio_NoExplanation": "暂无解说"
 }

@@ -60,7 +60,7 @@ dotnet run
 taskkill /IM "FoodTour_WebAdmin.Api.exe" /F
 ```
 
-> 💡 **Lưu ý:** Cổng mặc định là `https://foodtour-admin-api.onrender.com`
+> 💡 **Lưu ý:** Cổng mặc định là `https://foodtour-admin-api.onrender.com/login`
 
 ### Chạy Ứng Dụng Mobile (Android)
 Đảm bảo bạn đã mở máy ảo Android (Emulator) trước khi chạy lệnh:

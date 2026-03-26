@@ -7,10 +7,9 @@ namespace FoodTour.Mobile.ViewModels
         public LoadingViewModel(Services.DatabaseService dbService)
         {
             _dbService = dbService;
-            CheckAndLoadData();
         }
 
-        private async void CheckAndLoadData()
+        public async Task InitializeAsync()
         {
             // Khởi tạo Database và đảm bảo dữ liệu đã sẵn sàng
             await _dbService.GetShopsAsync();
@@ -19,9 +18,7 @@ namespace FoodTour.Mobile.ViewModels
             // Fire-and-forget: người dùng vẫn được chuyển sang MainTabs ngay lập tức
             if (Connectivity.Current.NetworkAccess == NetworkAccess.Internet)
             {
-                string apiUrl = DeviceInfo.Platform == DevicePlatform.Android
-                    ? "http://10.0.2.2:5154"
-                    : "http://localhost:5154";
+                string apiUrl = "https://foodtour-admin-api.onrender.com";
 
                 // Bắt đầu đồng bộ ngầm — không await để không chặn UI
                 _ = Task.Run(async () =>
@@ -42,8 +39,11 @@ namespace FoodTour.Mobile.ViewModels
                 System.Diagnostics.Debug.WriteLine("Background sync: Không có mạng, bỏ qua đồng bộ ngầm.");
             }
 
-            // Chuyển sang trang chính ngay lập tức — không chờ đồng bộ hoàn tất
-            await Shell.Current.GoToAsync("//MainTabs");
+            // Chuyển sang trang chính
+            if (Shell.Current != null)
+            {
+                await Shell.Current.GoToAsync("//MainTabs");
+            }
         }
     }
 }

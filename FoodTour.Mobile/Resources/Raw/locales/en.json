@@ -54,5 +54,19 @@
     "Settings_ClearImageCache": "Clear Image Cache",
     "Settings_ClearCacheConfirmMsg": "Are you sure you want to delete all cached images?",
     "Settings_ClearCacheDone": "Cached images cleared",
-    "Settings_ClearCacheOfflineWarning": "You are offline. Clearing the image cache will prevent images from displaying until you reconnect."
+    "Settings_ClearCacheOfflineWarning": "You are offline. Clearing the image cache will prevent images from displaying until you reconnect.",
+    "Onboarding_OfflineTitle": "Offline Mode (Recommended)",
+    "Onboarding_OfflineDesc": "Download all audio and images. Enjoy a seamless experience without network interruptions.",
+    "Onboarding_OnlineTitle": "Listen Online",
+    "Onboarding_OnlineDesc": "Always get the latest data. Requires a stable 4G/Wifi connection.",
+    "Onboarding_StartingDownload": "Starting download...",
+    "Onboarding_ErrorConn": "Server connection error. Please ensure the server is online.",
+    "Settings_ClearCacheResult": "Deleted {0} images",
+    "Audio_Preparing": "Preparing audio...",
+    "Audio_Downloading": "Downloading audio...",
+    "Audio_Playing": "Playing audio...",
+    "Audio_Error": "Audio playback error",
+    "Audio_Paused": "Paused",
+    "Audio_Ended": "Ended",
+    "Audio_NoExplanation": "No explanation available"
 }

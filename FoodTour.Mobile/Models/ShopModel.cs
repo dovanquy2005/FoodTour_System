@@ -11,8 +11,12 @@ namespace FoodTour.Mobile.Models
         public string ImageUrl { get; set; } = string.Empty;
         public double Latitude { get; set; }
         public double Longitude { get; set; }
-        public bool IsVisited { get; set; }
+        public double Radius { get; set; }
+        public int Priority { get; set; }
         public double Rating { get; set; }
+        public bool IsVisited { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
 
         [Ignore]
         public Location Location => new Location(Latitude, Longitude);
@@ -27,5 +31,7 @@ namespace FoodTour.Mobile.Models
         public string Address { get; set; } = string.Empty;
         [Ignore]
         public string Description { get; set; } = string.Empty;
+        [Ignore]
+        public string? AudioUrl { get; set; }
     }
 }

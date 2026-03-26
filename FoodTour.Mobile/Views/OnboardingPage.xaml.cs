@@ -33,10 +33,8 @@ public partial class OnboardingPage : ContentPage
         DownloadStatusLabel.Text = _localizationService["Onboarding_StartingDownload"] ?? "Đang bắt đầu tải...";
         DownloadProgressBar.Progress = 0.1;
 
-        // Determine API URL (Emulator uses 10.0.2.2, Windows uses localhost)
-        string apiUrl = DeviceInfo.Platform == DevicePlatform.Android 
-            ? "http://10.0.2.2:5154" 
-            : "http://localhost:5154";
+        // Determine API URL 
+        string apiUrl = "https://foodtour-admin-api.onrender.com";
 
         // REAL SYNC
         bool success = await _databaseService.FullSyncAsync(apiUrl, _localizationService);
@@ -59,7 +57,7 @@ public partial class OnboardingPage : ContentPage
         }
         else
         {
-            DownloadStatusLabel.Text = "Lỗi kết nối server. Vui lòng bật server admin.";
+            DownloadStatusLabel.Text = _localizationService["Onboarding_ErrorConn"] ?? "Lỗi kết nối server.";
             await Task.Delay(3000);
             ButtonsArea.IsVisible = true;
             ProgressArea.IsVisible = false;

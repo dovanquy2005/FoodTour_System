@@ -54,5 +54,19 @@
     "Settings_ClearImageCache": "画像キャッシュを削除",
     "Settings_ClearCacheConfirmMsg": "キャッシュされたすべての画像を削除してもよろしいですか？",
     "Settings_ClearCacheDone": "画像キャッシュを削除しました",
-    "Settings_ClearCacheOfflineWarning": "オフラインです。画像キャッシュを削除すると、再接続するまで画像が表示されなくなります。"
+    "Settings_ClearCacheOfflineWarning": "オフラインです。画像キャッシュを削除すると、再接続するまで画像が表示されなくなります。",
+    "Onboarding_OfflineTitle": "オフラインモード（推奨）",
+    "Onboarding_OfflineDesc": "すべての音声と画像をご利用のデバイスにダウンロードします。ネットワークの途切れを気にせずスムーズな体験が可能です。",
+    "Onboarding_OnlineTitle": "オンラインで聞く",
+    "Onboarding_OnlineDesc": "常に最新のデータを取得します。安定した4G/Wi-Fi接続が必要です。",
+    "Onboarding_StartingDownload": "ダウンロードを開始しています...",
+    "Onboarding_ErrorConn": "サーバー接続エラーです。サーバーがオンラインであることを確認してください。",
+    "Settings_ClearCacheResult": "{0} 枚の画像を削除しました",
+    "Audio_Preparing": "音声を準備しています...",
+    "Audio_Downloading": "音声をダウンロードしています...",
+    "Audio_Playing": "音声を再生しています...",
+    "Audio_Error": "音声の再生エラーです",
+    "Audio_Paused": "一時停止しました",
+    "Audio_Ended": "終了しました",
+    "Audio_NoExplanation": "解説はありません"
 }

@@ -126,7 +126,7 @@ namespace FoodTour.Mobile.ViewModels
             if (confirm)
             {
                 int deleted = await _dbService.ClearImageCacheAsync();
-                OfflineStatus = $"Đã xóa {deleted} ảnh";
+                OfflineStatus = string.Format(_localizationService["Settings_ClearCacheResult"] ?? "Đã xóa {0} ảnh", deleted);
 
                 if (Shell.Current != null)
                     await Shell.Current.DisplayAlert(

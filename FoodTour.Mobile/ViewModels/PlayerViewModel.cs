@@ -82,17 +82,7 @@ public partial class PlayerViewModel : ObservableObject
         IsMinimized = false;
     }
 
-    [RelayCommand]
-    private void SkipPrevious()
-    {
-        // Placeholder — shop navigation is handled by MapViewModel
-    }
 
-    [RelayCommand]
-    private void SkipNext()
-    {
-        // Placeholder — shop navigation is handled by MapViewModel
-    }
 
     [RelayCommand]
     private void Close()

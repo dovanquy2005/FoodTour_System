@@ -9,9 +9,7 @@ namespace FoodTour.Mobile.Helpers
         // Lấy base URL của API dựa trên nền tảng đang chạy
         private static string GetApiBaseUrl()
         {
-            return DeviceInfo.Platform == DevicePlatform.Android
-                ? "http://10.0.2.2:5154"
-                : "http://localhost:5154";
+            return "https://foodtour-admin-api.onrender.com";
         }
 
         /// <summary>
