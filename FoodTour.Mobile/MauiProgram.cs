@@ -7,6 +7,7 @@ using FoodTour.Mobile.ViewModels;
 using System.Net.Http;
 using FoodTour.Mobile.Services;
 namespace FoodTour.Mobile;
+
 public static class MauiProgram
 {
     public static MauiApp CreateMauiApp()
@@ -46,9 +47,9 @@ public static class MauiProgram
         // Đăng ký dịch vụ bản địa hóa — đọc file JSON từ app bundle, không cần HttpClient
         builder.Services.AddSingleton<ILocalizationService, LocalizationService>();
         builder.Services.AddSingleton<IAudioPlayerService, AudioPlayerService>();
-        builder.Services.AddSingleton<WalikingSimulationService>();
+        builder.Services.AddSingleton<WalkingSimulationService>();
         builder.Services.AddSingleton<PlayerViewModel>();
-        
+
         // Đăng ký cho tab MainPage (OTA Localization Test)
         builder.Services.AddTransient<MainPage>();
 
