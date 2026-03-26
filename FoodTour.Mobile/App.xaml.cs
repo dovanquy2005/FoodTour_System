@@ -8,9 +8,9 @@ public partial class App : Application
     private Page _initialPage = new Views.SplashPage();
 
     private readonly ViewModels.PlayerViewModel _playerVm;
-    private readonly Services.WalikingSimulationService _locationService;
+    private readonly Services.WalkingSimulationService _locationService;
 
-    public App(Services.ILocalizationService localizationService, Services.DatabaseService databaseService, ViewModels.PlayerViewModel playerVm, Services.WalikingSimulationService locationService)
+    public App(Services.ILocalizationService localizationService, Services.DatabaseService databaseService, ViewModels.PlayerViewModel playerVm, Services.WalkingSimulationService locationService)
     {
         InitializeComponent();
         _playerVm = playerVm;
@@ -24,12 +24,12 @@ public partial class App : Application
         // Auto-Detect & Auto-Translate Logic
         // Gọi xuống hệ điều hành máy để hỏi xem máy đang cài ngôn ngữ gì 
         var currentLang = Preferences.Default.Get("AppLanguage", string.Empty);
-        
+
         if (string.IsNullOrEmpty(currentLang))
         {
             var osLang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
             var supportedLangs = new[] { "vi", "en", "ja", "ru", "zh" };
-            
+
             if (Array.Exists(supportedLangs, lang => lang == osLang))
             {
                 currentLang = osLang;
@@ -43,7 +43,7 @@ public partial class App : Application
 
         // Determine if we should wait for OTA localization
         var isOfflineMode = Preferences.Default.Get("IsOfflineMode", false);
-        
+
         Task locTask;
         if (isOfflineMode)
         {
@@ -64,8 +64,8 @@ public partial class App : Application
 
         MainThread.BeginInvokeOnMainThread(() =>
         {
-            Page newPage = isSetupCompleted 
-                ? new AppShell(_playerVm, _locationService) 
+            Page newPage = isSetupCompleted
+                ? new AppShell(_playerVm, _locationService)
                 : new NavigationPage(new Views.OnboardingPage(localizationService, databaseService, _playerVm, _locationService));
 
             if (Application.Current?.Windows.Count > 0)

@@ -1,6 +1,14 @@
+using Android.OS;
 using FoodTour.Mobile.Models;
 using FoodTour.Mobile.Helpers;
 using Plugin.Maui.Audio;
+using AndroidAudioManager = Android.Media.AudioManager;
+using AndroidAudioFocus = Android.Media.AudioFocus;
+using AndroidAudioAttributes = Android.Media.AudioAttributes;
+using AndroidAudioUsageKind = Android.Media.AudioUsageKind;
+using AndroidAudioContentType = Android.Media.AudioContentType;
+using AndroidAudioFocusRequestClass = Android.Media.AudioFocusRequestClass;
+using AndroidBuildVersionCodes = Android.OS.BuildVersionCodes;
 
 namespace FoodTour.Mobile.Services;
 
@@ -15,15 +23,24 @@ public class AudioPlayerService : IAudioPlayerService, IDisposable
     private IAudioPlayer? _player;
     private IDispatcherTimer? _progressTimer;
 
+    private readonly AndroidAudioFocusListener _audioFocusListener;
+    private readonly AndroidAudioManager? _androidAudioManager;
+    private AndroidAudioFocusRequestClass? _audioFocusRequest;
+    private bool _wasInterrupted = false;
+
     public AudioPlayerService(ILocalizationService localizationService)
     {
         _localizationService = localizationService;
+        // Khởi tạo Android Audio Focus trong cùng constructor
+        _audioFocusListener = new AndroidAudioFocusListener(this);
+        var context = Android.App.Application.Context;
+        _androidAudioManager = (AndroidAudioManager?)context.GetSystemService(Android.Content.Context.AudioService);
     }
 
     public bool IsPlaying => _isPlaying;
     public ShopModel? CurrentShop => _currentShop;
     public string PlayerStatus => _playerStatus;
-    
+
     public double CurrentPosition => _player?.CurrentPosition ?? 0;
     public double Duration => _player?.Duration ?? 1;
 
@@ -48,7 +65,7 @@ public class AudioPlayerService : IAudioPlayerService, IDisposable
 
         _currentShop = shop;
         IsPlayerVisible = true;
-        
+
         string? audioUrlOrPath = shop.AudioUrl;
         if (string.IsNullOrEmpty(audioUrlOrPath))
         {
@@ -65,18 +82,18 @@ public class AudioPlayerService : IAudioPlayerService, IDisposable
         try
         {
             _player?.Dispose();
-            
+
             // Lấy Audio file: ưu tiên cache cục bộ, nếu không thì tải từ mạng
             string resolvedPath = ImagePathHelper.ResolveImageUrl(audioUrlOrPath);
-            
+
             if (resolvedPath.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             {
                 _playerStatus = _localizationService["Audio_Downloading"] ?? "Đang tải audio...";
                 StateChanged?.Invoke();
-                
+
                 using var httpClient = new HttpClient();
                 var bytes = await httpClient.GetByteArrayAsync(resolvedPath);
-                
+
                 string fileName = Path.GetFileName(new Uri(resolvedPath).LocalPath);
                 resolvedPath = Path.Combine(FileSystem.AppDataDirectory, fileName);
                 await File.WriteAllBytesAsync(resolvedPath, bytes);
@@ -85,8 +102,9 @@ public class AudioPlayerService : IAudioPlayerService, IDisposable
             var audioStream = File.OpenRead(resolvedPath);
             _player = AudioManager.Current.CreatePlayer(audioStream);
             _player.PlaybackEnded += OnPlaybackEnded;
+            RequestAudioFocus();
             _player.Play();
-            
+
             _playerStatus = _localizationService["Audio_Playing"] ?? "Đang phát audio...";
             _isPlaying = true;
             StartTimer();
@@ -107,17 +125,20 @@ public class AudioPlayerService : IAudioPlayerService, IDisposable
 
         if (_isPlaying)
         {
+            _wasInterrupted = false; // User chủ động dừng -> không auto-resume
             _player.Pause();
             _isPlaying = false;
             _playerStatus = _localizationService["Audio_Paused"] ?? "Đã tạm dừng";
         }
         else
         {
+            _wasInterrupted = false; // User chủ động resume
+            RequestAudioFocus(); // -> request lại focus rồi phát
             _player.Play();
             _isPlaying = true;
             _playerStatus = _localizationService["Audio_Playing"] ?? "Đang phát audio...";
         }
-        
+
         StateChanged?.Invoke();
         await Task.CompletedTask;
     }
@@ -127,6 +148,8 @@ public class AudioPlayerService : IAudioPlayerService, IDisposable
         try
         {
             StopTimer();
+            _wasInterrupted = false;
+            AbandonAudioFocus();
 
             if (_player != null)
             {
@@ -161,10 +184,12 @@ public class AudioPlayerService : IAudioPlayerService, IDisposable
             _isPlaying = false;
             _playerStatus = _localizationService["Audio_Ended"] ?? "Đã kết thúc";
             StopTimer();
+            _wasInterrupted = false;
+            AbandonAudioFocus();
             StateChanged?.Invoke();
         });
     }
-    
+
     private void StartTimer()
     {
         if (_progressTimer == null)
@@ -182,7 +207,7 @@ public class AudioPlayerService : IAudioPlayerService, IDisposable
                 };
             }
         }
-         _progressTimer?.Start();
+        _progressTimer?.Start();
     }
 
     private void StopTimer()
@@ -193,5 +218,140 @@ public class AudioPlayerService : IAudioPlayerService, IDisposable
     public void Dispose()
     {
         Stop();
+    }
+
+    // ANDROID AUDIO FOCUS
+    private void RequestAudioFocus()
+    {
+        if (_androidAudioManager == null) return;
+
+        if (Build.VERSION.SdkInt >= AndroidBuildVersionCodes.O)
+        {
+#pragma warning disable CA1416
+            var audioAttributes = new AndroidAudioAttributes.Builder()
+                .SetUsage(AndroidAudioUsageKind.AssistanceNavigationGuidance)!
+                .SetContentType(AndroidAudioContentType.Speech)!
+                .Build();
+
+            if (audioAttributes == null) return;
+
+            var request = new AndroidAudioFocusRequestClass.Builder(AndroidAudioFocus.Gain)
+                .SetAudioAttributes(audioAttributes)!
+                .SetAcceptsDelayedFocusGain(true)!
+                .SetWillPauseWhenDucked(true)!
+                .SetOnAudioFocusChangeListener(_audioFocusListener)!
+                .Build();
+
+            if (request == null) return;
+
+            _audioFocusRequest = request;
+            _androidAudioManager.RequestAudioFocus(_audioFocusRequest);
+#pragma warning restore CA1416
+        }
+        else
+        {
+#pragma warning disable CA1422
+            _androidAudioManager.RequestAudioFocus(
+                _audioFocusListener,
+                Android.Media.Stream.Music,
+                AndroidAudioFocus.Gain);
+#pragma warning restore CA1422
+        }
+    }
+
+    private void AbandonAudioFocus()
+    {
+        if (_androidAudioManager == null) return;
+        try
+        {
+            if (Build.VERSION.SdkInt >= AndroidBuildVersionCodes.O)
+            {
+#pragma warning disable CA1416
+                var request = _audioFocusRequest;
+                if (request != null)
+                {
+                    _androidAudioManager.AbandonAudioFocusRequest(request);
+                    _audioFocusRequest = null;
+                }
+#pragma warning restore CA1416
+            }
+            else
+            {
+#pragma warning disable CA1422
+                _androidAudioManager.AbandonAudioFocus(_audioFocusListener);
+#pragma warning restore CA1422
+            }
+        }
+        catch { }
+    }
+
+    private void HandleAudioFocusChange(AndroidAudioFocus focusChange)
+    {
+        // Dispatch về main thread để tránh race condition với UI và player
+        Application.Current?.Dispatcher.Dispatch(() =>
+        {
+            switch (focusChange)
+            {
+                // Focus được trả lại
+                case AndroidAudioFocus.Gain:
+                    // Chỉ tự động phát tiếp nếu trước đó bị hệ thống ngắt tạm thời
+                    if (_wasInterrupted && !_isPlaying && _player != null && _isPlayerVisible)
+                    {
+                        _wasInterrupted = false;
+                        _player.Play();
+                        _isPlaying = true;
+                        _playerStatus = _localizationService["Audio_Playing"] ?? "Đang phát audio...";
+                        StartTimer();
+                        StateChanged?.Invoke();
+                    }
+                    break;
+
+                // Mất focus tạm thời (thông báo, trợ lý giọng nói, cuộc gọi ngắn)
+                // → Tạm dừng và TỰ ĐỘNG PHÁT TIẾP khi âm thanh kia kết thúc
+                case AndroidAudioFocus.LossTransient:
+                case AndroidAudioFocus.LossTransientCanDuck:
+                    if (_isPlaying && _player != null)
+                    {
+                        _wasInterrupted = true;
+                        _player.Pause();
+                        _isPlaying = false;
+                        _playerStatus = _localizationService["Audio_Paused"] ?? "Đã tạm dừng";
+                        StopTimer();
+                        StateChanged?.Invoke();
+                    }
+                    break;
+
+                // Mất focus vĩnh viễn (mở app nhạc, YouTube…)
+                // → Dừng và KHÔNG TỰ PHÁT LẠI
+                case AndroidAudioFocus.Loss:
+                    if (_isPlaying && _player != null)
+                    {
+                        _wasInterrupted = false;
+                        _player.Pause();
+                        _isPlaying = false;
+                        _playerStatus = _localizationService["Audio_Paused"] ?? "Đã tạm dừng";
+                        StopTimer();
+                        AbandonAudioFocus();
+                        StateChanged?.Invoke();
+                    }
+                    break;
+            }
+        });
+    }
+
+    private sealed class AndroidAudioFocusListener
+        : Java.Lang.Object, AndroidAudioManager.IOnAudioFocusChangeListener
+    {
+        private readonly AudioPlayerService _service;
+
+        public AndroidAudioFocusListener(AudioPlayerService service)
+        {
+            _service = service;
+        }
+
+        public void OnAudioFocusChange([Android.Runtime.GeneratedEnum] AndroidAudioFocus focusChange)
+        {
+            _service.HandleAudioFocusChange(focusChange);
+        }
     }
 }

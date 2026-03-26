@@ -7,18 +7,18 @@ namespace FoodTour.Mobile;
 
 public partial class AppShell : Shell
 {
-    public AppShell(ViewModels.PlayerViewModel playerVm, Services.WalikingSimulationService locationService)
+    public AppShell(ViewModels.PlayerViewModel playerVm, Services.WalkingSimulationService locationService)
     {
         InitializeComponent();
         BindingContext = playerVm;
-        
+
         // Đăng ký route cho trang chi tiết
         Routing.RegisterRoute(nameof(Views.ShopDetailPage), typeof(Views.ShopDetailPage));
         Routing.RegisterRoute(nameof(Views.LanguageSelectionPage), typeof(Views.LanguageSelectionPage));
 
         // Đăng ký sự kiện lắng nghe kết nối mạng
         Connectivity.ConnectivityChanged += Connectivity_ConnectivityChanged;
-        
+
         // Bắt đầu dịch vụ GPS ngầm toàn cục
         _ = locationService.Start();
     }

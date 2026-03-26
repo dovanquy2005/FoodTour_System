@@ -10,9 +10,9 @@ public partial class OnboardingPage : ContentPage
     private readonly Services.ILocalizationService _localizationService;
     private readonly Services.DatabaseService _databaseService;
     private readonly ViewModels.PlayerViewModel _playerVm;
-    private readonly Services.WalikingSimulationService _locationService;
+    private readonly Services.WalkingSimulationService _locationService;
 
-    public OnboardingPage(Services.ILocalizationService localizationService, Services.DatabaseService databaseService, ViewModels.PlayerViewModel playerVm, Services.WalikingSimulationService locationService)
+    public OnboardingPage(Services.ILocalizationService localizationService, Services.DatabaseService databaseService, ViewModels.PlayerViewModel playerVm, Services.WalkingSimulationService locationService)
     {
         InitializeComponent();
         _localizationService = localizationService;
