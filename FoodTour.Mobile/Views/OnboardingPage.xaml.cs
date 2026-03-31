@@ -41,6 +41,11 @@ public partial class OnboardingPage : ContentPage
 
         if (success)
         {
+            DownloadProgressBar.Progress = 0.5;
+            DownloadStatusLabel.Text = _localizationService["Onboarding_DownloadingAssets"] ?? "Đang tải ảnh và âm thanh...";
+
+            await _databaseService.DownloadAllAssetsAsync(apiUrl);
+
             DownloadProgressBar.Progress = 1.0;
             DownloadStatusLabel.Text = completeText;
             await Task.Delay(1000);

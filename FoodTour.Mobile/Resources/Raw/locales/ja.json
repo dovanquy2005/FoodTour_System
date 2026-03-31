@@ -68,5 +68,9 @@
     "Audio_Error": "音声の再生エラーです",
     "Audio_Paused": "一時停止しました",
     "Audio_Ended": "終了しました",
-    "Audio_NoExplanation": "解説はありません"
+    "Audio_NoExplanation": "解説はありません",
+    "ShopDetail_Title": "場所の詳細",
+    "ShopDetail_Back": "← 戻る",
+    "ShopDetail_Intro": "紹介",
+    "ShopDetail_Menu": "メニュー"
 }

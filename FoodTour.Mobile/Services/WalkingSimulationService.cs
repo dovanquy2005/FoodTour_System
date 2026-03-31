@@ -1,10 +1,12 @@
 using Microsoft.Maui.Devices.Sensors;
 using FoodTour.Mobile.Models;
 using System.Collections.Concurrent;
+using CommunityToolkit.Mvvm.Messaging;
+using FoodTour.Mobile.Messages;
 
 namespace FoodTour.Mobile.Services;
 
-public class WalkingSimulationService
+public class WalkingSimulationService : IRecipient<LanguageChangedMessage>, IDisposable
 {
     private readonly DatabaseService _dbService;
     private readonly IAudioPlayerService _audioService;
@@ -13,21 +15,27 @@ public class WalkingSimulationService
     private bool _isRunning = false;
     public Action<Location>? OnLocationUpdate;
     public Action? OnRouteFinished;
+    public event Action<ShopModel>? ShopEntered;
+    public event Action<ShopModel>? ShopExited;
 
     private Location? _routeEnd;
+    private DateTime _startTime;
 
     // Chống spam: Debounce + Cooldown
     private DateTime _lastCheckTime = DateTime.MinValue;
     private const int DebounceMs = 2_000; // ms tối thiểu giữa 2 lần check liên tiếp
     private readonly ConcurrentDictionary<string, DateTime> _shopCooldowns = new();
-    private const int CooldownMinutes = 5;
-    private const double DefaultActivationRadiusM = 60.0;
+    private const int CooldownMinutes = 1;
+    private const double DefaultActivationRadiusM = 50.0;
     private const double HysteresisMultiplier = 1.3;
 
     public WalkingSimulationService(DatabaseService dbService, IAudioPlayerService audioService)
     {
         _dbService = dbService;
         _audioService = audioService;
+
+        // Đăng ký nhận sự kiện đổi ngôn ngữ toàn cục
+        WeakReferenceMessenger.Default.Register(this);
     }
 
     public void SetRouteEnd(Location end) => _routeEnd = end;
@@ -60,6 +68,7 @@ public class WalkingSimulationService
                 await Geolocation.Default.StartListeningForegroundAsync(request);
             }
 
+            _startTime = DateTime.UtcNow;
             _isRunning = true;
         }
         catch (Exception ex)
@@ -89,6 +98,10 @@ public class WalkingSimulationService
     private void OnLocationChanged(object? sender, GeolocationLocationChangedEventArgs e)
     {
         if (!_isRunning || e.Location is null) return;
+        
+        // Bỏ qua GPS kém và dữ liệu vị trí cũ sát với lúc bật (chống tự phát khi mới mở app)
+        if (e.Location.Accuracy.HasValue && e.Location.Accuracy.Value > 25.0) return;
+        if ((DateTime.UtcNow - _startTime).TotalSeconds < 2) return;
 
         OnLocationUpdate?.Invoke(e.Location);
 
@@ -165,7 +178,13 @@ public class WalkingSimulationService
 
             // User has truly left the shop.
             Console.WriteLine($"[GeoFence] Exited: {_currentShop.Name}");
+            var exitedShop = _currentShop;
             _currentShop = null;
+            
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                ShopExited?.Invoke(exitedShop);
+            });
             _audioService.Stop();
 
             // Fall through: maybe another shop is immediately nearby.
@@ -197,6 +216,11 @@ public class WalkingSimulationService
             Console.WriteLine($"[GeoFence] Entered: {_currentShop.Name} " +
                               $"(priority={_currentShop.Priority}, dist={candidate.dist:F0}m)");
 
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                ShopEntered?.Invoke(_currentShop);
+            });
+
             bool autoPlay = Preferences.Default.Get("AutoPlayAudio", true);
             if (autoPlay)
             {
@@ -227,4 +251,64 @@ public class WalkingSimulationService
             userLocation,
             new Location(shop.Latitude, shop.Longitude),
             DistanceUnits.Kilometers) * 1000;
+
+    // Phản hồi tức thì khi người dùng đổi ngôn ngữ trong Settings
+    public async void Receive(LanguageChangedMessage message)
+    {
+        // ── QUAN TRỌNG: Reload toàn bộ danh sách shop từ DB theo ngôn ngữ mới ──
+        // Vì GetShopsAsync() sử dụng AppLanguage preference (đã được cập nhật bởi SettingsViewModel)
+        // nên tất cả AudioUrl sẽ được gán lại theo ngôn ngữ mới.
+        try
+        {
+            var refreshedShops = await _dbService.GetShopsAsync();
+            _shops = refreshedShops.ToList();
+            Console.WriteLine($"[GeoFence] Đã reload {_shops.Count} shop theo ngôn ngữ: {message.Value}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[GeoFence] Reload shops lỗi: {ex.Message}");
+        }
+
+        // Nếu đang phát Audio cho quán hiện tại → đổi sang audio ngôn ngữ mới
+        if (_currentShop != null && _audioService.IsPlaying)
+        {
+            // Tạm giữ mốc thời gian (Seek Position) của Audio cũ
+            double currentPos = _audioService.CurrentPosition;
+            _audioService.Stop();
+
+            // Load lại đúng shop hiện tại kèm theo ngôn ngữ mới từ DB
+            var shopWithNewLang = await _dbService.GetShopAsync(_currentShop.Id);
+            if (shopWithNewLang == null) return;
+
+            // Cập nhật reference _currentShop sang bản mới
+            _currentShop = shopWithNewLang;
+
+            // Kiểm tra Offline-awareness
+            bool isOfflineMode = Preferences.Default.Get("IsOfflineMode", false);
+            if (isOfflineMode && !string.IsNullOrEmpty(shopWithNewLang.AudioUrl) && shopWithNewLang.AudioUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            {
+                MainThread.BeginInvokeOnMainThread(async () =>
+                {
+                    if (Application.Current?.Windows.Count > 0 && Application.Current.Windows[0].Page != null)
+                    {
+                        await Application.Current.Windows[0].Page!.DisplayAlert(
+                            "Dữ liệu chưa tải",
+                            "Ngôn ngữ mới chưa được cài đặt cho chế độ Offline. Vui lòng kết nối mạng và tải lại ở mục Dữ Liệu.",
+                            "OK");
+                    }
+                });
+                return; // Ngừng phát nếu không có mạng / chưa tải
+            }
+
+            // Play URL ngôn ngữ mới tại vị trí cũ
+            await _audioService.PlayShopAsync(shopWithNewLang);
+            _audioService.Seek(currentPos);
+        }
+    }
+
+    public void Dispose()
+    {
+        // Gỡ bỏ đăng ký để tránh memory leak khi class hủy
+        WeakReferenceMessenger.Default.UnregisterAll(this);
+    }
 }

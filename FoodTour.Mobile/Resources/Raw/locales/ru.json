@@ -68,5 +68,9 @@
     "Audio_Error": "Ошибка воспроизведения аудио",
     "Audio_Paused": "Пауза",
     "Audio_Ended": "Завершено",
-    "Audio_NoExplanation": "Нет пояснений"
+    "Audio_NoExplanation": "Нет пояснений",
+    "ShopDetail_Title": "Детали места",
+    "ShopDetail_Back": "← Назад",
+    "ShopDetail_Intro": "Введение",
+    "ShopDetail_Menu": "Меню"
 }

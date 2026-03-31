@@ -68,5 +68,9 @@
     "Audio_Error": "音频播放错误",
     "Audio_Paused": "已暂停",
     "Audio_Ended": "已结束",
-    "Audio_NoExplanation": "暂无解说"
+    "Audio_NoExplanation": "暂无解说",
+    "ShopDetail_Title": "地点详情",
+    "ShopDetail_Back": "← 返回",
+    "ShopDetail_Intro": "介绍",
+    "ShopDetail_Menu": "菜单"
 }

@@ -68,5 +68,9 @@
     "Audio_Error": "Audio playback error",
     "Audio_Paused": "Paused",
     "Audio_Ended": "Ended",
-    "Audio_NoExplanation": "No explanation available"
+    "Audio_NoExplanation": "No explanation available",
+    "ShopDetail_Title": "Location Details",
+    "ShopDetail_Back": "← Back",
+    "ShopDetail_Intro": "Introduction",
+    "ShopDetail_Menu": "Menu"
 }

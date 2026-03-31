@@ -42,6 +42,8 @@ namespace FoodTour.Mobile.ViewModels
             // Chuyển sang trang chính
             if (Shell.Current != null)
             {
+                // Thêm một delay nhỏ để MAUI hoàn tất layout pass trước khi điều hướng, tránh crash ngay lập tức
+                await Task.Delay(150);
                 await Shell.Current.GoToAsync("//MainTabs");
             }
         }

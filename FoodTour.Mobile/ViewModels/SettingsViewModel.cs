@@ -1,7 +1,9 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using FoodTour.Mobile.Services;
 using FoodTour.Mobile.Models;
+using FoodTour.Mobile.Messages;
 using System.Collections.ObjectModel;
 
 namespace FoodTour.Mobile.ViewModels
@@ -102,6 +104,9 @@ namespace FoodTour.Mobile.ViewModels
 
             Preferences.Default.Set("AppLanguage", langCode);
             await _localizationService.ChangeLanguageAsync(langCode);
+
+            // Bắn tín hiệu toàn cục thông báo ngôn ngữ vừa bị thay đổi
+            WeakReferenceMessenger.Default.Send(new LanguageChangedMessage(langCode));
 
             // Quay lại trang trước
             await Shell.Current.GoToAsync("..");

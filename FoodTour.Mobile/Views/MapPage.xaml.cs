@@ -12,7 +12,7 @@ namespace FoodTour.Mobile.Views;
 public partial class MapPage : ContentPage
 {
     private MapViewModel _viewModel;
-    private Models.ShopModel? _currentShop = null; // Kiểm tra distance đến đúng shop đang active (hysteresis)
+    private readonly WalkingSimulationService _walkingSimulationService;
     private Location? _userLocation = null; // Vị trí thật của người dùng
     private Models.ShopModel? _pendingRouteShop = null; // Quán cần chỉ đường nếu Map chưa vẽ xong
     private bool _isMapLoaded = false; // Flag kiểm tra map render xong lần đầu chưa
@@ -26,10 +26,11 @@ public partial class MapPage : ContentPage
     private const int MoveThrottleMs = 800; // khoảng thời gian giữa 2 lần check move
     private CancellationTokenSource _resumeCts = new();
     private const int ResumeDelayMs = 30_000; // Tự động resume follow sau 30s
-    private readonly Dictionary<Models.ShopModel, Circle> _shopCircles = new(); // Lưu trữ các vòng tròn bán kính của shop
+    private readonly Dictionary<string, Circle> _shopCircles = new(); // Key là shop.Id thay vì Object để tránh khác reference
 
-    public MapPage(MapViewModel vm)
+    public MapPage(MapViewModel vm, WalkingSimulationService walkingSimulationService)
     {
+        _walkingSimulationService = walkingSimulationService;
         try
         {
             InitializeComponent();
@@ -101,9 +102,9 @@ public partial class MapPage : ContentPage
         try
         {
             _resumeCts.Cancel();
-            _currentShop = null; // reset khi thoát tab
 
-            // Đã hủy đăng ký sự kiện CollectionChanged
+            _walkingSimulationService.ShopEntered -= OnShopEntered;
+            _walkingSimulationService.ShopExited -= OnShopExited;
             if (_viewModel.Shops != null)
                 _viewModel.Shops.CollectionChanged -= OnShopsCollectionChanged;
 
@@ -305,6 +306,12 @@ public partial class MapPage : ContentPage
 
             if (status != PermissionStatus.Granted) return;
 
+            // Đăng ký sự kiện enter/exit zone từ WalkingSimulationService
+            _walkingSimulationService.ShopEntered -= OnShopEntered;
+            _walkingSimulationService.ShopEntered += OnShopEntered;
+            _walkingSimulationService.ShopExited -= OnShopExited;
+            _walkingSimulationService.ShopExited += OnShopExited;
+
             // Đăng ký nhận thông tin vị trí mới (Lắng nghe Foreground đã được khởi chạy ở Global Service)
             Geolocation.Default.LocationChanged -= OnUserLocationChanged;
             Geolocation.Default.LocationChanged += OnUserLocationChanged;
@@ -352,50 +359,6 @@ public partial class MapPage : ContentPage
                     });
                 }
             }
-
-            if (_viewModel.Shops == null) return;
-
-            // Case 1: Đang trong shop → chỉ check shop đó, tránh flapping
-            if (_currentShop != null)
-            {
-                double distToCurrent = Location.CalculateDistance(
-                    userLoc,
-                    _currentShop.Location,
-                    DistanceUnits.Kilometers) * 1000;
-
-                if (distToCurrent <= ShopRadiusMeters * 1.3)
-                    return; // Vẫn trong shop cũ → bám ở đây, không làm gì
-
-                // Ra khỏi shop cũ
-                var exitedShop = _currentShop; // Lưu tạm trước khi null
-                _currentShop = null;
-                MainThread.BeginInvokeOnMainThread(() =>
-                {
-                    ResetShopCircle(exitedShop); // Reset về đỏ
-                });
-            }
-
-            // Case 2: Tìm shop GẦN NHẤT trong ShopRadiusMeters (dùng LINQ)
-            var nearest = _viewModel.Shops
-                .Select(s => (shop: s, dist: DistanceMeters(userLoc, s.Location)))
-                .Where(x => x.dist <= ShopRadiusMeters)
-                .OrderBy(x => x.dist)
-                .FirstOrDefault().shop;
-
-            if (nearest == null) return;
-            _currentShop = nearest;
-            MainThread.BeginInvokeOnMainThread(() =>
-            {
-                try
-                {
-                    HighlightShopCircle(nearest); // Highlight xanh
-                    HapticFeedback.Default.Perform(HapticFeedbackType.LongPress);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"EnterShop error: {ex.Message}\n{ex.StackTrace}");
-                }
-            });
         }
         catch (Exception ex)
         {
@@ -461,17 +424,18 @@ public partial class MapPage : ContentPage
         {
             try
             {
-                // Vẽ vòng tròn bán kính 100m (dùng Inline Object Intialization)
+                // Vẽ vòng tròn bán kính động theo database (nếu chưa set thì mặc định 50m)
+                double radius = shop.Radius > 0 ? shop.Radius : 50.0;
                 var circle = new Circle
                 {
                     Center = shop.Location,
-                    Radius = Distance.FromMeters(ShopRadiusMeters),
+                    Radius = Distance.FromMeters(radius),
                     StrokeColor = Colors.Red,
                     StrokeWidth = 2,
                     FillColor = Colors.Red.WithAlpha(0.25f)
                 };
                 MainMap.MapElements.Add(circle);
-                _shopCircles[shop] = circle;
+                _shopCircles[shop.Id] = circle;
 
                 // Thêm cọc (Pin) ở giữa tâm
                 var pin = new Pin
@@ -530,15 +494,34 @@ public partial class MapPage : ContentPage
 
     private void HighlightShopCircle(Models.ShopModel shop)
     {
-        if (!_shopCircles.TryGetValue(shop, out var circle)) return;
+        if (shop == null || string.IsNullOrEmpty(shop.Id)) return;
+        if (!_shopCircles.TryGetValue(shop.Id, out var circle)) return;
         circle.StrokeColor = Colors.Green;
         circle.FillColor = Colors.Green.WithAlpha(0.25f);
     }
 
     private void ResetShopCircle(Models.ShopModel shop)
     {
-        if (!_shopCircles.TryGetValue(shop, out var circle)) return;
+        if (shop == null || string.IsNullOrEmpty(shop.Id)) return;
+        if (!_shopCircles.TryGetValue(shop.Id, out var circle)) return;
         circle.StrokeColor = Colors.Red;
         circle.FillColor = Colors.Red.WithAlpha(0.25f);
+    }
+    
+    private void OnShopEntered(Models.ShopModel shop)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            HighlightShopCircle(shop);
+            try { HapticFeedback.Default.Perform(HapticFeedbackType.LongPress); } catch { }
+        });
+    }
+
+    private void OnShopExited(Models.ShopModel shop)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            ResetShopCircle(shop);
+        });
     }
 }

@@ -68,5 +68,9 @@
     "Audio_Error": "Lỗi phát audio",
     "Audio_Paused": "Đã tạm dừng",
     "Audio_Ended": "Đã kết thúc",
-    "Audio_NoExplanation": "Không có thuyết minh"
+    "Audio_NoExplanation": "Không có thuyết minh",
+    "ShopDetail_Title": "Chi tiết địa điểm",
+    "ShopDetail_Back": "← Quay lại",
+    "ShopDetail_Intro": "Giới thiệu",
+    "ShopDetail_Menu": "Thực đơn món ăn"
 }
