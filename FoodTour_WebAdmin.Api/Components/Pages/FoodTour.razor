@@ -2,6 +2,8 @@
 @layout FoodTour_WebAdmin.Api.Components.Layout.PublicLayout
 @inject IDbContextFactory<AppDbContext> DbFactory
 @inject IJSRuntime JS
+@inject IWebHostEnvironment Env
+@using System.Text.Json
 
 <PageTitle>FoodTour — Vĩnh Khánh Street Eats</PageTitle>
 
@@ -150,8 +152,8 @@
     {
         <div class="ft-not-found">
             <MudIcon Icon="@Icons.Material.Filled.SearchOff" Style="font-size: 64px; color: #E0D5CB; margin-bottom: 16px;" />
-            <h2 style="color: #2D1F14; font-weight: 800; margin: 0 0 8px;">Không tìm thấy quán</h2>
-            <p style="color: #8C7B6B; margin: 0;">Mã QR không hợp lệ hoặc quán ăn đã bị xóa.</p>
+            <h2 style="color: #2D1F14; font-weight: 800; margin: 0 0 8px;">@Ui("Landing_NotFound")</h2>
+            <p style="color: #8C7B6B; margin: 0;">@Ui("Landing_InvalidQr")</p>
         </div>
     }
     else
@@ -182,7 +184,7 @@
                 <p class="ft-address">📍 @(_currentTranslation?.Address ?? "")</p>
 
                 <!-- Language Selector -->
-                <p class="ft-section-title">🌐 Ngôn ngữ / Language</p>
+                <p class="ft-section-title">🌐 @Ui("Landing_LanguageLabel")</p>
                 <div class="ft-lang-row">
                     @foreach (var t in _shop.ShopTranslations)
                     {
@@ -208,27 +210,27 @@
             @if (!string.IsNullOrWhiteSpace(_currentTranslation?.Description))
             {
                 <div class="ft-card">
-                    <p class="ft-section-title">📖 Giới thiệu</p>
+                    <p class="ft-section-title">📖 @Ui("Landing_DescriptionTitle")</p>
                     <p class="ft-desc">@_currentTranslation.Description</p>
                 </div>
             }
 
             <!-- Audio Card -->
             <div class="ft-card">
-                <p class="ft-section-title">🎧 Audio Guide</p>
+                <p class="ft-section-title">🎧 @Ui("Landing_AudioGuideTitle")</p>
                 @if (!string.IsNullOrEmpty(_currentTranslation?.AudioUrl) && _currentTranslation.IsAudioGenerated)
                 {
                     <audio id="ft-audio-player" src="@_currentTranslation.AudioUrl" preload="auto"></audio>
                     <button class="ft-audio-btn" @onclick="ToggleAudio">
                         <span style="font-size: 1.2rem;">@(_isPlaying ? "⏸" : "▶")</span>
-                        @(_isPlaying ? "Đang phát..." : "Nghe giới thiệu")
+                        @(_isPlaying ? Ui("Landing_AudioPlaying") : Ui("Landing_AudioPlay"))
                     </button>
                 }
                 else
                 {
                     <button class="ft-audio-btn" disabled>
                         <span>🔇</span>
-                        Audio chưa sẵn sàng
+                        @Ui("Landing_AudioNotReady")
                     </button>
                 }
             </div>
@@ -250,8 +252,45 @@
     private bool _loading = true;
     private bool _isPlaying = false;
 
+    // Dictionary lưu trữ các chuỗi giao diện theo ngôn ngữ hiện tại
+    private Dictionary<string, string> _ui = new();
+
     // Danh sách ngôn ngữ hỗ trợ
     private static readonly HashSet<string> SupportedLanguages = new() { "vi", "en", "ja", "zh", "ru" };
+
+    /// <summary>
+    /// Đọc file JSON từ wwwroot/locales/{langCode}.json và nạp vào Dictionary _ui.
+    /// </summary>
+    private void LoadUiStrings(string langCode)
+    {
+        var filePath = Path.Combine(Env.WebRootPath, "locales", $"{langCode}.json");
+        if (File.Exists(filePath))
+        {
+            var json = File.ReadAllText(filePath);
+            _ui = JsonSerializer.Deserialize<Dictionary<string, string>>(json)
+                  ?? new Dictionary<string, string>();
+        }
+        else
+        {
+            // Fallback sang tiếng Anh nếu file không tồn tại
+            var fallback = Path.Combine(Env.WebRootPath, "locales", "en.json");
+            if (File.Exists(fallback))
+            {
+                var json = File.ReadAllText(fallback);
+                _ui = JsonSerializer.Deserialize<Dictionary<string, string>>(json)
+                      ?? new Dictionary<string, string>();
+            }
+            else
+            {
+                _ui = new Dictionary<string, string>();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Helper để lấy chuỗi UI từ dictionary, trả về key nếu không tìm thấy.
+    /// </summary>
+    private string Ui(string key) => _ui.GetValueOrDefault(key, key);
 
     protected override async Task OnInitializedAsync()
     {
@@ -260,6 +299,9 @@
             .Include(s => s.ShopTranslations)
             .AsNoTracking()
             .FirstOrDefaultAsync(s => s.Id == Id);
+
+        // Nạp UI strings mặc định (tiếng Anh) để trang hiển thị đúng khi chưa detect browser language
+        LoadUiStrings(_selectedLang);
 
         _loading = false;
     }
@@ -294,6 +336,9 @@
             ?? _shop?.ShopTranslations.FirstOrDefault(t => t.LanguageCode == "en")
             ?? _shop?.ShopTranslations.FirstOrDefault();
         _isPlaying = false;
+
+        // Cập nhật UI strings theo ngôn ngữ mới
+        LoadUiStrings(langCode);
     }
 
     private async Task ToggleAudio()

@@ -50,5 +50,13 @@
     "Alert_SampleTitle": "Street route data updated",
     "Alert_SampleMessage": "Audio files for District 4 snail shops have been added.",
     "Alert_Today": "Today",
-    "Alert_EmptyState": "No new notifications"
+    "Alert_EmptyState": "No new notifications",
+    "Landing_NotFound": "Shop not found",
+    "Landing_InvalidQr": "The QR code is invalid or the shop has been removed.",
+    "Landing_LanguageLabel": "Language",
+    "Landing_DescriptionTitle": "About",
+    "Landing_AudioGuideTitle": "Audio Guide",
+    "Landing_AudioPlaying": "Playing...",
+    "Landing_AudioPlay": "Listen to introduction",
+    "Landing_AudioNotReady": "Audio not available"
 }

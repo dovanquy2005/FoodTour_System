@@ -50,5 +50,13 @@
     "Alert_SampleTitle": "Данные о маршруте обновлены",
     "Alert_SampleMessage": "Добавлены аудиофайлы для магазинов в Районе 4.",
     "Alert_Today": "Сегодня",
-    "Alert_EmptyState": "Нет новых уведомлений"
+    "Alert_EmptyState": "Нет новых уведомлений",
+    "Landing_NotFound": "Заведение не найдено",
+    "Landing_InvalidQr": "QR-код недействителен или заведение было удалено.",
+    "Landing_LanguageLabel": "Язык / Language",
+    "Landing_DescriptionTitle": "Описание",
+    "Landing_AudioGuideTitle": "Аудиогид",
+    "Landing_AudioPlaying": "Воспроизведение...",
+    "Landing_AudioPlay": "Слушать введение",
+    "Landing_AudioNotReady": "Аудио недоступно"
 }

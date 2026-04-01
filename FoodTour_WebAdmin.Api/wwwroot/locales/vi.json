@@ -50,5 +50,13 @@
     "Alert_SampleTitle": "Dữ liệu tuyến phố đã cập nhật",
     "Alert_SampleMessage": "Đã thêm file audio cho các quán ốc Quận 4.",
     "Alert_Today": "Hôm nay",
-    "Alert_EmptyState": "Không có thông báo mới"
+    "Alert_EmptyState": "Không có thông báo mới",
+    "Landing_NotFound": "Không tìm thấy quán",
+    "Landing_InvalidQr": "Mã QR không hợp lệ hoặc quán ăn đã bị xóa.",
+    "Landing_LanguageLabel": "Ngôn ngữ / Language",
+    "Landing_DescriptionTitle": "Giới thiệu",
+    "Landing_AudioGuideTitle": "Audio Guide",
+    "Landing_AudioPlaying": "Đang phát...",
+    "Landing_AudioPlay": "Nghe giới thiệu",
+    "Landing_AudioNotReady": "Audio chưa sẵn sàng"
 }

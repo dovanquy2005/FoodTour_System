@@ -50,5 +50,13 @@
     "Alert_SampleTitle": "ルートデータが更新されました",
     "Alert_SampleMessage": "4区のカタツムリ店の音声ファイルが追加されました。",
     "Alert_Today": "今日",
-    "Alert_EmptyState": "新しい通知はありません"
+    "Alert_EmptyState": "新しい通知はありません",
+    "Landing_NotFound": "お店が見つかりません",
+    "Landing_InvalidQr": "QRコードが無効か、お店が削除されています。",
+    "Landing_LanguageLabel": "言語 / Language",
+    "Landing_DescriptionTitle": "紹介",
+    "Landing_AudioGuideTitle": "オーディオガイド",
+    "Landing_AudioPlaying": "再生中...",
+    "Landing_AudioPlay": "紹介を聴く",
+    "Landing_AudioNotReady": "オーディオは利用できません"
 }

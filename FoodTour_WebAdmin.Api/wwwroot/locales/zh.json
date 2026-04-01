@@ -50,5 +50,13 @@
     "Alert_SampleTitle": "街道路线数据已更新",
     "Alert_SampleMessage": "已添加第 4 区蜗牛店的音频文件。",
     "Alert_Today": "今天",
-    "Alert_EmptyState": "没有新通知"
+    "Alert_EmptyState": "没有新通知",
+    "Landing_NotFound": "未找到商店",
+    "Landing_InvalidQr": "二维码无效或商店已被删除。",
+    "Landing_LanguageLabel": "语言 / Language",
+    "Landing_DescriptionTitle": "简介",
+    "Landing_AudioGuideTitle": "音频导览",
+    "Landing_AudioPlaying": "正在播放...",
+    "Landing_AudioPlay": "收听介绍",
+    "Landing_AudioNotReady": "音频暂不可用"
 }
