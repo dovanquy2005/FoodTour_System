@@ -57,6 +57,7 @@ public class AudioPlayerService : IAudioPlayerService, IDisposable
         }
     }
 
+    public event Action? PlaybackEnded;
     public event Action? StateChanged;
 
     public async Task PlayShopAsync(ShopModel shop)
@@ -187,6 +188,7 @@ public class AudioPlayerService : IAudioPlayerService, IDisposable
             _wasInterrupted = false;
             AbandonAudioFocus();
             StateChanged?.Invoke();
+            PlaybackEnded?.Invoke();
         });
     }
 
@@ -210,15 +212,9 @@ public class AudioPlayerService : IAudioPlayerService, IDisposable
         _progressTimer?.Start();
     }
 
-    private void StopTimer()
-    {
-        _progressTimer?.Stop();
-    }
+    private void StopTimer() => _progressTimer?.Stop();
 
-    public void Dispose()
-    {
-        Stop();
-    }
+    public void Dispose() => Stop();
 
     // ANDROID AUDIO FOCUS
     private void RequestAudioFocus()
@@ -306,8 +302,7 @@ public class AudioPlayerService : IAudioPlayerService, IDisposable
                     }
                     break;
 
-                // Mất focus tạm thời (thông báo, trợ lý giọng nói, cuộc gọi ngắn)
-                // → Tạm dừng và TỰ ĐỘNG PHÁT TIẾP khi âm thanh kia kết thúc
+                // Mất focus tạm thời (thông báo, cuộc gọi) → Tạm dừng và TỰ ĐỘNG PHÁT TIẾP khi âm thanh kia kết thúc
                 case AndroidAudioFocus.LossTransient:
                 case AndroidAudioFocus.LossTransientCanDuck:
                     if (_isPlaying && _player != null)
@@ -321,8 +316,7 @@ public class AudioPlayerService : IAudioPlayerService, IDisposable
                     }
                     break;
 
-                // Mất focus vĩnh viễn (mở app nhạc, YouTube…)
-                // → Dừng và KHÔNG TỰ PHÁT LẠI
+                // Mất focus vĩnh viễn (mở app nhạc, YouTube…) → Dừng và KHÔNG TỰ PHÁT LẠI
                 case AndroidAudioFocus.Loss:
                     if (_isPlaying && _player != null)
                     {
@@ -344,14 +338,8 @@ public class AudioPlayerService : IAudioPlayerService, IDisposable
     {
         private readonly AudioPlayerService _service;
 
-        public AndroidAudioFocusListener(AudioPlayerService service)
-        {
-            _service = service;
-        }
+        public AndroidAudioFocusListener(AudioPlayerService service) => _service = service;
 
-        public void OnAudioFocusChange([Android.Runtime.GeneratedEnum] AndroidAudioFocus focusChange)
-        {
-            _service.HandleAudioFocusChange(focusChange);
-        }
+        public void OnAudioFocusChange([Android.Runtime.GeneratedEnum] AndroidAudioFocus focusChange) => _service.HandleAudioFocusChange(focusChange);
     }
 }
