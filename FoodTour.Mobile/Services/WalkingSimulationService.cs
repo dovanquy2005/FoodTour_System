@@ -20,6 +20,9 @@ public class WalkingSimulationService : IRecipient<LanguageChangedMessage>, IDis
 
     private Location? _routeEnd;
     private DateTime _startTime;
+    private HashSet<string> _activeZoneIds = new();
+    private readonly List<ShopModel> _audioQueue = new();
+    private readonly SemaphoreSlim _queueLock = new SemaphoreSlim(1, 1);
 
     // Chống spam: Debounce + Cooldown
     private DateTime _lastCheckTime = DateTime.MinValue;
@@ -33,6 +36,9 @@ public class WalkingSimulationService : IRecipient<LanguageChangedMessage>, IDis
     {
         _dbService = dbService;
         _audioService = audioService;
+
+        _audioService.StateChanged += OnAudioStateChanged;
+        _audioService.PlaybackEnded += OnPlaybackEnded;
 
         // Đăng ký nhận sự kiện đổi ngôn ngữ toàn cục
         WeakReferenceMessenger.Default.Register(this);
@@ -80,7 +86,7 @@ public class WalkingSimulationService : IRecipient<LanguageChangedMessage>, IDis
     public void Stop()
     {
         _isRunning = false;
-        _currentShop = null;
+        _audioService.Stop();
 
         try
         {
@@ -98,67 +104,17 @@ public class WalkingSimulationService : IRecipient<LanguageChangedMessage>, IDis
     private void OnLocationChanged(object? sender, GeolocationLocationChangedEventArgs e)
     {
         if (!_isRunning || e.Location is null) return;
-        
+
         // Bỏ qua GPS kém và dữ liệu vị trí cũ sát với lúc bật (chống tự phát khi mới mở app)
         if (e.Location.Accuracy.HasValue && e.Location.Accuracy.Value > 25.0) return;
         if ((DateTime.UtcNow - _startTime).TotalSeconds < 2) return;
 
         OnLocationUpdate?.Invoke(e.Location);
 
-        // Fire-and-forget: keep the handler non-blocking.
-        _ = CheckShopAsync(e.Location);
-
+        _ = CheckShopAsync(e.Location); // fire-and-forget, non-blocking
         CheckEnd(e.Location);
     }
-    /*
-        private async Task CheckShop(Location location)
-        {
-            // Case 1: Đang ở trong 1 shop → kiểm tra xem còn trong radius không
-            if (_currentShop != null)
-            {
-                double distToCurrent = Location.CalculateDistance(
-                    location,
-                    new Location(_currentShop.Latitude, _currentShop.Longitude),
-                    DistanceUnits.Kilometers) * 1000;
 
-                if (distToCurrent <= 50)
-                    return; // Vẫn trong shop cũ → không làm gì, bám ở đây
-
-                // Ra khỏi shop cũ → reset
-                _currentShop = null;
-                _audioService.Stop();
-                // Không return ở đây để hỗ trợ trường hợp nhảy cóc (teleport) sang quán khác ngay lập tức
-            }
-
-            // Case 2: Tìm shop gần nhất trong 100m
-            ShopModel? nearest = null;
-            double minDist = double.MaxValue;
-
-            foreach (var shop in _shops)
-            {
-                double dist = Location.CalculateDistance(
-                    location,
-                    new Location(shop.Latitude, shop.Longitude),
-                    DistanceUnits.Kilometers) * 1000;
-
-                if (dist <= 100 && dist < minDist)
-                {
-                    minDist = dist;
-                    nearest = shop;
-                }
-            }
-
-            if (nearest != null)
-            {
-                _currentShop = nearest;
-                bool autoPlay = Microsoft.Maui.Storage.Preferences.Default.Get("AutoPlayAudio", true);
-                if (autoPlay)
-                {
-                    await _audioService.PlayShopAsync(nearest);
-                }
-            }
-        }
-    */
     private async Task CheckShopAsync(Location userLocation)
     {
         // ── 1. DEBOUNCE ───────────────────────────────────────────────────────
@@ -166,69 +122,188 @@ public class WalkingSimulationService : IRecipient<LanguageChangedMessage>, IDis
         if ((now - _lastCheckTime).TotalMilliseconds < DebounceMs) return;
         _lastCheckTime = now;
 
-        // ── 2. HYSTERESIS EXIT CHECK ──────────────────────────────────────────
-        if (_currentShop is not null)
+        await _queueLock.WaitAsync();
+        try
         {
-            double entryRadius = GetActivationRadius(_currentShop);
-            double exitRadius = entryRadius * HysteresisMultiplier;
-            double distToCurrent = MetersTo(_currentShop, userLocation);
+            // ── 2. UPDATE ACTIVE ZONES ────────────────────────────────────────
+            var inRadius = _shops
+                .Where(s => MetersTo(s, userLocation) <= GetActivationRadius(s))
+                .ToList();
 
-            if (distToCurrent <= exitRadius)
-                return; // Still inside extended exit zone — do nothing.
+            _activeZoneIds = new HashSet<string>(inRadius.Select(s => s.Id));
 
-            // User has truly left the shop.
-            Console.WriteLine($"[GeoFence] Exited: {_currentShop.Name}");
-            var exitedShop = _currentShop;
-            _currentShop = null;
-            
-            MainThread.BeginInvokeOnMainThread(() =>
+            // ── 3. HYSTERESIS: protect currently playing shop ─────────────────
+            if (_currentShop != null)
             {
-                ShopExited?.Invoke(exitedShop);
-            });
-            _audioService.Stop();
+                double exitRadius = GetActivationRadius(_currentShop) * HysteresisMultiplier;
+                double distToCurrent = MetersTo(_currentShop, userLocation);
 
-            // Fall through: maybe another shop is immediately nearby.
-        }
+                if (distToCurrent <= exitRadius)
+                    return; // Still inside extended exit zone — do nothing.
 
-        // ── 3. PRIORITY-BASED CANDIDATE SELECTION ────────────────────────────
-        var candidates = _shops
-            .Select(s => (shop: s, dist: MetersTo(s, userLocation), radius: GetActivationRadius(s)))
-            .Where(x => x.dist <= x.radius)               // within activation zone
-            .OrderByDescending(x => x.shop.Priority)       // highest priority first
-            .ThenBy(x => x.dist)                           // nearest as tiebreaker
-            .ToList();
+                Console.WriteLine($"[GeoFence] Exited: {_currentShop.Name}");
+                var exitedShop = _currentShop;
+                _currentShop = null;
 
-        foreach (var candidate in candidates)
-        {
-            // ── 4. COOLDOWN CHECK ─────────────────────────────────────────────
-            if (_shopCooldowns.TryGetValue(candidate.shop.Id, out var lastPlayed)
-                && (now - lastPlayed).TotalMinutes < CooldownMinutes)
-            {
-                Console.WriteLine($"[GeoFence] Cooldown active: {candidate.shop.Name} " +
-                                  $"({(int)(now - lastPlayed).TotalSeconds}s / {CooldownMinutes * 60}s)");
-                continue; // Skip — try the next lower-priority candidate.
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    ShopExited?.Invoke(exitedShop);
+                });
+
+                _audioService.Stop();
+                // Fall through: maybe another shop is immediately nearby.
             }
 
-            // ── 5. WINNER — stamp cooldown BEFORE async play to prevent race ──
-            _currentShop = candidate.shop;
-            _shopCooldowns[candidate.shop.Id] = now;
+            // ── 4. REMOVE QUEUED SHOPS WHOSE ZONE THE USER HAS LEFT ──────────
+            int removedFromQueue = _audioQueue.RemoveAll(q => !_activeZoneIds.Contains(q.Id));
+            if (removedFromQueue > 0)
+                Console.WriteLine($"[GeoFence] Pruned {removedFromQueue} shop(s) from queue (zone exited).");
 
-            Console.WriteLine($"[GeoFence] Entered: {_currentShop.Name} " +
-                              $"(priority={_currentShop.Priority}, dist={candidate.dist:F0}m)");
+            // ── 5. FIND NEW CANDIDATES TO ENQUEUE ────────────────────────────
+            var alreadyScheduledIds = new HashSet<string>(_audioQueue.Select(q => q.Id));
+            if (_currentShop != null) alreadyScheduledIds.Add(_currentShop.Id);
 
+            var newCandidates = inRadius
+                .Where(s => !alreadyScheduledIds.Contains(s.Id) && !IsInCooldown(s, now))
+                .OrderByDescending(s => s.Priority)
+                .ThenBy(s => MetersTo(s, userLocation))
+                .ToList();
+
+            // ── 6. ENQUEUE — maintaining descending priority order ─────────────
+            foreach (var candidate in newCandidates)
+            {
+                int insertAt = _audioQueue.FindIndex(q => q.Priority < candidate.Priority);
+                if (insertAt < 0)
+                    _audioQueue.Add(candidate);
+                else
+                    _audioQueue.Insert(insertAt, candidate);
+
+                Console.WriteLine($"[GeoFence] Enqueued: {candidate.Name} (priority={candidate.Priority})");
+            }
+
+            // ── 7. START PLAYING IF IDLE ──────────────────────────────────────
+            if (_currentShop == null && _audioQueue.Count > 0)
+            {
+                await AdvanceQueueLocked(now);
+            }
+        }
+        finally
+        {
+            _queueLock.Release();
+        }
+    }
+
+    private async Task AdvanceQueueAsync()
+    {
+        await _queueLock.WaitAsync();
+        try
+        {
+            var finishedShop = _currentShop;
+            _currentShop = null;
+
+            if (finishedShop != null)
+            {
+                MainThread.BeginInvokeOnMainThread(() => ShopExited?.Invoke(finishedShop));
+            }
+
+            await AdvanceQueueLocked(DateTime.UtcNow);
+        }
+        finally
+        {
+            _queueLock.Release();
+        }
+    }
+
+    private async Task AdvanceQueueLocked(DateTime now)
+    {
+        while (_audioQueue.Count > 0)
+        {
+            var next = _audioQueue[0];
+            _audioQueue.RemoveAt(0);
+
+            // Skip if user has left this shop's zone while it was waiting.
+            if (!_activeZoneIds.Contains(next.Id))
+            {
+                Console.WriteLine($"[Queue] Skip {next.Name} — user no longer in zone.");
+                continue;
+            }
+
+            // Re-check cooldown at dequeue time
+            if (IsInCooldown(next, now))
+            {
+                Console.WriteLine($"[Queue] Skip {next.Name} — cooldown active.");
+                continue;
+            }
+
+            // ── Winner ──────────────────────────────────────────────────────
+            _currentShop = next;
+            // Stamp cooldown BEFORE awaiting PlayShopAsync to prevent re-entry
+            _shopCooldowns[next.Id] = now;
+
+            Console.WriteLine($"[Queue] Playing: {next.Name} (priority={next.Priority})");
+
+            var shopToPlay = _currentShop;
             MainThread.BeginInvokeOnMainThread(() =>
             {
-                ShopEntered?.Invoke(_currentShop);
+                ShopEntered?.Invoke(shopToPlay);
             });
 
             bool autoPlay = Preferences.Default.Get("AutoPlayAudio", true);
             if (autoPlay)
             {
-                await _audioService.PlayShopAsync(_currentShop);
+                await _audioService.PlayShopAsync(next);
             }
 
-            break; // Only trigger one shop per cycle.
+            return; // done for this cycle; next track starts via PlaybackEnded
         }
+
+        // Queue exhausted.
+        _currentShop = null;
+        Console.WriteLine("[Queue] Queue empty — all done.");
+    }
+
+    private async Task ClearQueueAsync()
+    {
+        await _queueLock.WaitAsync();
+        try
+        {
+            if (_audioService.IsPlaying || _audioService.IsPlayerVisible)
+            {
+                Console.WriteLine("[Queue] ClearQueue skipped — new shop already active (internal transition stop).");
+                return;
+            }
+
+            var stoppedShop = _currentShop;
+            _currentShop = null;
+
+            // Reset circle cho shop bị user dừng thủ công
+            if (stoppedShop != null)
+                MainThread.BeginInvokeOnMainThread(() => ShopExited?.Invoke(stoppedShop));
+
+            if (_audioQueue.Count > 0)
+            {
+                Console.WriteLine($"[Queue] Cleared {_audioQueue.Count} item(s) — player stopped by user.");
+                _audioQueue.Clear();
+            }
+        }
+        finally
+        {
+            _queueLock.Release();
+        }
+    }
+
+    private void OnAudioStateChanged()
+    {
+        // Detect explicit user stop: player becomes invisible (not just paused) -> clear the queue
+        if (!_audioService.IsPlayerVisible && !_audioService.IsPlaying)
+        {
+            _ = ClearQueueAsync();
+        }
+    }
+
+    private void OnPlaybackEnded()
+    {
+        _ = AdvanceQueueAsync();
     }
 
     private void CheckEnd(Location location)
@@ -241,16 +316,6 @@ public class WalkingSimulationService : IRecipient<LanguageChangedMessage>, IDis
             OnRouteFinished?.Invoke();
         }
     }
-
-    // HELPERS
-    private static double GetActivationRadius(ShopModel shop) =>
-        shop.Radius > 0 ? shop.Radius : DefaultActivationRadiusM;
-
-    private static double MetersTo(ShopModel shop, Location userLocation) =>
-        Location.CalculateDistance(
-            userLocation,
-            new Location(shop.Latitude, shop.Longitude),
-            DistanceUnits.Kilometers) * 1000;
 
     // Phản hồi tức thì khi người dùng đổi ngôn ngữ trong Settings
     public async void Receive(LanguageChangedMessage message)
@@ -306,9 +371,25 @@ public class WalkingSimulationService : IRecipient<LanguageChangedMessage>, IDis
         }
     }
 
+    // HELPERS
+    private static double GetActivationRadius(ShopModel shop) =>
+        shop.Radius > 0 ? shop.Radius : DefaultActivationRadiusM;
+
+    private static double MetersTo(ShopModel shop, Location userLocation) =>
+        Location.CalculateDistance(
+            userLocation,
+            new Location(shop.Latitude, shop.Longitude),
+            DistanceUnits.Kilometers) * 1000;
+    private bool IsInCooldown(ShopModel shop, DateTime now) =>
+        _shopCooldowns.TryGetValue(shop.Id, out var lastPlayed)
+        && (now - lastPlayed).TotalMinutes < CooldownMinutes;
+
+    // Gỡ bỏ đăng ký để tránh memory leak khi class hủy
     public void Dispose()
     {
-        // Gỡ bỏ đăng ký để tránh memory leak khi class hủy
+        _audioService.StateChanged -= OnAudioStateChanged;
+        _audioService.PlaybackEnded -= OnPlaybackEnded;
+
         WeakReferenceMessenger.Default.UnregisterAll(this);
     }
 }
