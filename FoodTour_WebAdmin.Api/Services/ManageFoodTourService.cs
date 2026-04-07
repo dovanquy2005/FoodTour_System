@@ -1,6 +1,8 @@
 using FoodTour_WebAdmin.Api.Data;
 using FoodTour_WebAdmin.Api.Models;
 using FoodTour_WebAdmin.Api.DTOs;
+using FoodTour_WebAdmin.Api.Hubs;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace FoodTour_WebAdmin.Api.Services;
@@ -12,6 +14,8 @@ public class ManageFoodTourService
     private readonly ITtsService _ttsService;
     private readonly ISupabaseStorageService _storageService;
     private readonly ILogger<ManageFoodTourService> _logger;
+    // SignalR Hub — dùng để đẩy thông báo cập nhật tới Mobile App
+    private readonly IHubContext<UpdateHub> _hubContext;
     
     // Cấu hình ngôn ngữ đích
     private readonly string[] _targetLanguages = { "en", "ja", "ru", "zh" };
@@ -23,13 +27,15 @@ public class ManageFoodTourService
         LangblyTranslateService translateService,
         ITtsService ttsService,
         ISupabaseStorageService storageService,
-        ILogger<ManageFoodTourService> logger)
+        ILogger<ManageFoodTourService> logger,
+        IHubContext<UpdateHub> hubContext)
     {
         _contextFactory = contextFactory;
         _translateService = translateService;
         _ttsService = ttsService;
         _storageService = storageService;
         _logger = logger;
+        _hubContext = hubContext;
     }
 
     public async Task<ShopModel> CreateShopWithTranslationAsync(CreateShopRequest request)
@@ -101,6 +107,9 @@ public class ManageFoodTourService
             _context.Shops.Add(shop);
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
+
+            // Thông báo tới tất cả Mobile App đang kết nối: có Shop mới được tạo
+            await _hubContext.Clients.All.SendAsync("ReceiveUpdate", shop.Id);
 
             return shop;
         }
@@ -249,6 +258,9 @@ public class ManageFoodTourService
             _context.Shops.Update(shop);
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
+
+            // Thông báo tới tất cả Mobile App: Shop vừa được cập nhật (audio, radius, text...)
+            await _hubContext.Clients.All.SendAsync("ReceiveUpdate", shopId);
         }
         catch (Exception)
         {

@@ -1,3 +1,6 @@
+using CommunityToolkit.Mvvm.Messaging;
+using FoodTour.Mobile.Messages;
+
 namespace FoodTour.Mobile.ViewModels
 {
     public class LoadingViewModel : BaseViewModel
@@ -14,19 +17,50 @@ namespace FoodTour.Mobile.ViewModels
             // Khởi tạo Database và đảm bảo dữ liệu đã sẵn sàng
             await _dbService.GetShopsAsync();
 
-            // Đồng bộ dữ liệu ngầm: kiểm tra mạng và đồng bộ không chặn navigation
+            // Đồng bộ dữ liệu ngầm: phân biệt WiFi vs 4G/LTE
             // Fire-and-forget: người dùng vẫn được chuyển sang MainTabs ngay lập tức
             if (Connectivity.Current.NetworkAccess == NetworkAccess.Internet)
             {
-                string apiUrl = "https://foodtour-admin-api.onrender.com";
+                bool isWiFi = Helpers.NetworkHelper.IsFreeNetwork();
 
-                // Bắt đầu đồng bộ ngầm — không await để không chặn UI
+                string apiUrl = AppConfig.ApiBaseUrl;
+
                 _ = Task.Run(async () =>
                 {
                     try
                     {
-                        await _dbService.SyncDataFromApiAsync(apiUrl);
-                        System.Diagnostics.Debug.WriteLine("Background sync: Đồng bộ dữ liệu ngầm thành công.");
+                        if (isWiFi)
+                        {
+                            // ═══════ WiFi: Auto-sync ngầm hoàn toàn ═══════
+                            // Tải data mới nhất + media, không hỏi user
+                            bool synced = await _dbService.SyncDataFromApiAsync(apiUrl);
+                            if (synced)
+                            {
+                                System.Diagnostics.Debug.WriteLine("Background sync [WiFi]: Đồng bộ ngầm thành công.");
+
+                                // Gửi message → AppShell hiện Snackbar "Dữ liệu đã được cập nhật mới nhất"
+                                MainThread.BeginInvokeOnMainThread(() =>
+                                {
+                                    WeakReferenceMessenger.Default.Send(new DataSyncedMessage("synced"));
+                                });
+                            }
+                        }
+                        else
+                        {
+                            // ═══════ 4G/LTE: Chỉ kiểm tra có update, KHÔNG tự sync ═══════
+                            // Tạo notification trong SQLite nếu có dữ liệu mới
+                            bool hasUpdate = await _dbService.CheckForUpdatesAsync();
+                            System.Diagnostics.Debug.WriteLine($"Background sync [4G]: Kiểm tra cập nhật = {hasUpdate}");
+
+                            if (hasUpdate)
+                            {
+                                // Gửi message → AppShell hiện Badge đỏ trên tab Alerts
+                                MainThread.BeginInvokeOnMainThread(() =>
+                                {
+                                    WeakReferenceMessenger.Default.Send(new NewUpdateAvailableMessage(0, 0));
+                                });
+                            }
+                        }
                     }
                     catch (Exception ex)
                     {

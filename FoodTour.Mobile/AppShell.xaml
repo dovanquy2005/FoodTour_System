@@ -24,23 +24,26 @@
 	</Shell.Resources>
 
 	<Shell.TitleView>
-		<HorizontalStackLayout x:Name="StatusIndicatorContainer" 
-							   HorizontalOptions="End" 
-							   VerticalOptions="Center" 
-							   Margin="0,0,15,0" 
-							   Spacing="6"
-							   IsVisible="False">
-			<Label x:Name="StatusIcon" 
-				   Text="☁️" 
-				   FontSize="20" 
-				   VerticalOptions="Center"/>
-			<Label x:Name="StatusText" 
-				   Text="Offline Mode" 
-				   TextColor="{StaticResource TextSecondary}" 
-				   FontSize="12" 
-				   FontAttributes="Bold" 
-				   VerticalOptions="Center"/>
-		</HorizontalStackLayout>
+		<Grid>
+			<!-- Status Indicator (mạng) -->
+			<HorizontalStackLayout x:Name="StatusIndicatorContainer" 
+								   HorizontalOptions="End" 
+								   VerticalOptions="Center" 
+								   Margin="0,0,15,0" 
+								   Spacing="6"
+								   IsVisible="False">
+				<Label x:Name="StatusIcon" 
+					   Text="☁️" 
+					   FontSize="20" 
+					   VerticalOptions="Center"/>
+				<Label x:Name="StatusText" 
+					   Text="Offline Mode" 
+					   TextColor="{StaticResource TextSecondary}" 
+					   FontSize="12" 
+					   FontAttributes="Bold" 
+					   VerticalOptions="Center"/>
+			</HorizontalStackLayout>
+		</Grid>
 	</Shell.TitleView>
 
 	<!-- Trang khởi động -->
@@ -63,7 +66,7 @@
 			<ShellContent Route="ScanPage" ContentTemplate="{DataTemplate views:ScanPage}" />
 		</Tab>
 
-		<Tab Title="{ext:Translate Tab_Alerts}" Icon="notifications.png">
+		<Tab x:Name="AlertsTab" Title="{ext:Translate Tab_Alerts}" Icon="notifications.png">
 			<ShellContent Route="AlertsPage" ContentTemplate="{DataTemplate views:AlertsPage}" />
 		</Tab>
 

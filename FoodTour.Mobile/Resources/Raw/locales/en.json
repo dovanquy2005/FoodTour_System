@@ -72,5 +72,17 @@
     "ShopDetail_Title": "Location Details",
     "ShopDetail_Back": "← Back",
     "ShopDetail_Intro": "Introduction",
-    "ShopDetail_Menu": "Menu"
+    "ShopDetail_Menu": "Menu",
+    "Notify_UpdateAvailable": "Update available",
+    "Notify_UpdateBtn": "Update now",
+    "Notify_Downloading": "Downloading...",
+    "Notify_Updated": "Updated",
+    "Notify_NoNetwork": "No network connection. Please check your Wifi or mobile data.",
+    "Notify_ServerSleeping": "Server is starting up, please try again later...",
+    "Notify_Error": "Update error",
+    "Notify_EmptyState": "No update notifications",
+    "Notify_DataUpdateDesc": "shops updated",
+    "Notify_PullToRefresh": "Pull down to check for updates",
+    "Notify_SyncComplete": "Map data has been updated to the latest version",
+    "Notify_MobileDataConfirm": "There is about {0} of new POI data, do you want to use mobile data to download?"
 }

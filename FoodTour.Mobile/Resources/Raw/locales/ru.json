@@ -72,5 +72,17 @@
     "ShopDetail_Title": "Детали места",
     "ShopDetail_Back": "← Назад",
     "ShopDetail_Intro": "Введение",
-    "ShopDetail_Menu": "Меню"
+    "ShopDetail_Menu": "Меню",
+    "Notify_UpdateAvailable": "Доступно обновление",
+    "Notify_UpdateBtn": "Обновить сейчас",
+    "Notify_Downloading": "Загрузка...",
+    "Notify_Updated": "Обновлено",
+    "Notify_NoNetwork": "Нет подключения к сети. Проверьте Wi-Fi или мобильные данные.",
+    "Notify_ServerSleeping": "Сервер запускается, попробуйте позже...",
+    "Notify_Error": "Ошибка обновления",
+    "Notify_EmptyState": "Нет уведомлений об обновлениях",
+    "Notify_DataUpdateDesc": "заведений обновлено",
+    "Notify_PullToRefresh": "Потяните вниз для проверки обновлений",
+    "Notify_SyncComplete": "Данные карты были успешно обновлены",
+    "Notify_MobileDataConfirm": "Доступно около {0} новых данных POI. Вы хотите использовать мобильные данные для загрузки?"
 }

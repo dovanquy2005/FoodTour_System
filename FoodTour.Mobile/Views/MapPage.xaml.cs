@@ -316,17 +316,26 @@ public partial class MapPage : ContentPage
             Geolocation.Default.LocationChanged -= OnUserLocationChanged;
             Geolocation.Default.LocationChanged += OnUserLocationChanged;
 
-            var location = await Geolocation.Default.GetLocationAsync();
-            if (location == null) return;
-            _userLocation = location;
-            MainThread.BeginInvokeOnMainThread(() =>
+            // FIX: Cố gắng lấy vị trí lần cuối cùng ngay lập tức để hiển thị liền mà không bắt Tab đợi 2-3s
+            var location = await Geolocation.Default.GetLastKnownLocationAsync();
+            if (location == null)
             {
-                TransitionTo(FollowState.Following);
-                if (MainMap?.Handler != null)
+                // Fallback nếu không có last known location
+                location = await Geolocation.Default.GetLocationAsync(new GeolocationRequest(GeolocationAccuracy.Medium, TimeSpan.FromSeconds(2)));
+            }
+
+            if (location != null)
+            {
+                _userLocation = location;
+                MainThread.BeginInvokeOnMainThread(() =>
                 {
-                    MoveCamera(location, FollowRadiusMeters);
-                }
-            });
+                    TransitionTo(FollowState.Following);
+                    if (MainMap?.Handler != null)
+                    {
+                        MoveCamera(location, FollowRadiusMeters);
+                    }
+                });
+            }
         }
         catch (Exception ex)
         {

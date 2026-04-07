@@ -34,7 +34,7 @@ public partial class OnboardingPage : ContentPage
         DownloadProgressBar.Progress = 0.1;
 
         // Determine API URL 
-        string apiUrl = "https://foodtour-admin-api.onrender.com";
+        string apiUrl = AppConfig.ApiBaseUrl;
 
         // REAL SYNC
         bool success = await _databaseService.FullSyncAsync(apiUrl, _localizationService);
@@ -57,7 +57,7 @@ public partial class OnboardingPage : ContentPage
             // Navigate to Main App
             if (Application.Current?.Windows.Count > 0)
             {
-                Application.Current.Windows[0].Page = new AppShell(_playerVm, _locationService);
+                Application.Current.Windows[0].Page = new AppShell(_playerVm, _locationService, _localizationService, _databaseService);
             }
         }
         else
@@ -78,7 +78,7 @@ public partial class OnboardingPage : ContentPage
         // Navigate to Main App
         if (Application.Current?.Windows.Count > 0)
         {
-            Application.Current.Windows[0].Page = new AppShell(_playerVm, _locationService);
+            Application.Current.Windows[0].Page = new AppShell(_playerVm, _locationService, _localizationService, _databaseService);
         }
     }
 }

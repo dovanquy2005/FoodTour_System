@@ -72,5 +72,17 @@
     "ShopDetail_Title": "場所の詳細",
     "ShopDetail_Back": "← 戻る",
     "ShopDetail_Intro": "紹介",
-    "ShopDetail_Menu": "メニュー"
+    "ShopDetail_Menu": "メニュー",
+    "Notify_UpdateAvailable": "アップデートがあります",
+    "Notify_UpdateBtn": "今すぐ更新",
+    "Notify_Downloading": "ダウンロード中...",
+    "Notify_Updated": "更新済み",
+    "Notify_NoNetwork": "ネットワーク接続がありません。WifiまたはモバイルデータをＯＮにしてください。",
+    "Notify_ServerSleeping": "サーバーが起動中です。しばらくしてから再試行してください...",
+    "Notify_Error": "更新エラー",
+    "Notify_EmptyState": "更新通知はありません",
+    "Notify_DataUpdateDesc": "店舗が更新されました",
+    "Notify_PullToRefresh": "下に引いて更新を確認",
+    "Notify_SyncComplete": "マップデータが最新に更新されました",
+    "Notify_MobileDataConfirm": "約 {0} の新しいPOIデータがあります。モバイルデータを使用してダウンロードしますか？"
 }

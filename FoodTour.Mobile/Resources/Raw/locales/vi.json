@@ -72,5 +72,17 @@
     "ShopDetail_Title": "Chi tiết địa điểm",
     "ShopDetail_Back": "← Quay lại",
     "ShopDetail_Intro": "Giới thiệu",
-    "ShopDetail_Menu": "Thực đơn món ăn"
+    "ShopDetail_Menu": "Thực đơn món ăn",
+    "Notify_UpdateAvailable": "Có bản cập nhật mới",
+    "Notify_UpdateBtn": "Cập nhật ngay",
+    "Notify_Downloading": "Đang tải...",
+    "Notify_Updated": "Đã cập nhật",
+    "Notify_NoNetwork": "Không có kết nối mạng. Vui lòng kiểm tra Wifi hoặc 4G.",
+    "Notify_ServerSleeping": "Server đang khởi động, vui lòng thử lại sau...",
+    "Notify_Error": "Lỗi cập nhật",
+    "Notify_EmptyState": "Không có thông báo cập nhật",
+    "Notify_DataUpdateDesc": "quán ăn đã được cập nhật",
+    "Notify_PullToRefresh": "Kéo xuống để kiểm tra cập nhật mới",
+    "Notify_SyncComplete": "Dữ liệu bản đồ đã được cập nhật mới nhất",
+    "Notify_MobileDataConfirm": "Có dữ liệu POI mới khoảng {0}, bạn có muốn cập nhật bằng mạng di động không?"
 }

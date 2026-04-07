@@ -65,7 +65,7 @@ public partial class App : Application
         MainThread.BeginInvokeOnMainThread(() =>
         {
             Page newPage = isSetupCompleted
-                ? new AppShell(_playerVm, _locationService)
+                ? new AppShell(_playerVm, _locationService, localizationService, databaseService)
                 : new NavigationPage(new Views.OnboardingPage(localizationService, databaseService, _playerVm, _locationService));
 
             if (Application.Current?.Windows.Count > 0)

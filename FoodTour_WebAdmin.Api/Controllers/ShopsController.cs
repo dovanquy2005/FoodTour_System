@@ -91,6 +91,66 @@ public class ShopsController : ControllerBase
         return NoContent();
     }
 
+    // GET: api/shops/updates?since={ISO 8601 timestamp}
+    // Kiểm tra xem có bản cập nhật mới kể từ lần đồng bộ cuối
+    [HttpGet("updates")]
+    public async Task<ActionResult> CheckForUpdates([FromQuery] string? since = null)
+    {
+        using var _db = await _dbFactory.CreateDbContextAsync();
+
+        // Sử dụng cờ UTC để Npgsql/PostgreSQL không báo lỗi "Cannot write DateTime with Kind=Unspecified"
+        DateTime sinceDate = DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc);
+        
+        if (!string.IsNullOrEmpty(since))
+        {
+            if (!DateTime.TryParse(since, null, System.Globalization.DateTimeStyles.RoundtripKind, out sinceDate))
+            {
+                return BadRequest(new { message = "Invalid 'since' format. Use ISO 8601 (e.g., 2026-01-01T00:00:00Z)." });
+            }
+            // Đảm bảo là UTC
+            if (sinceDate.Kind == DateTimeKind.Unspecified)
+            {
+                sinceDate = DateTime.SpecifyKind(sinceDate, DateTimeKind.Utc);
+            }
+        }
+
+        // Lọc các shop có UpdatedAt > sinceDate
+        var updatedShops = await _db.Shops
+            .Include(s => s.ShopTranslations)
+            .Where(s => s.UpdatedAt > sinceDate)
+            .ToListAsync();
+
+        if (updatedShops.Count == 0)
+        {
+            return Ok(new { hasUpdates = false, updatedShopIds = Array.Empty<string>(), totalEstimatedSize = 0L });
+        }
+
+        var updatedShopIds = updatedShops.Select(s => s.Id).ToList();
+
+        // Ước tính dung lượng: đếm số file media cần tải (ảnh shop + audio translations)
+        long estimatedSize = 0;
+        foreach (var shop in updatedShops)
+        {
+            // Ảnh shop: ước tính ~200KB mỗi ảnh
+            if (!string.IsNullOrEmpty(shop.ImageUrl))
+                estimatedSize += 200_000;
+
+            // Audio files: ước tính ~500KB mỗi file
+            foreach (var trans in shop.ShopTranslations)
+            {
+                if (!string.IsNullOrEmpty(trans.AudioUrl) && trans.IsAudioGenerated)
+                    estimatedSize += 500_000;
+            }
+        }
+
+        return Ok(new
+        {
+            hasUpdates = true,
+            updatedShopIds = updatedShopIds,
+            totalEstimatedSize = estimatedSize
+        });
+    }
+
     // GET: api/shops/stats
     [HttpGet("stats")]
     public async Task<ActionResult> GetStats()

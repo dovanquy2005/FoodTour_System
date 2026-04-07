@@ -1,7 +1,9 @@
 using Android.OS;
 using FoodTour.Mobile.Models;
 using FoodTour.Mobile.Helpers;
+using FoodTour.Mobile.Messages;
 using Plugin.Maui.Audio;
+using CommunityToolkit.Mvvm.Messaging;
 using AndroidAudioManager = Android.Media.AudioManager;
 using AndroidAudioFocus = Android.Media.AudioFocus;
 using AndroidAudioAttributes = Android.Media.AudioAttributes;
@@ -12,7 +14,7 @@ using AndroidBuildVersionCodes = Android.OS.BuildVersionCodes;
 
 namespace FoodTour.Mobile.Services;
 
-public class AudioPlayerService : IAudioPlayerService, IDisposable
+public class AudioPlayerService : IAudioPlayerService, IRecipient<AudioFilesUpdatedMessage>, IDisposable
 {
     private readonly ILocalizationService _localizationService;
     private ShopModel? _currentShop;
@@ -35,6 +37,11 @@ public class AudioPlayerService : IAudioPlayerService, IDisposable
         _audioFocusListener = new AndroidAudioFocusListener(this);
         var context = Android.App.Application.Context;
         _androidAudioManager = (AndroidAudioManager?)context.GetSystemService(Android.Content.Context.AudioService);
+
+        // Đăng ký nhận sự kiện khi file audio mới được tải về disk (từ DownloadUpdateAsync)
+        // Đây là điểm xử lý được nhất: trực tiếp tại service nắm giữ player,
+        // không phụ thuộc vào geofencing hay UI layer.
+        WeakReferenceMessenger.Default.Register<AudioFilesUpdatedMessage>(this);
     }
 
     public bool IsPlaying => _isPlaying;
@@ -214,7 +221,35 @@ public class AudioPlayerService : IAudioPlayerService, IDisposable
 
     private void StopTimer() => _progressTimer?.Stop();
 
-    public void Dispose() => Stop();
+    public void Dispose()
+    {
+        WeakReferenceMessenger.Default.UnregisterAll(this);
+        Stop();
+    }
+
+    // ─────────────────────────────────────────
+    // Hot-reload audio khi file .mp3 mới được ghi xuống disk
+    // ─────────────────────────────────────────
+    public async void Receive(AudioFilesUpdatedMessage message)
+    {
+        // Chỉ xử lý nếu đang phát một shop và shop đó có trong danh sách được cập nhật
+        if (_currentShop == null) return;
+        if (!message.Value.Contains(_currentShop.Id)) return;
+
+        System.Diagnostics.Debug.WriteLine($"[AudioPlayer] File audio mới cho shop '{_currentShop.Name}' đã sẵn sàng, reload...");
+
+        // Lưu lại tập tham chiếu shop trước khi Stop() xóa _currentShop
+        var shopToReload = _currentShop;
+
+        // Dừng player cũ hoàn toàn (giải phóng FileDescriptor/stream cũ)
+        // Sau Stop(): _currentShop = null, _isPlaying = false, _player = null
+        Stop();
+
+        // Phát lại từ đầu với file mới nhất trên disk
+        // PlayShopAsync sẽ gọi File.OpenRead() mới → đọc nội dung mới
+        // (không bị early-return vì _currentShop đã bị null)
+        await PlayShopAsync(shopToReload);
+    }
 
     // ANDROID AUDIO FOCUS
     private void RequestAudioFocus()

@@ -6,6 +6,8 @@ using FoodTour.Mobile.Views;
 using FoodTour.Mobile.ViewModels;
 using System.Net.Http;
 using FoodTour.Mobile.Services;
+using CommunityToolkit.Maui;
+
 namespace FoodTour.Mobile;
 
 public static class MauiProgram
@@ -16,6 +18,7 @@ public static class MauiProgram
         builder
             .UseMauiApp<App>()
             .UseMauiMaps()
+            .UseMauiCommunityToolkit()
             .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");

@@ -9,7 +9,7 @@ namespace FoodTour.Mobile.Helpers
         // Lấy base URL của API dựa trên nền tảng đang chạy
         private static string GetApiBaseUrl()
         {
-            return "https://foodtour-admin-api.onrender.com";
+            return AppConfig.ApiBaseUrl;
         }
 
         /// <summary>

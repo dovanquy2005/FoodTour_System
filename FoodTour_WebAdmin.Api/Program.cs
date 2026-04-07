@@ -4,6 +4,7 @@ using MudBlazor.Services;
 // Thêm 2 namespace này để sử dụng PasswordHasher và UserModel
 using Microsoft.AspNetCore.Identity;
 using FoodTour_WebAdmin.Api.Models;
+using FoodTour_WebAdmin.Api.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,6 +21,9 @@ builder.Services.AddHttpClient<FoodTour_WebAdmin.Api.Services.ITtsService, FoodT
 builder.Services.AddSingleton<FoodTour_WebAdmin.Api.Services.IQrCodeService, FoodTour_WebAdmin.Api.Services.QrCodeService>();
 builder.Services.AddScoped<FoodTour_WebAdmin.Api.Services.ManageFoodTourService>();
 builder.Services.AddScoped<FoodTour_WebAdmin.Api.Services.AuthService>();
+
+// SignalR — cho phép Server đẩy thông báo cập nhật tới Mobile App theo thời gian thực
+builder.Services.AddSignalR();
 
 // API Controllers
 builder.Services.AddControllers();
@@ -45,14 +49,17 @@ builder.Services.AddMudServices(config =>
     config.SnackbarConfiguration.SnackbarVariant = MudBlazor.Variant.Filled;
 });
 
-// CORS — allow MAUI app and any client to consume the API
+// CORS — cho phép MAUI app và mọi client truy cập API
+// Lưu ý: SignalR yêu cầu AllowCredentials nên không dùng AllowAnyOrigin được,
+// thay vào đó dùng SetIsOriginAllowed để chấp nhận mọi origin.
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.SetIsOriginAllowed(_ => true)
               .AllowAnyMethod()
-              .AllowAnyHeader();
+              .AllowAnyHeader()
+              .AllowCredentials();
     });
 });
 
@@ -97,6 +104,9 @@ app.UseCors();
 
 // API Controllers
 app.MapControllers();
+
+// SignalR Hub — endpoint để Mobile App kết nối nhận thông báo real-time
+app.MapHub<UpdateHub>("/api/updatesHub");
 
 // Blazor
 app.MapRazorComponents<FoodTour_WebAdmin.Api.Components.App>()

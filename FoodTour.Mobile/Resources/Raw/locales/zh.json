@@ -72,5 +72,17 @@
     "ShopDetail_Title": "地点详情",
     "ShopDetail_Back": "← 返回",
     "ShopDetail_Intro": "介绍",
-    "ShopDetail_Menu": "菜单"
+    "ShopDetail_Menu": "菜单",
+    "Notify_UpdateAvailable": "有可用更新",
+    "Notify_UpdateBtn": "立即更新",
+    "Notify_Downloading": "正在下载...",
+    "Notify_Updated": "已更新",
+    "Notify_NoNetwork": "没有网络连接。请检查您的Wifi或移动数据。",
+    "Notify_ServerSleeping": "服务器正在启动，请稍后重试...",
+    "Notify_Error": "更新错误",
+    "Notify_EmptyState": "没有更新通知",
+    "Notify_DataUpdateDesc": "家店铺已更新",
+    "Notify_PullToRefresh": "下拉检查更新",
+    "Notify_SyncComplete": "地图数据已更新至最新版本",
+    "Notify_MobileDataConfirm": "有约 {0} 的新 POI 数据，您要使用移动网络下载吗？"
 }

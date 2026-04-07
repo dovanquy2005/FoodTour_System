@@ -1,0 +1,47 @@
+name: Build and Deploy FoodTour APK
+
+on:
+  push:
+    branches: [ "main" ] # Nó sẽ chạy mỗi khi bạn push code lên nhánh main
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET 9
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 9.0.x
+
+    - name: Install MAUI Workload
+      run: dotnet workload install maui-android
+
+    - name: Restore dependencies
+      run: dotnet restore FoodTour.Mobile/FoodTour.Mobile.csproj
+
+    - name: Build and Publish APK
+      run: |
+        dotnet publish FoodTour.Mobile/FoodTour.Mobile.csproj -f net9.0-android -c Release -r android-arm64 --self-contained true /p:AndroidKeyStore=true /p:AndroidSigningKeyStore=FoodTour.Mobile/foodtour.keystore /p:AndroidSigningKeyAlias=foodtour_alias /p:AndroidSigningKeyPass=123456 /p:AndroidSigningStorePass=123456
+
+    - name: Upload to Supabase Storage
+      shell: pwsh
+      run: |
+        # Đường dẫn tới file APK sau khi build xong trên GitHub
+        $filePath = "FoodTour.Mobile/bin/Release/net9.0-android/android-arm64/publish/com.companyname.foodtour.mobile-Signed.apk"
+        
+        # Link API của bạn
+        $url = "${{ secrets.SUPABASE_URL }}/storage/v1/object/app/foodtour.apk"
+        
+        # Lệnh đẩy file lên và ghi đè (upsert)
+        Invoke-RestMethod -Uri $url `
+          -Method Post `
+          -InFile $filePath `
+          -ContentType "application/vnd.android.package-archive" `
+          -Headers @{ 
+            "Authorization" = "Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}";
+            "x-upsert" = "true" 
+          }
