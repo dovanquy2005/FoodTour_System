@@ -56,8 +56,6 @@ public static class MauiProgram
         // Đăng ký cho tab MainPage (OTA Localization Test)
         builder.Services.AddTransient<MainPage>();
 
-        builder.Services.AddSingleton<App>();
-
         return builder.Build();
     }
 }

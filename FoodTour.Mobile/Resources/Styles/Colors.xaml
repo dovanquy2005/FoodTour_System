@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8" ?>
+<?xml version="1.0" encoding="UTF-8" ?>
 <?xaml-comp compile="true" ?>
 <ResourceDictionary 
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
@@ -8,6 +8,7 @@
     <!-- Primary accent — warm terracotta orange -->
     <Color x:Key="Primary">#E8672A</Color>
     <Color x:Key="PrimaryDark">#C85520</Color>
+    <Color x:Key="PrimaryDarkText">#FFFFFF</Color>
     <Color x:Key="PrimaryLight">#F4A574</Color>
 
     <!-- Secondary — soft peach -->

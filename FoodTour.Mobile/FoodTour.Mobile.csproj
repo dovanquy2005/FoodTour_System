@@ -8,28 +8,36 @@
         <SingleProject>true</SingleProject>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <AndroidFastDeployment>False</AndroidFastDeployment>
-        
-        <RuntimeIdentifiers>android-arm64</RuntimeIdentifiers>
 
         <ApplicationTitle>FoodTour</ApplicationTitle>
         <ApplicationId>com.companyname.foodtour.mobile</ApplicationId>
         <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
         <ApplicationVersion>1</ApplicationVersion>
 
-        <AndroidCreatePackagePerAbi>true</AndroidCreatePackagePerAbi>
-        <AndroidLinkResources>true</AndroidLinkResources>
-        <PublishTrimmed>true</PublishTrimmed>
-        <TrimMode>full</TrimMode>
-        <MtouchLink>SdkOnly</MtouchLink>
-        <EnableEventSourceSupport>false</EnableEventSourceSupport>
-        <StackTraceSupport>false</StackTraceSupport>
-        <WindowsPackageType>None</WindowsPackageType>
-        <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
-
         <AndroidSdkDirectory>D:\Android\Sdk</AndroidSdkDirectory>
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24.0</SupportedOSPlatformVersion>
         <MauiEnableXamlCBindingWithSourceCompilation>true</MauiEnableXamlCBindingWithSourceCompilation>
+        <WindowsPackageType>None</WindowsPackageType>
+        <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    </PropertyGroup>
+
+    <!-- Debug: fast deployment, no trimming, works on emulator -->
+    <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+        <AndroidFastDeployment>True</AndroidFastDeployment>
+        <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
+    </PropertyGroup>
+
+    <!-- Release: optimized for production APK -->
+    <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+        <AndroidFastDeployment>False</AndroidFastDeployment>
+        <RuntimeIdentifiers>android-arm64</RuntimeIdentifiers>
+        <AndroidCreatePackagePerAbi>true</AndroidCreatePackagePerAbi>
+        <AndroidLinkResources>true</AndroidLinkResources>
+        <PublishTrimmed>true</PublishTrimmed>
+        <TrimMode>partial</TrimMode>
+        <MtouchLink>SdkOnly</MtouchLink>
+        <EnableEventSourceSupport>false</EnableEventSourceSupport>
+        <StackTraceSupport>false</StackTraceSupport>
     </PropertyGroup>
 
     <ItemGroup>
