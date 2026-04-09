@@ -153,6 +153,7 @@
                 Shadow="{Shadow Radius=12, Opacity=0.3, Offset='0,4'}">
             <Border.GestureRecognizers>
                 <TapGestureRecognizer Command="{Binding ExpandCommand}"/>
+                <PanGestureRecognizer PanUpdated="OnAvatarPanUpdated" />
             </Border.GestureRecognizers>
 
             <Grid>
@@ -179,6 +180,28 @@
                            VerticalOptions="Center"/>
                 </Border>
             </Grid>
+        </Border>
+
+        <!-- ════════ DISMISS ZONE ('X') ════════ -->
+        <Border x:Name="DismissZone"
+                IsVisible="False"
+                Opacity="0"
+                HorizontalOptions="Center"
+                VerticalOptions="End"
+                Margin="0,0,0,0"
+                WidthRequest="60"
+                HeightRequest="60"
+                StrokeShape="RoundRectangle 30"
+                BackgroundColor="#E53935"
+                Stroke="#B71C1C"
+                StrokeThickness="2"
+                Shadow="{Shadow Radius=10, Opacity=0.5, Offset='0,4'}">
+            <Label Text="✕"
+                   TextColor="White"
+                   FontSize="24"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center"/>
         </Border>
     </Grid>
 </ContentView>

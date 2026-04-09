@@ -19,9 +19,33 @@ namespace FoodTour.Mobile.ViewModels
             get => shop;
             set
             {
-                SetProperty(ref shop, value);
-                if (value != null) LoadDishes(value.Id);
+                if (SetProperty(ref shop, value) && value != null)
+                {
+                    LoadDishes(value.Id);
+                    RefreshShopDataAsync(value.Id);
+                }
             }
+        }
+
+        private async void RefreshShopDataAsync(string shopId)
+        {
+            try
+            {
+                var freshShop = await _dbService.GetShopAsync(shopId);
+                if (freshShop != null && shop != null)
+                {
+                    // Chỉ cập nhật UI nếu có sự khác biệt (nhất là sau khi ứng dụng đồng bộ text mới ngầm)
+                    if (freshShop.Name != shop.Name || freshShop.Description != shop.Description || freshShop.Address != shop.Address)
+                    {
+                        MainThread.BeginInvokeOnMainThread(() =>
+                        {
+                            // Bỏ qua setter để tránh gọi lại LoadDishes()
+                            SetProperty(ref shop, freshShop, nameof(Shop));
+                        });
+                    }
+                }
+            }
+            catch { }
         }
 
         [ObservableProperty]

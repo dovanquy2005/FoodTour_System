@@ -329,10 +329,18 @@ public partial class MapPage : ContentPage
                 _userLocation = location;
                 MainThread.BeginInvokeOnMainThread(() =>
                 {
-                    TransitionTo(FollowState.Following);
                     if (MainMap?.Handler != null)
                     {
-                        MoveCamera(location, FollowRadiusMeters);
+                        if (_pendingRouteShop != null)
+                        {
+                            DrawRouteToShop(_pendingRouteShop);
+                            _pendingRouteShop = null;
+                        }
+                        else
+                        {
+                            TransitionTo(FollowState.Following);
+                            MoveCamera(location, FollowRadiusMeters);
+                        }
                     }
                 });
             }
@@ -385,18 +393,36 @@ public partial class MapPage : ContentPage
             try
             {
                 // Không thể vẽ đường nếu chưa biết vị trí người dùng
-                if (_userLocation == null) return;
+                if (_userLocation == null) 
+                {
+                    _pendingRouteShop = targetShop;
+                    return;
+                }
+
                 TransitionTo(FollowState.RouteView);
                 ScheduleResumeFollow();
 
                 foreach (var line in MainMap.MapElements.OfType<Polyline>().ToList())
                     MainMap.MapElements.Remove(line);
 
-                MainMap.MapElements.Add(new Polyline
+                var polyline = new Polyline
                 {
                     StrokeColor = Colors.Blue,
                     StrokeWidth = 8,
                     Geopath = { _userLocation, targetShop.Location }
+                };
+                MainMap.MapElements.Add(polyline);
+
+                // Tự động xóa đường màu xanh sau 5 giây để tránh làm rối bản đồ
+                Task.Delay(TimeSpan.FromSeconds(3)).ContinueWith(_ =>
+                {
+                    MainThread.BeginInvokeOnMainThread(() =>
+                    {
+                        if (MainMap != null && MainMap.MapElements.Contains(polyline))
+                        {
+                            MainMap.MapElements.Remove(polyline);
+                        }
+                    });
                 });
 
                 double distKm = Location.CalculateDistance(_userLocation, targetShop.Location, DistanceUnits.Kilometers);
@@ -423,9 +449,16 @@ public partial class MapPage : ContentPage
     {
         if (MainMap == null) return;
 
+        var existingPolylines = MainMap.MapElements.OfType<Polyline>().ToList();
+
         MainMap.MapElements.Clear();
         MainMap.Pins.Clear();
         _shopCircles.Clear();
+
+        foreach (var p in existingPolylines)
+        {
+            MainMap.MapElements.Add(p);
+        }
 
         if (_viewModel.Shops == null || _viewModel.Shops.Count == 0) return;
 

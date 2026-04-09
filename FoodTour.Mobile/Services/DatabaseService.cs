@@ -73,6 +73,14 @@
                         var fullUrl = relativeUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase) 
                             ? relativeUrl 
                             : apiUrl.TrimEnd('/') + (relativeUrl.StartsWith("/") ? relativeUrl : "/" + relativeUrl);
+                            
+                        // Nếu đã chuyển sang dùng fallback localhost
+                        if (AppConfig.UseLocalFallback && fullUrl.Contains("onrender.com"))
+                        {
+                            var cloudUrl = "https://foodtour-admin-api.onrender.com";
+                            fullUrl = fullUrl.Replace(cloudUrl, AppConfig.ApiBaseUrl);
+                        }
+
                         var fileBytes = await httpClient.GetByteArrayAsync(fullUrl);
                         await File.WriteAllBytesAsync(localPath, fileBytes);
                     }
@@ -106,7 +114,7 @@
                     int updatedShopCount = 0;
                     DateTime? maxUpdatedAt = null;
 
-                    var shopsResponse = await httpClient.GetAsync($"{apiUrl}/api/shops");
+                    var shopsResponse = await SendWithRetryAsync(httpClient, $"{apiUrl}/api/shops");
                     if (shopsResponse.IsSuccessStatusCode)
                     {
                         var shops = await shopsResponse.Content.ReadFromJsonAsync<List<ShopModel>>();
@@ -218,7 +226,7 @@
                     }
 
                     // ──── 2. Sync Dishes ────
-                    var dishesResponse = await httpClient.GetAsync($"{apiUrl}/api/dishes");
+                    var dishesResponse = await SendWithRetryAsync(httpClient, $"{apiUrl}/api/dishes");
                     if (dishesResponse.IsSuccessStatusCode)
                     {
                         var dishes = await dishesResponse.Content.ReadFromJsonAsync<List<DishModel>>();
@@ -509,28 +517,73 @@
             {
                 for (int attempt = 1; attempt <= maxRetries; attempt++)
                 {
+                    // Nếu đã đổi sang fallback proxy, thì cập nhật URL cho chính xác
+                    if (AppConfig.UseLocalFallback && url.Contains("onrender.com"))
+                    {
+                        var cloudUrl = "https://foodtour-admin-api.onrender.com";
+                        url = url.Replace(cloudUrl, AppConfig.ApiBaseUrl);
+                    }
+
                     try
                     {
                         var response = await client.GetAsync(url);
-                        // Nếu server trả về 5xx (đang khởi động), retry
-                        if ((int)response.StatusCode >= 500 && attempt < maxRetries)
+                        // Nếu server trả về 5xx (như 521: web server is down), fallback hoặc retry
+                        if ((int)response.StatusCode >= 500)
                         {
-                            var delay = (int)Math.Pow(2, attempt) * 1000; // 2s, 4s, 8s
-                            System.Diagnostics.Debug.WriteLine($"[Retry] Server trả về {response.StatusCode}, thử lại sau {delay}ms (lần {attempt}/{maxRetries})");
-                            await Task.Delay(delay);
-                            continue;
+                            if (!AppConfig.IsLocalEnvironment && !AppConfig.UseLocalFallback)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"[Cloud Down {(int)response.StatusCode}] Fallback sang Localhost...");
+                                AppConfig.UseLocalFallback = true;
+                                var cloudUrl = "https://foodtour-admin-api.onrender.com";
+                                url = url.Replace(cloudUrl, AppConfig.ApiBaseUrl);
+                                
+                                response = await client.GetAsync(url);
+                                if (response.IsSuccessStatusCode)
+                                    return response;
+                            }
+
+                            if (attempt < maxRetries)
+                            {
+                                var delay = (int)Math.Pow(2, attempt) * 1000; // 2s, 4s, 8s
+                                System.Diagnostics.Debug.WriteLine($"[Retry] Server trả về {response.StatusCode}, thử lại sau {delay}ms (lần {attempt}/{maxRetries})");
+                                await Task.Delay(delay);
+                                continue;
+                            }
                         }
                         return response;
                     }
-                    catch (Exception ex) when (attempt < maxRetries)
+                    catch (Exception ex)
                     {
-                        // Lỗi kết nối tạm thời (transient failure) — retry
-                        var delay = (int)Math.Pow(2, attempt) * 1000;
-                        System.Diagnostics.Debug.WriteLine($"[Retry] Lỗi: {ex.Message}, thử lại sau {delay}ms (lần {attempt}/{maxRetries})");
-                        await Task.Delay(delay);
+                        // Lỗi kết nối tạm thời (transient failure) hoặc server sập
+                        if (!AppConfig.IsLocalEnvironment && !AppConfig.UseLocalFallback)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[Cloud Error {ex.Message}] Fallback sang Localhost...");
+                            AppConfig.UseLocalFallback = true;
+                            var cloudUrl = "https://foodtour-admin-api.onrender.com";
+                            url = url.Replace(cloudUrl, AppConfig.ApiBaseUrl);
+                            
+                            try
+                            {
+                                var responseLocal = await client.GetAsync(url);
+                                if (responseLocal.IsSuccessStatusCode)
+                                    return responseLocal;
+                            }
+                            catch { }
+                        }
+
+                        if (attempt < maxRetries)
+                        {
+                            var delay = (int)Math.Pow(2, attempt) * 1000;
+                            System.Diagnostics.Debug.WriteLine($"[Retry] Lỗi: {ex.Message}, thử lại sau {delay}ms (lần {attempt}/{maxRetries})");
+                            await Task.Delay(delay);
+                        }
+                        else if (attempt == maxRetries)
+                        {
+                            // Tới lần cuối mà vẫn lỗi thì ném
+                            throw;
+                        }
                     }
                 }
-                // Lần cuối: ném lỗi nếu vẫn thất bại
                 return await client.GetAsync(url);
             }
 
