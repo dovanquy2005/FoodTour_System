@@ -37,7 +37,6 @@ public class ShopsController : ControllerBase
         using var _db = await _dbFactory.CreateDbContextAsync();
         var ShopModel = await _db.Shops
             .Include(s => s.ShopTranslations)
-            .Include(s => s.Dishes)
             .FirstOrDefaultAsync(s => s.Id == id);
 
         if (ShopModel is null)
@@ -157,14 +156,12 @@ public class ShopsController : ControllerBase
     {
         using var _db = await _dbFactory.CreateDbContextAsync();
         var totalShops = await _db.Shops.CountAsync();
-        var totalDishes = await _db.Dishes.CountAsync();
         var avgRating = totalShops > 0 ? await _db.Shops.AverageAsync(s => s.Rating) : 0;
         var topShop = await _db.Shops.OrderByDescending(s => s.Rating).FirstOrDefaultAsync();
 
         return Ok(new
         {
             totalShops,
-            totalDishes,
             averageRating = Math.Round(avgRating, 1),
             topShopName = topShop?.Name ?? "N/A"
         });

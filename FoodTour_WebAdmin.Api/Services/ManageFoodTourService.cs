@@ -120,62 +120,6 @@ public class ManageFoodTourService
         }
     }
 
-    public async Task<DishModel> CreateDishWithTranslationAsync(CreateDishRequest request)
-    {
-        using var _context = await _contextFactory.CreateDbContextAsync();
-        using var transaction = await _context.Database.BeginTransactionAsync();
-        try
-        {
-            var dishId = Guid.NewGuid().ToString();
-            var dish = new DishModel
-            {
-                Id = dishId,
-                ShopId = request.ShopId,
-                Price = request.Price,
-                ImageUrl = request.ImageUrl,
-                DishTranslations = new List<DishTranslationModel>()
-            };
-
-            // Bản gốc tiếng Việt
-            var viTranslation = new DishTranslationModel
-            {
-                LanguageCode = "vi",
-                Name = request.Name
-            };
-
-            // Dịch song song
-            var languageTasks = _targetLanguages.Select(async lang =>
-            {
-                var translatedName = await _translateService.TranslateTextAsync(request.Name, lang);
-                return new DishTranslationModel
-                {
-                    LanguageCode = lang,
-                    Name = translatedName
-                };
-            });
-
-            var translatedResults = await Task.WhenAll(languageTasks);
-
-            var allTranslations = new List<DishTranslationModel> { viTranslation };
-            allTranslations.AddRange(translatedResults);
-
-            foreach (var t in allTranslations)
-            {
-                dish.DishTranslations.Add(t);
-            }
-
-            _context.Dishes.Add(dish);
-            await _context.SaveChangesAsync();
-            await transaction.CommitAsync();
-
-            return dish;
-        }
-        catch (Exception)
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
-    }
 
     public async Task UpdateShopWithTranslationAsync(string shopId, CreateShopRequest request)
     {
@@ -269,69 +213,6 @@ public class ManageFoodTourService
         }
     }
 
-    public async Task UpdateDishWithTranslationAsync(string dishId, CreateDishRequest request)
-    {
-        using var _context = await _contextFactory.CreateDbContextAsync();
-        using var transaction = await _context.Database.BeginTransactionAsync();
-        try
-        {
-            var dish = await _context.Dishes.Include(d => d.DishTranslations).FirstOrDefaultAsync(d => d.Id == dishId);
-            if (dish == null) return;
-
-            dish.ShopId = request.ShopId;
-            dish.Price = request.Price;
-            dish.ImageUrl = request.ImageUrl;
-
-            var viTranslation = dish.DishTranslations.FirstOrDefault(t => t.LanguageCode == "vi");
-            if (viTranslation != null)
-            {
-                viTranslation.Name = request.Name;
-            }
-            else
-            {
-                viTranslation = new DishTranslationModel
-                {
-                    LanguageCode = "vi",
-                    Name = request.Name
-                };
-                dish.DishTranslations.Add(viTranslation);
-            }
-
-            var languageTasks = _targetLanguages.Select(async lang =>
-            {
-                var translatedName = await _translateService.TranslateTextAsync(request.Name, lang);
-                return new { lang, name = translatedName };
-            });
-
-            var translatedResults = await Task.WhenAll(languageTasks);
-
-            foreach (var result in translatedResults)
-            {
-                var existingTranslation = dish.DishTranslations.FirstOrDefault(t => t.LanguageCode == result.lang);
-                if (existingTranslation != null)
-                {
-                    existingTranslation.Name = result.name;
-                }
-                else
-                {
-                    dish.DishTranslations.Add(new DishTranslationModel
-                    {
-                        LanguageCode = result.lang,
-                        Name = result.name
-                    });
-                }
-            }
-
-            _context.Dishes.Update(dish);
-            await _context.SaveChangesAsync();
-            await transaction.CommitAsync();
-        }
-        catch (Exception)
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
-    }
 
     // ═══════ HELPER: TTS + Upload cho Shop ═══════
     private async Task GenerateAndUploadShopAudioAsync(ShopTranslationModel translation, string shopId)

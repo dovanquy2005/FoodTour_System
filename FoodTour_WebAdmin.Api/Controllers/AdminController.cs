@@ -22,10 +22,5 @@ public class AdminController : ControllerBase
         return Ok(result);
     }
 
-    [HttpPost("dishes")]
-    public async Task<IActionResult> CreateDish([FromBody] CreateDishRequest request)
-    {
-        var result = await _foodService.CreateDishWithTranslationAsync(request);
-        return Ok(result);
-    }
+
 }

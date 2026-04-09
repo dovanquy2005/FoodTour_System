@@ -37,20 +37,7 @@
             </MudPaper>
         </MudItem>
 
-        <MudItem xs="12" sm="6" md="3">
-            <MudPaper Class="stat-card" Elevation="0" Style="padding: 24px; border-radius: 16px; border: 1px solid #F0E8E0; background: linear-gradient(135deg, #FFFFFF, #F0F8FF);">
-                <MudStack Spacing="2">
-                    <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                        <MudAvatar Size="Size.Medium" Style="background: linear-gradient(135deg, #5B8FD4, #7BAAF0);">
-                            <MudIcon Icon="@Icons.Material.Filled.RestaurantMenu" Style="color: white;" />
-                        </MudAvatar>
-                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text">+8%</MudChip>
-                    </MudStack>
-                    <MudText Typo="Typo.h4" Style="font-weight: 800; color: #2D1F14;">@_totalDishes</MudText>
-                    <MudText Typo="Typo.body2" Style="color: #8C7B6B;">Tổng món ăn</MudText>
-                </MudStack>
-            </MudPaper>
-        </MudItem>
+
 
         <MudItem xs="12" sm="6" md="3">
             <MudPaper Class="stat-card" Elevation="0" Style="padding: 24px; border-radius: 16px; border: 1px solid #F0E8E0; background: linear-gradient(135deg, #FFFFFF, #F0FFF4);">
@@ -162,7 +149,6 @@
                     <MudTh Style="font-weight: 700;">Tên quán</MudTh>
                     <MudTh Style="font-weight: 700;">Địa chỉ</MudTh>
                     <MudTh Style="font-weight: 700;">Đánh giá</MudTh>
-                    <MudTh Style="font-weight: 700;">Món ăn</MudTh>
                     <MudTh Style="font-weight: 700; text-align: right;">Trạng thái</MudTh>
                 </HeaderContent>
                 <RowTemplate>
@@ -180,9 +166,6 @@
                             ★ @context.Rating.ToString("0.0")
                         </MudChip>
                     </MudTd>
-                    <MudTd>
-                        <MudText Typo="Typo.body2">@context.Dishes.Count món</MudText>
-                    </MudTd>
                     <MudTd Style="text-align: right;">
                         <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">Hoạt động</MudChip>
                     </MudTd>
@@ -194,7 +177,6 @@
 
 @code {
     private int _totalShops;
-    private int _totalDishes;
     private string _avgRating = "0";
     private List<ShopModel>? _topShops;
     private List<ShopModel>? _recentShops;
@@ -210,11 +192,10 @@
     {
         using var Db = await DbFactory.CreateDbContextAsync();
         _totalShops = await Db.Shops.CountAsync();
-        _totalDishes = await Db.Dishes.CountAsync();
         var avg = _totalShops > 0 ? await Db.Shops.AverageAsync(s => s.Rating) : 0;
         _avgRating = avg.ToString("0.0");
 
         _topShops = await Db.Shops.Include(s => s.ShopTranslations).OrderByDescending(s => s.Rating).Take(5).ToListAsync();
-        _recentShops = await Db.Shops.Include(s => s.ShopTranslations).Include(s => s.Dishes).OrderByDescending(s => s.CreatedAt).Take(5).ToListAsync();
+        _recentShops = await Db.Shops.Include(s => s.ShopTranslations).OrderByDescending(s => s.CreatedAt).Take(5).ToListAsync();
     }
 }

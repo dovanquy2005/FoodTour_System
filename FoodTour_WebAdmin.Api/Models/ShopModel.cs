@@ -16,7 +16,7 @@ public class ShopModel
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     public ICollection<ShopTranslationModel> ShopTranslations { get; set; } = new List<ShopTranslationModel>();
-    public ICollection<DishModel> Dishes { get; set; } = new List<DishModel>();
+
 
     [NotMapped]
     public string QrNavigationUrl => $"https://foodtour-admin-api.onrender.com/foodtour/{Id}";

@@ -35,16 +35,12 @@
                 if (!Preferences.Default.ContainsKey("DatabaseMigratedV3"))
                 {
                     await _database.DropTableAsync<ShopTranslationModel>();
-                    await _database.DropTableAsync<DishTranslationModel>();
                     await _database.DropTableAsync<ShopModel>();
-                    await _database.DropTableAsync<DishModel>();
                     Preferences.Default.Set("DatabaseMigratedV3", true);
                 }
 
                 await _database.CreateTableAsync<ShopModel>();
-                await _database.CreateTableAsync<DishModel>();
                 await _database.CreateTableAsync<ShopTranslationModel>();
-                await _database.CreateTableAsync<DishTranslationModel>();
 
                 // Migration V4: Thêm bảng NotificationModel cho hệ thống cập nhật qua thông báo
                 await _database.CreateTableAsync<NotificationModel>();
@@ -225,47 +221,6 @@
                         }
                     }
 
-                    // ──── 2. Sync Dishes ────
-                    var dishesResponse = await SendWithRetryAsync(httpClient, $"{apiUrl}/api/dishes");
-                    if (dishesResponse.IsSuccessStatusCode)
-                    {
-                        var dishes = await dishesResponse.Content.ReadFromJsonAsync<List<DishModel>>();
-                        if (dishes != null && dishes.Count > 0)
-                        {
-                            // Dishes không có UpdatedAt trên server, dùng InsertOrReplace trực tiếp
-                            await _database!.RunInTransactionAsync(db =>
-                            {
-                                foreach (var dish in dishes)
-                                {
-                                    db.InsertOrReplace(dish);
-                                }
-                            });
-
-                            // Upsert dish translations
-                            await _database.RunInTransactionAsync(db =>
-                            {
-                                foreach (var dish in dishes)
-                                {
-                                    if (dish.DishTranslations != null)
-                                    {
-                                        foreach (var trans in dish.DishTranslations)
-                                        {
-                                            db.InsertOrReplace(trans);
-                                        }
-                                    }
-                                }
-                            });
-
-                            // Tải ảnh Dish về cache
-                            foreach (var dish in dishes)
-                            {
-                                if (!string.IsNullOrEmpty(dish.ImageUrl))
-                                {
-                                    await DownloadAndCacheFileAsync(httpClient, apiUrl, dish.ImageUrl);
-                                }
-                            }
-                        }
-                    }
 
                     // Lưu thời điểm đồng bộ thành công để CheckForUpdatesAsync không tạo notification trùng
                     if (hasChanges && updatedShopCount > 0)
@@ -392,27 +347,6 @@
                 return shop;
             }
 
-            public async Task<List<DishModel>> GetDishesByShopAsync(string shopId)
-            {
-                await Init();
-                var langCode = Preferences.Default.Get("AppLanguage", "vi");
-                var dishes = await _database!.Table<DishModel>().Where(d => d.ShopId == shopId).ToListAsync();
-
-                foreach (var dish in dishes)
-                {
-                    dish.ImageUrl = GetLocalPathIfExists(dish.ImageUrl) ?? dish.ImageUrl;
-
-                    var trans = await _database.Table<DishTranslationModel>()
-                        .Where(t => t.DishId == dish.Id && t.LanguageCode == langCode)
-                        .FirstOrDefaultAsync();
-
-                    if (trans != null)
-                    {
-                        dish.Name = trans.Name;
-                    }
-                }
-                return dishes;
-            }
 
             public async Task<int> AddShopAsync(ShopModel shop)
             {
@@ -466,14 +400,6 @@
                         }
                     }
 
-                    var dishes = await _database.Table<DishModel>().ToListAsync();
-                    foreach (var dish in dishes)
-                    {
-                        if (!string.IsNullOrEmpty(dish.ImageUrl))
-                        {
-                            await DownloadAndCacheFileAsync(httpClient, apiUrl, dish.ImageUrl);
-                        }
-                    }
 
                     return true;
                 }
@@ -803,50 +729,6 @@
                             // mà không cần khởi động lại ứng dụng.
                             WeakReferenceMessenger.Default.Send(new AudioFilesUpdatedMessage(shopIds));
                             System.Diagnostics.Debug.WriteLine($"[DownloadUpdate] Đã broadcast AudioFilesUpdatedMessage cho {shopIds.Count} shop.");
-                        }
-                    }
-
-                    // ──── 3. Cập nhật Dishes nếu có ────
-                    var dishesResponse = await SendWithRetryAsync(httpClient, $"{API_BASE_URL}/api/dishes");
-                    if (dishesResponse.IsSuccessStatusCode)
-                    {
-                        var allDishes = await dishesResponse.Content.ReadFromJsonAsync<List<DishModel>>();
-                        if (allDishes != null)
-                        {
-                            // Chỉ cập nhật dishes thuộc shops đã thay đổi
-                            var targetDishes = allDishes.Where(d => shopIds.Contains(d.ShopId)).ToList();
-
-                            await _database.RunInTransactionAsync(db =>
-                            {
-                                foreach (var dish in targetDishes)
-                                {
-                                    db.InsertOrReplace(dish);
-                                }
-                            });
-
-                            await _database.RunInTransactionAsync(db =>
-                            {
-                                foreach (var dish in targetDishes)
-                                {
-                                    if (dish.DishTranslations != null)
-                                    {
-                                        foreach (var trans in dish.DishTranslations)
-                                        {
-                                            db.InsertOrReplace(trans);
-                                        }
-                                    }
-                                }
-                            });
-
-                            // Tải ảnh dishes mới
-                            foreach (var dish in targetDishes)
-                            {
-                                if (!string.IsNullOrEmpty(dish.ImageUrl))
-                                {
-                                    DeleteOldCachedFile(dish.ImageUrl);
-                                    await DownloadAndCacheFileAsync(httpClient, API_BASE_URL, dish.ImageUrl);
-                                }
-                            }
                         }
                     }
 

@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -21,7 +20,6 @@ namespace FoodTour.Mobile.ViewModels
             {
                 if (SetProperty(ref shop, value) && value != null)
                 {
-                    LoadDishes(value.Id);
                     RefreshShopDataAsync(value.Id);
                 }
             }
@@ -48,9 +46,6 @@ namespace FoodTour.Mobile.ViewModels
             catch { }
         }
 
-        [ObservableProperty]
-        ObservableCollection<DishModel> dishes = new();
-
         public ShopDetailViewModel(DatabaseService dbService)
         {
             _dbService = dbService;
@@ -63,15 +58,6 @@ namespace FoodTour.Mobile.ViewModels
             await Shell.Current.GoToAsync("..");
         }
 
-        private async void LoadDishes(string shopId)
-        {
-            var data = await _dbService.GetDishesByShopAsync(shopId);
-            MainThread.BeginInvokeOnMainThread(() =>
-            {
-                Dishes = new ObservableCollection<DishModel>(data);
-            });
-        }
-
         public async void Receive(LanguageChangedMessage message)
         {
             // Nếu trang chi tiết đang mở và có shop hiện tại, reload lại dữ liệu Text / Translation từ DB
@@ -82,7 +68,7 @@ namespace FoodTour.Mobile.ViewModels
                     var updatedShop = await _dbService.GetShopAsync(shop.Id);
                     if (updatedShop != null)
                     {
-                        // Gắn lại Shop sẽ tự trigger OnPropertyChanged và gọi lại LoadDishes()
+                        // Gắn lại Shop sẽ tự trigger OnPropertyChanged
                         MainThread.BeginInvokeOnMainThread(() =>
                         {
                             Shop = updatedShop;
