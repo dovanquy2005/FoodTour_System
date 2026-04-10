@@ -413,7 +413,7 @@ public partial class MapPage : ContentPage
                 };
                 MainMap.MapElements.Add(polyline);
 
-                // Tự động xóa đường màu xanh sau 5 giây để tránh làm rối bản đồ
+                // Tự động xóa đường màu xanh sau 3 giây để tránh làm rối bản đồ
                 Task.Delay(TimeSpan.FromSeconds(3)).ContinueWith(_ =>
                 {
                     MainThread.BeginInvokeOnMainThread(() =>

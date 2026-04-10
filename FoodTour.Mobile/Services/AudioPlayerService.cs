@@ -93,7 +93,7 @@ public class AudioPlayerService : IAudioPlayerService, IRecipient<AudioFilesUpda
 
             // Lấy Audio file: ưu tiên cache cục bộ, nếu không thì tải từ mạng
             string resolvedPath = ImagePathHelper.ResolveImageUrl(audioUrlOrPath);
-
+            // file local không tồn tại => tải từ cloud server và lưu vào storage
             if (resolvedPath.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             {
                 _playerStatus = _localizationService["Audio_Downloading"] ?? "Đang tải audio...";
@@ -111,6 +111,8 @@ public class AudioPlayerService : IAudioPlayerService, IRecipient<AudioFilesUpda
             _player = AudioManager.Current.CreatePlayer(audioStream);
             _player.PlaybackEnded += OnPlaybackEnded;
             RequestAudioFocus();
+            
+            //dùng thư viện Plungin.MAUI.Audio để phát audio
             _player.Play();
 
             _playerStatus = _localizationService["Audio_Playing"] ?? "Đang phát audio...";

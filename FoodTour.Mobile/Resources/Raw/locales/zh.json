@@ -45,7 +45,7 @@
     "Scan_Title": "扫描二维码",
     "Scan_Subtitle": "扫描桌子上的二维码开始",
     "Scan_CameraInstruction": "将相机对准二维码",
-    "Scan_FooterInstruction": "将手机摄像头对准桌子上的二维码，聆听有关这道菜的科学解说。",
+    "Scan_FooterInstruction": "将手机摄像头对准二维码，扫描并收听音频指南。",
     "Alert_Title": "通知",
     "Alert_SampleTitle": "街道路线数据已更新",
     "Alert_SampleMessage": "已添加第 4 区蜗牛店的音频文件。",

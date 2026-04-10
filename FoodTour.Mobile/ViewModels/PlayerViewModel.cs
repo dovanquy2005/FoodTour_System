@@ -21,8 +21,10 @@ public partial class PlayerViewModel : ObservableObject
     // Properties proxying the service state
     public bool IsVisible => _audioService.IsPlayerVisible;
     public ShopModel? CurrentShop => _audioService.CurrentShop;
+
     public string PlayerStatus => _audioService.PlayerStatus;
     public string PlayIcon => _audioService.IsPlaying ? "pause.png" : "play.png";
+
     // Giải quyết đường dẫn ảnh: ưu tiên file cache cục bộ, nếu không có thì dùng URL API
     public string ShopImage => ImagePathHelper.ResolveImageUrl(_audioService.CurrentShop?.ImageUrl);
     public string ShopName => _audioService.CurrentShop?.Name ?? "Đang tải...";
@@ -39,8 +41,10 @@ public partial class PlayerViewModel : ObservableObject
         {
             OnPropertyChanged(nameof(IsVisible));
             OnPropertyChanged(nameof(CurrentShop));
+            // cập nhật UI sang "Tạm dừng" hoặc "Đang phát"
             OnPropertyChanged(nameof(PlayerStatus));
             OnPropertyChanged(nameof(PlayIcon));
+            //----------------------------------------
             OnPropertyChanged(nameof(ShopImage));
             OnPropertyChanged(nameof(ShopName));
             
@@ -88,5 +92,12 @@ public partial class PlayerViewModel : ObservableObject
     private void Close()
     {
         _audioService.Stop();
+
+        // Xóa sạch hàng đợi và hủy lệnh khôi phục QR mode
+#pragma warning disable CS0618
+        var walkingService = (Application.Current?.Windows.Count > 0 ? Application.Current.Windows[0].Page : Application.Current?.MainPage)?
+            .Handler?.MauiContext?.Services.GetService<WalkingSimulationService>();
+#pragma warning restore CS0618
+        walkingService?.HandleManualStop();
     }
 }

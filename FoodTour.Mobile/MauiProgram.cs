@@ -1,6 +1,7 @@
 using Microsoft.Maui.Controls.Hosting;
 using Microsoft.Maui.Hosting;
 using Microsoft.Maui.Controls.Maps;
+using ZXing.Net.Maui.Controls;
 using Microsoft.Maui.Maps;
 using FoodTour.Mobile.Views;
 using FoodTour.Mobile.ViewModels;
@@ -17,6 +18,7 @@ public static class MauiProgram
         var builder = MauiApp.CreateBuilder();
         builder
             .UseMauiApp<App>()
+            .UseBarcodeReader()
             .UseMauiMaps()
             .UseMauiCommunityToolkit()
             .ConfigureFonts(fonts =>

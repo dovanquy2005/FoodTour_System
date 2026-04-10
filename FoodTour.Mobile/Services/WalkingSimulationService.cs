@@ -22,6 +22,11 @@ public class WalkingSimulationService : IRecipient<LanguageChangedMessage>, IRec
     private DateTime _startTime;
     private Location? _lastKnownLocation; // Lưu vị trí cuối cùng để dùng khi cần check lại
 
+    // Các biến trạng thái để quản lý chế độ QR
+    private ShopModel? _interruptedShop = null;
+    private double _interruptedPosition = 0;
+    private bool _isQrModeActive = false;
+
     // Chống spam: Debounce + Cooldown
     private DateTime _lastCheckTime = DateTime.MinValue;
     private const int DebounceMs = 2_000; // ms tối thiểu giữa 2 lần check liên tiếp
@@ -294,6 +299,24 @@ public class WalkingSimulationService : IRecipient<LanguageChangedMessage>, IRec
         }
     }
 
+    public async Task PlayShopFromQrAsync(ShopModel qrShop)
+    {
+        // Kiểm tra nếu đang phát audio tự động thì lưu lại _currentShop vào _interruptedShop và lưu vị trí hiện tại.
+        if (_currentShop != null)
+        {
+            _interruptedShop = _currentShop;
+            _interruptedPosition = _audioService.CurrentPosition;
+            _audioService.Stop();
+        }
+
+        // Bật cờ ưu tiên đặc biệt (Bypass Cooldown)
+        _isQrModeActive = true;
+        _currentShop = qrShop;
+
+        // Bỏ qua check thời gian cooldown, phát ngay tiếng
+        await _audioService.PlayShopAsync(qrShop);
+    }
+
     /// <summary>
     /// Callback khi Audio hoàn thành thưc thụ.
     /// Đây là cơ chế tuần tự: Khi âm thanh xong thì Auto đẩy cho các shop kế tiếp nếu nằm trồng lên nhau.
@@ -301,6 +324,30 @@ public class WalkingSimulationService : IRecipient<LanguageChangedMessage>, IRec
     private void OnPlaybackEnded()
     {
         if (_currentShop == null) return;
+
+        // Xử lý chế độ QR ngắt quãng (Interrupt & Resume)
+        if (_isQrModeActive)
+        {
+            _isQrModeActive = false;
+            
+            if (_interruptedShop != null)
+            {
+                var resumeShop = _interruptedShop;
+                double resumePosition = _interruptedPosition;
+                
+                _interruptedShop = null;
+                _interruptedPosition = 0;
+                
+                _currentShop = resumeShop;
+                
+                MainThread.BeginInvokeOnMainThread(async () =>
+                {
+                    await _audioService.PlayShopAsync(resumeShop);
+                    _audioService.Seek(resumePosition);
+                });
+            }
+            return; // Return sớm để tránh việc ProcessAudioQueueAsync chạy sai dòng thời gian
+        }
 
         Console.WriteLine($"[GeoFence] Audio kết thúc cho {_currentShop.Name}, kiểm tra hàng đợi tuần tự...");
 
@@ -393,7 +440,17 @@ public class WalkingSimulationService : IRecipient<LanguageChangedMessage>, IRec
         }
     }
 
+    public void HandleManualStop()
+    {
+        _isQrModeActive = false;
+        _interruptedShop = null;
+        _currentShop = null;
 
+        lock (_audioQueue)
+        {
+            _audioQueue.Clear();
+        }
+    }
 
     // Gỡ bỏ đăng ký để tránh memory leak khi class hủy
     public void Dispose()

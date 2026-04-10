@@ -45,7 +45,7 @@
     "Scan_Title": "Scan QR Code",
     "Scan_Subtitle": "Scan the code at the table to start",
     "Scan_CameraInstruction": "Align the camera with the QR code",
-    "Scan_FooterInstruction": "Point your phone camera at the QR code on the table to hear a scientific commentary about the dish.",
+    "Scan_FooterInstruction": "Point your phone camera at the QR code to scan and listen to the audio guide.",
     "Alert_Title": "Alerts",
     "Alert_SampleTitle": "Street route data updated",
     "Alert_SampleMessage": "Audio files for District 4 snail shops have been added.",

@@ -45,7 +45,7 @@
     "Scan_Title": "Quét mã QR",
     "Scan_Subtitle": "Quét mã tại bàn để bắt đầu",
     "Scan_CameraInstruction": "Đưa camera vào mã QR",
-    "Scan_FooterInstruction": "Hướng camera điện thoại vào mã QR trên bàn để nghe thuyết minh khoa học về món ăn.",
+    "Scan_FooterInstruction": "Hướng camera điện thoại vào mã QR để quét và nghe thuyết minh.",
     "Alert_Title": "Thông báo",
     "Alert_SampleTitle": "Dữ liệu tuyến phố đã cập nhật",
     "Alert_SampleMessage": "Đã thêm file audio cho các quán ốc Quận 4.",

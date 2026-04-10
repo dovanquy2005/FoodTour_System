@@ -315,6 +315,16 @@
             var detectedLang = MapBrowserLanguage(browserLang);
             SwitchLanguage(detectedLang);
             StateHasChanged();
+
+            // Tự động phát audio ngay khi trang render xong (Autoplay UX)
+            // Delay nhỏ để DOM cập nhật xong thẻ <audio> với src đúng ngôn ngữ
+            await Task.Delay(300);
+            if (!string.IsNullOrEmpty(_currentTranslation?.AudioUrl) && _currentTranslation.IsAudioGenerated)
+            {
+                await JS.InvokeVoidAsync("playAudioAuto", "ft-audio-player");
+                _isPlaying = true;
+                StateHasChanged();
+            }
         }
     }
 
@@ -328,17 +338,40 @@
         return SupportedLanguages.Contains(shortCode) ? shortCode : "en";
     }
 
-    private void SwitchLanguage(string langCode)
+    private async void SwitchLanguage(string langCode)
     {
         _selectedLang = langCode;
         _currentTranslation = _shop?.ShopTranslations
             .FirstOrDefault(t => t.LanguageCode == langCode)
             ?? _shop?.ShopTranslations.FirstOrDefault(t => t.LanguageCode == "en")
             ?? _shop?.ShopTranslations.FirstOrDefault();
-        _isPlaying = false;
 
         // Cập nhật UI strings theo ngôn ngữ mới
         LoadUiStrings(langCode);
+
+        // Cập nhật DOM trước rồi mới gọi JS (để thẻ <audio> có src mới)
+        StateHasChanged();
+
+        // Tự động phát audio ngôn ngữ mới (không cần user bấm Play lại)
+        await Task.Delay(200); // Chờ Blazor re-render xong thẻ <audio>
+        if (!string.IsNullOrEmpty(_currentTranslation?.AudioUrl) && _currentTranslation.IsAudioGenerated)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("reloadAndPlayAudio", "ft-audio-player");
+                _isPlaying = true;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[FoodTour] Auto-play error: {ex.Message}");
+                _isPlaying = false;
+            }
+        }
+        else
+        {
+            _isPlaying = false;
+        }
+        StateHasChanged();
     }
 
     private async Task ToggleAudio()
