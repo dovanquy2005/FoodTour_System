@@ -34,13 +34,25 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddAuthorizationCore();
 
 // Đăng ký Cookie Authentication Scheme để thoả mãn ASP.NET Core Authorization Middleware.
-// Thực tế xác thực do CustomAuthStateProvider đảm nhiệm — scheme này chỉ định hướng
-// người dùng chưa xác thực về /login thay vì ném lỗi 500.
+// QUAN TRỌNG: Không đặt LoginPath — để Cookie middleware không tự Challenge (redirect /login)
+// các anonymous request. Việc redirect do AuthorizeRouteView + RedirectToLogin đảm nhiệm
+// ở tầng Blazor, đảm bảo [AllowAnonymous] trên các trang công khai (FoodTour.razor...) hoạt động.
 builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
-        options.LoginPath = "/login";
-        options.AccessDeniedPath = "/login";
+        // Không set LoginPath — tắt auto-challenge của Cookie middleware
+        // (nếu set, nó sẽ redirect cả [AllowAnonymous] pages về /login)
+        options.Events.OnRedirectToLogin = ctx =>
+        {
+            // Trả về 401 thay vì redirect — Blazor AuthorizeRouteView sẽ xử lý tiếp
+            ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            return Task.CompletedTask;
+        };
+        options.Events.OnRedirectToAccessDenied = ctx =>
+        {
+            ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+            return Task.CompletedTask;
+        };
     });
 
 builder.Services.AddScoped<Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider, FoodTour_WebAdmin.Api.Services.CustomAuthStateProvider>();

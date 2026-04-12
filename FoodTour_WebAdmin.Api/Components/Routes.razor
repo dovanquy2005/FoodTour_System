@@ -1,4 +1,5 @@
 @using FoodTour_WebAdmin.Api.Components.Shared
+@inject NavigationManager Navigation
 
 <CascadingAuthenticationState>
     <MudPopoverProvider />
@@ -10,20 +11,36 @@
 
     <Router AppAssembly="typeof(Program).Assembly">
         <Found Context="routeData">
-            <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
-                <NotAuthorized>
-                    @* Dùng component riêng thay vì NavigateTo inline.
-                       OnAfterRender trong RedirectToLogin KHÔNG chạy trong Prerender,
-                       tránh loop: Prerender→Anonymous→/login→LocalStorage→Authenticated→/dashboard→... *@
-                    <RedirectToLogin />
-                </NotAuthorized>
-                <Authorizing>
-                    <div style="display:flex; align-items:center; justify-content:center; height:100vh; gap:16px;">
-                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-                        <MudText Style="color:#64748b;">Đang xác thực...</MudText>
-                    </div>
-                </Authorizing>
-            </AuthorizeRouteView>
+            @{
+                // ── Xác định route có phải public không (không cần auth) ──
+                // ToBaseRelativePath trả về path không có dấu "/" đầu, vd: "foodtour/abc123"
+                var relativePath = Navigation.ToBaseRelativePath(Navigation.Uri);
+                var isPublicRoute = relativePath.StartsWith("foodtour/", StringComparison.OrdinalIgnoreCase)
+                                 || relativePath.Equals("foodtour", StringComparison.OrdinalIgnoreCase);
+            }
+
+            @if (isPublicRoute)
+            {
+                @* ── PUBLIC ROUTE: RouteView thuần — KHÔNG chạy auth evaluation ──
+                   FoodTour.razor dùng @layout PublicLayout nên DefaultLayout ở đây không quan trọng *@
+                <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.PublicLayout)" />
+            }
+            else
+            {
+                @* ── PROTECTED ROUTE: AuthorizeRouteView kiểm tra auth bình thường *@
+                <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
+                    <NotAuthorized>
+                        <RedirectToLogin />
+                    </NotAuthorized>
+                    <Authorizing>
+                        <div style="display:flex; align-items:center; justify-content:center; height:100vh; gap:16px;">
+                            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                            <MudText Style="color:#64748b;">Đang xác thực...</MudText>
+                        </div>
+                    </Authorizing>
+                </AuthorizeRouteView>
+            }
+
             <FocusOnNavigate RouteData="routeData" Selector="h1" />
         </Found>
     </Router>

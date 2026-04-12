@@ -1,11 +1,25 @@
 @inject NavigationManager Navigation
 
 @code {
+    // ─── Danh sách path công khai — không cần đăng nhập ───
+    private static readonly string[] PublicPaths =
+    [
+        "/foodtour"   // Trang khách vãng lai quét QR
+    ];
+
     // OnAfterRender KHÔNG chạy trong Prerender — đảm bảo chỉ redirect
     // sau khi circuit đã kết nối và LocalStorage đã sẵn sàng.
     protected override void OnAfterRender(bool firstRender)
     {
-        if (firstRender)
+        if (!firstRender) return;
+
+        var path = new Uri(Navigation.Uri).AbsolutePath;
+
+        // Nếu đang ở trang công khai → không redirect về /login
+        bool isPublic = PublicPaths.Any(p =>
+            path.StartsWith(p, StringComparison.OrdinalIgnoreCase));
+
+        if (!isPublic)
             Navigation.NavigateTo("/login");
     }
 }
