@@ -1,0 +1,340 @@
+@page "/owner/my-shop"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Owner")]
+@inject IDbContextFactory<AppDbContext> DbFactory
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<PageTitle>Quán của tôi — FoodTour Owner</PageTitle>
+
+<MudText Typo="Typo.h4" Style="font-weight: 800; color: #1e293b; margin-bottom: 4px;">
+    🏪 Quán của tôi
+</MudText>
+<MudText Typo="Typo.body2" Style="color: #64748b; margin-bottom: 28px;">
+    Xem và đề xuất cập nhật thông tin quán ăn của bạn
+</MudText>
+
+@if (_isLoading)
+{
+    <div style="display:flex; align-items:center; gap:16px; padding:48px 0;">
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Medium" />
+        <MudText Typo="Typo.body1" Style="color:#64748b;">Đang tải thông tin quán...</MudText>
+    </div>
+}
+else if (_shop == null)
+{
+    <!-- Chưa được gán quán -->
+    <MudPaper Elevation="0" Style="border-radius:20px; border:2px dashed #e2e8f0; padding:64px 32px; text-align:center;">
+        <MudIcon Icon="@Icons.Material.Filled.StoreMallDirectory" Style="font-size:64px; color:#cbd5e1;" />
+        <MudText Typo="Typo.h6" Style="font-weight:700; color:#94a3b8; margin-top:16px;">
+            Bạn chưa được liên kết với quán nào
+        </MudText>
+        <MudText Typo="Typo.body2" Style="color:#b0bec5; margin-top:8px; max-width:400px; margin-left:auto; margin-right:auto;">
+            Vui lòng liên hệ Admin để được gán quyền quản lý quán.
+            Sau khi được gán, thông tin quán sẽ hiển thị tại đây.
+        </MudText>
+    </MudPaper>
+}
+else
+{
+    <!-- Banner trạng thái Pending -->
+    @if (IsPending)
+    {
+        <MudAlert Severity="Severity.Warning" Icon="@Icons.Material.Filled.HourglassTop"
+                  Style="border-radius:14px; margin-bottom:20px; font-weight:600;">
+            ⏳ Yêu cầu cập nhật của bạn đang chờ Admin duyệt. Form tạm thời bị khóa.
+        </MudAlert>
+    }
+
+    <!-- Banner trạng thái Rejected -->
+    @if (IsRejected && _latestSubmission != null)
+    {
+        <MudAlert Severity="Severity.Error" Icon="@Icons.Material.Filled.Cancel"
+                  Style="border-radius:14px; margin-bottom:20px;">
+            <MudText Typo="Typo.body2" Style="font-weight:700; margin-bottom:4px;">
+                ❌ Yêu cầu của bạn đã bị từ chối. Bạn có thể chỉnh sửa và gửi lại.
+            </MudText>
+            @if (!string.IsNullOrWhiteSpace(_latestSubmission.AdminNote))
+            {
+                <MudText Typo="Typo.body2">
+                    <strong>Lý do:</strong> @_latestSubmission.AdminNote
+                </MudText>
+            }
+        </MudAlert>
+    }
+
+    <!-- Banner trạng thái Approved -->
+    @if (IsApproved)
+    {
+        <MudAlert Severity="Severity.Success" Icon="@Icons.Material.Filled.CheckCircle"
+                  Style="border-radius:14px; margin-bottom:20px;">
+            <MudText Typo="Typo.body2" Style="font-weight:700; margin-bottom:4px;">
+                ✅ Yêu cầu cập nhật đã được Admin duyệt thành công!
+            </MudText>
+            <MudText Typo="Typo.body2">
+                Thông tin mới đang hiển thị trên App. Bạn có thể tiếp tục đề xuất cập nhật khác nếu muốn.
+            </MudText>
+        </MudAlert>
+    }
+
+    <!-- Banner quán mới — chưa có submission nào và toạ độ = 0 -->
+    @if (_isNewShopPendingReview && _latestSubmission == null)
+    {
+        <MudAlert Severity="Severity.Info" Icon="@Icons.Material.Filled.Verified"
+                  Style="border-radius:14px; margin-bottom:20px;">
+            <MudText Typo="Typo.body2" Style="font-weight:700; margin-bottom:4px;">
+                ℹ️ Hồ sơ quán đang chờ Admin kiểm duyệt lần đầu.
+            </MudText>
+            <MudText Typo="Typo.body2">
+                Bạn có thể bổ sung <strong>Mô tả</strong> và <strong>Tọa độ</strong> bên dưới để giúp Admin duyệt nhanh hơn.
+            </MudText>
+        </MudAlert>
+    }
+
+    <MudGrid Spacing="4">
+        <!-- ══ CỘT TRÁI: Thông tin hiện tại ══ -->
+        <MudItem xs="12" md="5">
+            <MudPaper Elevation="0" Style="border-radius:20px; border:1px solid #f1f5f9; overflow:hidden; height:100%;">
+                <!-- Ảnh quán -->
+                @if (!string.IsNullOrEmpty(_shop.ImageUrl))
+                {
+                    <img src="@_shop.ImageUrl" alt="Ảnh quán"
+                         style="width:100%; height:220px; object-fit:cover;" />
+                }
+                else
+                {
+                    <div style="width:100%; height:220px; background:linear-gradient(135deg,#f1f5f9,#e2e8f0);
+                                display:flex; align-items:center; justify-content:center;">
+                        <MudIcon Icon="@Icons.Material.Filled.Image" Style="font-size:64px; color:#cbd5e1;" />
+                    </div>
+                }
+
+                <div style="padding:20px;">
+                    <MudText Typo="Typo.overline" Style="color:#94a3b8; letter-spacing:1.5px; font-size:0.7rem;">
+                        THÔNG TIN HIỆN TẠI
+                    </MudText>
+                    <MudText Typo="Typo.h6" Style="font-weight:800; color:#1e293b; margin-top:4px;">
+                        @_shop.Name
+                    </MudText>
+                    <MudText Typo="Typo.body2" Style="color:#64748b; margin-top:4px;">
+                        <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" Style="vertical-align:middle; margin-right:4px;" />
+                        @_shop.Address
+                    </MudText>
+
+                    <MudDivider Style="margin: 16px 0;" />
+
+                    <MudStack Row Spacing="2" Style="flex-wrap:wrap;">
+                        <MudChip T="string" Icon="@Icons.Material.Filled.Star" Color="Color.Warning" Size="Size.Small">
+                            @_shop.Rating.ToString("F1")
+                        </MudChip>
+                        <MudChip T="string" Icon="@Icons.Material.Filled.GpsFixed" Size="Size.Small">
+                            @_shop.Latitude.ToString("F5"), @_shop.Longitude.ToString("F5")
+                        </MudChip>
+                    </MudStack>
+
+                    <MudText Typo="Typo.body2" Style="color:#475569; margin-top:16px; line-height:1.6; font-size:0.85rem;">
+                        @_shop.Description
+                    </MudText>
+                </div>
+            </MudPaper>
+        </MudItem>
+
+        <!-- ══ CỘT PHẢI: Form đề xuất cập nhật ══ -->
+        <MudItem xs="12" md="7">
+            <MudPaper Elevation="0" Style="border-radius:20px; border:1px solid #f1f5f9; padding:28px;">
+                <MudText Typo="Typo.subtitle1" Style="font-weight:800; color:#1e293b; margin-bottom:4px;">
+                    ✏️ Đề xuất cập nhật thông tin
+                </MudText>
+                <MudText Typo="Typo.body2" Style="color:#64748b; margin-bottom:20px;">
+                    Thông tin sẽ được gửi tới Admin và áp dụng sau khi được duyệt.
+                </MudText>
+
+                <MudForm @ref="_submitForm" @bind-IsValid="_isFormValid">
+                    <MudStack Spacing="4">
+                        <MudTextField @bind-Value="_draft.Name" Label="Tên quán" Variant="Variant.Outlined"
+                                      Required="true" RequiredError="Vui lòng nhập tên quán"
+                                      Disabled="FormLocked" />
+
+                        <MudTextField @bind-Value="_draft.Address" Label="Địa chỉ" Variant="Variant.Outlined"
+                                      Required="true" RequiredError="Vui lòng nhập địa chỉ"
+                                      Disabled="FormLocked" />
+
+                        <MudTextField @bind-Value="_draft.Description" Label="Mô tả / Kịch bản Audio"
+                                      Variant="Variant.Outlined" Lines="5"
+                                      Placeholder="Giới thiệu về quán..."
+                                      Disabled="FormLocked" />
+
+                        <MudTextField @bind-Value="_draft.ImageUrl" Label="URL Ảnh bìa" Variant="Variant.Outlined"
+                                      Placeholder="https://..." Disabled="FormLocked" />
+
+                        <MudGrid Spacing="3">
+                            <MudItem xs="6">
+                                <MudNumericField @bind-Value="_draft.Latitude" Label="Vĩ độ (Latitude)"
+                                                 Variant="Variant.Outlined" Format="F6"
+                                                 Disabled="FormLocked" />
+                            </MudItem>
+                            <MudItem xs="6">
+                                <MudNumericField @bind-Value="_draft.Longitude" Label="Kinh độ (Longitude)"
+                                                 Variant="Variant.Outlined" Format="F6"
+                                                 Disabled="FormLocked" />
+                            </MudItem>
+                        </MudGrid>
+
+                        <MudNumericField @bind-Value="_draft.Rating" Label="Xếp hạng (Rating)"
+                                         Variant="Variant.Outlined" Min="0" Max="5" Format="F1"
+                                         Disabled="FormLocked" />
+
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.Send"
+                                   Size="Size.Large" FullWidth="true"
+                                   OnClick="HandleSubmit"
+                                   Disabled="@(FormLocked || _isSubmitting || !_isFormValid)"
+                                   Style="border-radius:12px; font-weight:700; padding:14px;">
+                            @if (_isSubmitting)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                <span>Đang gửi...</span>
+                            }
+                            else
+                            {
+                                <span>Gửi yêu cầu cập nhật</span>
+                            }
+                        </MudButton>
+                    </MudStack>
+                </MudForm>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    // ── State ──
+    private bool _isLoading = true;
+    private bool _isSubmitting = false;
+    private bool _isFormValid = true;
+    private bool _isNewShopPendingReview = false;
+
+    private ShopModel? _shop;
+    // Submission mới nhất (bất kể status) — 1 query thay vì 3 query riêng
+    private ShopSubmission? _latestSubmission;
+    private string _ownerId = "";
+    private MudForm? _submitForm;
+
+    private ShopSubmission _draft = new();
+
+    // Derived helpers — rõ ràng, không có state thug
+    private bool IsPending  => _latestSubmission?.Status == SubmissionStatus.Pending;
+    private bool IsRejected => _latestSubmission?.Status == SubmissionStatus.Rejected;
+    private bool IsApproved => _latestSubmission?.Status == SubmissionStatus.Approved;
+    private bool FormLocked => IsPending;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Lấy ID Owner từ Claims
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _ownerId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "";
+
+        if (string.IsNullOrEmpty(_ownerId))
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        await LoadShopDataAsync();
+    }
+
+    private async Task LoadShopDataAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            _shop = await db.Shops
+                .Include(s => s.ShopTranslations)
+                .FirstOrDefaultAsync(s => s.OwnerId == _ownerId);
+
+            if (_shop != null)
+            {
+                _isNewShopPendingReview = _shop.Latitude == 0 && _shop.Longitude == 0;
+
+                // Lấy submission MỚI NHẤT (bất kể status) — dùng 1 query
+                _latestSubmission = await db.ShopSubmissions
+                    .Where(s => s.ShopId == _shop.Id && s.OwnerId == _ownerId)
+                    .OrderByDescending(s => s.UpdatedAt)
+                    .FirstOrDefaultAsync();
+
+                // Prefill draft:
+                // • Rejected → giữ nguyên nội dung Owner đã sử a (trong submission bị reject)
+                // • Approved / null → dùng dữ liệu hiện tại của quán (Shop đã được cập nhật)
+                var src = IsRejected ? _latestSubmission! : null;
+                _draft = new ShopSubmission
+                {
+                    ShopId      = _shop.Id,
+                    OwnerId     = _ownerId,
+                    Name        = src?.Name        ?? _shop.Name,
+                    Address     = src?.Address     ?? _shop.Address,
+                    Description = src?.Description ?? _shop.Description,
+                    ImageUrl    = src?.ImageUrl    ?? _shop.ImageUrl,
+                    Latitude    = src?.Latitude    ?? _shop.Latitude,
+                    Longitude   = src?.Longitude   ?? _shop.Longitude,
+                    Radius      = src?.Radius      ?? _shop.Radius,
+                    Priority    = src?.Priority    ?? _shop.Priority,
+                    Rating      = src?.Rating      ?? _shop.Rating,
+                };
+            }
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (_shop == null || IsPending) return;
+
+        await _submitForm!.Validate();
+        if (!_isFormValid) return;
+
+        _isSubmitting = true;
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            var submission = new ShopSubmission
+            {
+                Id          = Guid.NewGuid().ToString(),
+                ShopId      = _shop.Id,
+                OwnerId     = _ownerId,
+                Name        = _draft.Name,
+                Address     = _draft.Address,
+                Description = _draft.Description,
+                ImageUrl    = _draft.ImageUrl,
+                Latitude    = _draft.Latitude,
+                Longitude   = _draft.Longitude,
+                Radius      = _draft.Radius,
+                Priority    = _draft.Priority,
+                Rating      = _draft.Rating,
+                Status      = SubmissionStatus.Pending,
+                CreatedAt   = DateTime.UtcNow,
+                UpdatedAt   = DateTime.UtcNow,
+            };
+
+            db.ShopSubmissions.Add(submission);
+            await db.SaveChangesAsync();
+
+            // Cập nhật local state — không cần reload
+            _latestSubmission = submission;
+            Snackbar.Add("✅ Yêu cầu cập nhật đã được gửi! Vui lòng chờ Admin xét duyệt.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Lỗi khi gửi yêu cầu: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+}

@@ -32,6 +32,17 @@ builder.Services.AddSwaggerGen();
 
 // Blazor Server Auth & Components
 builder.Services.AddAuthorizationCore();
+
+// Đăng ký Cookie Authentication Scheme để thoả mãn ASP.NET Core Authorization Middleware.
+// Thực tế xác thực do CustomAuthStateProvider đảm nhiệm — scheme này chỉ định hướng
+// người dùng chưa xác thực về /login thay vì ném lỗi 500.
+builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/login";
+        options.AccessDeniedPath = "/login";
+    });
+
 builder.Services.AddScoped<Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider, FoodTour_WebAdmin.Api.Services.CustomAuthStateProvider>();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
@@ -101,6 +112,10 @@ app.UseAntiforgery();
 
 // CORS
 app.UseCors();
+
+// Authentication & Authorization Middleware (phải sau UseCors, trước MapControllers)
+app.UseAuthentication();
+app.UseAuthorization();
 
 // API Controllers
 app.MapControllers();

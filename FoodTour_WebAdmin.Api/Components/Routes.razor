@@ -1,3 +1,5 @@
+@using FoodTour_WebAdmin.Api.Components.Shared
+
 <CascadingAuthenticationState>
     <MudPopoverProvider />
     <MudDialogProvider FullWidth="true" MaxWidth="MaxWidth.Small"
@@ -8,7 +10,20 @@
 
     <Router AppAssembly="typeof(Program).Assembly">
         <Found Context="routeData">
-            <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
+            <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
+                <NotAuthorized>
+                    @* Dùng component riêng thay vì NavigateTo inline.
+                       OnAfterRender trong RedirectToLogin KHÔNG chạy trong Prerender,
+                       tránh loop: Prerender→Anonymous→/login→LocalStorage→Authenticated→/dashboard→... *@
+                    <RedirectToLogin />
+                </NotAuthorized>
+                <Authorizing>
+                    <div style="display:flex; align-items:center; justify-content:center; height:100vh; gap:16px;">
+                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                        <MudText Style="color:#64748b;">Đang xác thực...</MudText>
+                    </div>
+                </Authorizing>
+            </AuthorizeRouteView>
             <FocusOnNavigate RouteData="routeData" Selector="h1" />
         </Found>
     </Router>

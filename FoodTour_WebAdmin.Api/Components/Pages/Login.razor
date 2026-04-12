@@ -67,6 +67,9 @@
         </MudForm>
 
         <div class="footer-text">
+            Chưa có tài khoản chủ quán? <a href="/register">Dăng ký tại đây</a>
+        </div>
+        <div class="footer-text" style="margin-top:8px;">
             Bằng việc đăng nhập, bạn đồng ý với <a href="#">Điều khoản sử dụng</a> của hệ thống.
         </div>
     </div>
@@ -288,13 +291,19 @@
     private InputType _passwordInput = InputType.Password;
     private string _passwordInputIcon = Icons.Material.Filled.VisibilityOff;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // Nếu đã đăng nhập thì đá về admin luôn
+        if (!firstRender) return;
+
+        // Chỉ chạy sau khi Blazor đã hydrate xong (LocalStorage đọc được).
+        // OnInitializedAsync chạy trong Prerender khi JS chưa sẵn sàng — đọc
+        // LocalStorage và lúc này sẽ trả về anonymous dù user đã đăng nhập.
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         if (authState.User.Identity?.IsAuthenticated == true)
         {
-            Navigation.NavigateTo("/shops");
+            var role = authState.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+            var dest  = role == "Admin" ? "/dashboard" : "/owner/my-shop";
+            Navigation.NavigateTo(dest); // soft-navigate, KHÔNG forceLoad
         }
     }
 
@@ -325,12 +334,15 @@
             if (user != null)
             {
                 var customAuthStateProvider = (FoodTour_WebAdmin.Api.Services.CustomAuthStateProvider)AuthStateProvider;
-                customAuthStateProvider.MarkUserAsAuthenticated(user);
+                await customAuthStateProvider.MarkUserAsAuthenticated(user);
 
                 Snackbar.Add($"Đăng nhập thành công! Xin chào {user.FullName}", Severity.Success);
-                
-                // Điều hướng sang trang Tổng quan (/dashboard)
-                Navigation.NavigateTo("/dashboard");
+
+                // Phân Role: Admin → /dashboard | Owner → /owner/my-shop
+                // Soft-navigate đủ — _cachedUser đã set trong Scoped DI instance này,
+                // KHÔNG dùng forceLoad:true (sẽ gây loop vì Prerender trả Anonymous).
+                var destination = user.Role == "Admin" ? "/dashboard" : "/owner/my-shop";
+                Navigation.NavigateTo(destination);
             }
             else
             {

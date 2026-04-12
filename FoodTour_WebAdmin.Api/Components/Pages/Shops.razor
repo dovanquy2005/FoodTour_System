@@ -138,10 +138,26 @@
                     </MudText>
                 </MudTd>
                 <MudTd>
-                    <MudChip T="string" Size="Size.Small"
-                             Style="@($"background: {(context.Rating >= 4.5 ? "#FFF0E6" : context.Rating >= 4 ? "#F0FFF4" : "#FBF7F2")}; color: {(context.Rating >= 4.5 ? "#E8672A" : context.Rating >= 4 ? "#5DAA68" : "#8C7B6B")}; font-weight: 700;")">
-                        ★ @context.Rating.ToString("0.0")
-                    </MudChip>
+                    <MudStack Spacing="1">
+                        <MudChip T="string" Size="Size.Small"
+                                 Style="@($"background: {(context.Rating >= 4.5 ? "#FFF0E6" : context.Rating >= 4 ? "#F0FFF4" : "#FBF7F2")}; color: {(context.Rating >= 4.5 ? "#E8672A" : context.Rating >= 4 ? "#5DAA68" : "#8C7B6B")}; font-weight: 700;")">
+                            ★ @context.Rating.ToString("0.0")
+                        </MudChip>
+                        @if (context.IsActive)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text"
+                                     Icon="@Icons.Material.Filled.Visibility" Style="font-size:0.7rem; padding:2px 6px;">
+                                Kích hoạt
+                            </MudChip>
+                        }
+                        else
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Text"
+                                     Icon="@Icons.Material.Filled.VisibilityOff" Style="font-size:0.7rem; padding:2px 6px;">
+                                Ẩn
+                            </MudChip>
+                        }
+                    </MudStack>
                 </MudTd>
                 <MudTd>
                     <MudText Typo="Typo.caption" Style="color: #B5A899; font-family: monospace !important;">
@@ -231,7 +247,7 @@
                 </MudGrid>
                 <MudNumericField @bind-Value="_editShop.Rating" Label="Đánh giá (0-5)" Variant="Variant.Outlined"
                                  Min="0.0" Max="5.0" Step="0.1" Immediate="true" />
-                <MudSwitch @bind-Value="_editShop.IsVisited" Label="Đã ghé thăm" Color="Color.Primary" />
+                <MudSwitch @bind-Value="_editShop.IsActive" Label="Kích hoạt (Hiển thị trên App)" Color="Color.Success" />
             </MudStack>
         </MudForm>
     </DialogContent>
@@ -313,7 +329,7 @@
             Longitude = ShopModel.Longitude,
             Radius = ShopModel.Radius,
             Priority = ShopModel.Priority,
-            IsVisited = ShopModel.IsVisited,
+            IsActive     = ShopModel.IsActive,
             Rating = ShopModel.Rating,
         };
         _dialogVisible = true;

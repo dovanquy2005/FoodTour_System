@@ -19,12 +19,14 @@ public class ShopsController : ControllerBase
     }
 
     // GET: api/shops
+    // Chỉ trả về các quán đã kích hoạt (IsActive = true) cho Mobile App
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ShopModel>>> GetAll()
     {
         using var _db = await _dbFactory.CreateDbContextAsync();
         var shops = await _db.Shops
             .Include(s => s.ShopTranslations)
+            .Where(s => s.IsActive)           // ← chỉ gửi quán đang kích hoạt
             .OrderByDescending(s => s.Rating)
             .ToListAsync();
         return Ok(shops);
@@ -113,10 +115,10 @@ public class ShopsController : ControllerBase
             }
         }
 
-        // Lọc các shop có UpdatedAt > sinceDate
+        // Lọc các shop đang kích hoạt và có UpdatedAt > sinceDate
         var updatedShops = await _db.Shops
             .Include(s => s.ShopTranslations)
-            .Where(s => s.UpdatedAt > sinceDate)
+            .Where(s => s.IsActive && s.UpdatedAt > sinceDate)  // ← chỉ thông báo về quán active
             .ToListAsync();
 
         if (updatedShops.Count == 0)

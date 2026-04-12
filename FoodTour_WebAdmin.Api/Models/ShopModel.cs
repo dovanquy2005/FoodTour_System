@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations;
 
 namespace FoodTour_WebAdmin.Api.Models;
 
@@ -11,7 +12,12 @@ public class ShopModel
     public double Radius { get; set; } 
     public int Priority { get; set; } 
     public double Rating { get; set; }
-    public bool IsVisited { get; set; }
+    public bool IsActive { get; set; } = true;  // true = hiển thị trên App
+    public string? OwnerId { get; set; }
+
+    // Navigation Property — tải kèm thông tin chủ quán khi Include()
+    [ForeignKey("OwnerId")]
+    public virtual UserModel? Owner { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

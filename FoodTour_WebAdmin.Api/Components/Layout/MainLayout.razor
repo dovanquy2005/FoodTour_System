@@ -129,10 +129,10 @@
         }
     }
 
-    private void Logout()
+    private async Task Logout()
     {
         var customAuthStateProvider = (FoodTour_WebAdmin.Api.Services.CustomAuthStateProvider)AuthStateProvider;
-        customAuthStateProvider.MarkUserAsLoggedOut();
+        await customAuthStateProvider.MarkUserAsLoggedOut();
         Navigation.NavigateTo("/login");
     }
 }

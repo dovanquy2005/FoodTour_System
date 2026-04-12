@@ -12,29 +12,52 @@
     </div>
 
     <!-- Navigation -->
-    <MudText Typo="Typo.overline" Style="padding: 8px 16px 4px; color: #B5A899; letter-spacing: 1.5px; font-weight: 600;">
-        TỔNG QUAN
-    </MudText>
-    <MudNavLink Href="/dashboard" Match="NavLinkMatch.All"
-                Icon="@Icons.Material.Filled.Dashboard"
-                Style="border-radius: 10px; margin: 2px 4px;">
-        Dashboard
-    </MudNavLink>
+    <AuthorizeView Roles="Admin">
+        <Authorized>
+            <MudText Typo="Typo.overline" Style="padding: 8px 16px 4px; color: #B5A899; letter-spacing: 1.5px; font-weight: 600;">
+                TỔNG QUAN
+            </MudText>
+            <MudNavLink Href="/dashboard" Match="NavLinkMatch.All"
+                        Icon="@Icons.Material.Filled.Dashboard"
+                        Style="border-radius: 10px; margin: 2px 4px;">
+                Dashboard
+            </MudNavLink>
 
-    <MudText Typo="Typo.overline" Style="padding: 16px 16px 4px; color: #B5A899; letter-spacing: 1.5px; font-weight: 600;">
-        QUẢN LÝ
-    </MudText>
-    <MudNavLink Href="/shops" Match="NavLinkMatch.Prefix"
-                Icon="@Icons.Material.Filled.Storefront"
-                Style="border-radius: 10px; margin: 2px 4px;">
-        Quán ăn
-    </MudNavLink>
+            <MudText Typo="Typo.overline" Style="padding: 16px 16px 4px; color: #B5A899; letter-spacing: 1.5px; font-weight: 600;">
+                QUẢN LÝ
+            </MudText>
+            <MudNavLink Href="/shops" Match="NavLinkMatch.Prefix"
+                        Icon="@Icons.Material.Filled.Storefront"
+                        Style="border-radius: 10px; margin: 2px 4px;">
+                Quán ăn
+            </MudNavLink>
 
-    <MudNavLink Href="/qr-management" Match="NavLinkMatch.Prefix"
-                Icon="@Icons.Material.Filled.QrCode2"
-                Style="border-radius: 10px; margin: 2px 4px;">
-        Quản lý QR
-    </MudNavLink>
+            <MudNavLink Href="/qr-management" Match="NavLinkMatch.Prefix"
+                        Icon="@Icons.Material.Filled.QrCode2"
+                        Style="border-radius: 10px; margin: 2px 4px;">
+                Quản lý QR
+            </MudNavLink>
+
+            <MudNavLink Href="/admin/shop-submissions" Match="NavLinkMatch.Prefix"
+                        Icon="@Icons.Material.Filled.FactCheck"
+                        Style="border-radius: 10px; margin: 2px 4px;">
+                Duyệt yêu cầu
+            </MudNavLink>
+        </Authorized>
+    </AuthorizeView>
+
+    <AuthorizeView Roles="Owner">
+        <Authorized>
+            <MudText Typo="Typo.overline" Style="padding: 8px 16px 4px; color: #B5A899; letter-spacing: 1.5px; font-weight: 600;">
+                QUẢN LÝ QUÁN
+            </MudText>
+            <MudNavLink Href="/owner/my-shop" Match="NavLinkMatch.All"
+                        Icon="@Icons.Material.Filled.StoreMallDirectory"
+                        Style="border-radius: 10px; margin: 2px 4px;">
+                Quán của tôi
+            </MudNavLink>
+        </Authorized>
+    </AuthorizeView>
 
     <!-- <MudText Typo="Typo.overline" Style="padding: 16px 16px 4px; color: #B5A899; letter-spacing: 1.5px; font-weight: 600;">
         HỆ THỐNG

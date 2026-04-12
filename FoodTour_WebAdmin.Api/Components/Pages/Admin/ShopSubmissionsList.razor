@@ -1,0 +1,638 @@
+@page "/admin/shop-submissions"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+@inject IDbContextFactory<AppDbContext> DbFactory
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@using FoodTour_WebAdmin.Api.Models
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Duyệt yêu cầu cập nhật — FoodTour Admin</PageTitle>
+
+@* ══ HEADER ══ *@
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px;">
+    <div>
+        <MudText Typo="Typo.h4" Style="font-weight:800; color:#1e293b; margin-bottom:4px;">
+            📋 Duyệt yêu cầu cập nhật quán
+        </MudText>
+        <MudText Typo="Typo.body2" Style="color:#64748b;">
+            Xem xét và phê duyệt các thay đổi do Chủ quán đề xuất
+        </MudText>
+    </div>
+
+    <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+        @if (_pendingCount > 0)
+        {
+            <MudChip T="string" Color="Color.Warning" Icon="@Icons.Material.Filled.HourglassTop"
+                     Style="font-weight:700;">
+                @_pendingCount yêu cầu đang chờ
+            </MudChip>
+        }
+        <MudButton StartIcon="@Icons.Material.Filled.Refresh" Variant="Variant.Outlined"
+                   OnClick="LoadDataAsync" Disabled="_isLoading">
+            Làm mới
+        </MudButton>
+    </MudStack>
+</div>
+
+@if (_isLoading)
+{
+    <div style="display:flex; gap:16px; align-items:center; padding:48px 0;">
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        <MudText Style="color:#64748b;">Đang tải danh sách...</MudText>
+    </div>
+}
+else
+{
+    @* ══ TABS CHÍNH ══ *@
+    <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4"
+             @bind-ActivePanelIndex="_activeTab"
+             Style="border-radius:16px;">
+
+        @* ── TAB 1: ĐANG CHỜ DUYỆT ── *@
+        <MudTabPanel Icon="@Icons.Material.Filled.HourglassTop"
+                     Text="Đang chờ duyệt"
+                     BadgeData="@(_pendingCount > 0 ? _pendingCount.ToString() : null)"
+                     BadgeColor="Color.Warning">
+
+            <MudTextField @bind-Value="_searchPending" Immediate="true"
+                          Placeholder="Tìm tên quán, địa chỉ, chủ quán..."
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                          Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Style="max-width:420px; margin-bottom:16px;" />
+
+            <MudTable T="ShopSubmission"
+                      Items="@PendingList"
+                      Hover="true" Striped="true" Elevation="0"
+                      Style="border-radius:16px; border:1px solid #f1f5f9; overflow:hidden;"
+                      Filter="s => FilterRow(s, _searchPending)">
+                @* ColGroup *@
+                <ColGroup>
+                    <col style="width:22%;" />
+                    <col style="width:20%;" />
+                    <col style="width:22%;" />
+                    <col style="width:14%;" />
+                    <col style="width:22%; text-align:center;" />
+                </ColGroup>
+                <HeaderContent>
+                    <MudTh Style="@_thStyle">Tên quán đề xuất</MudTh>
+                    <MudTh Style="@_thStyle">Địa chỉ mới</MudTh>
+                    <MudTh Style="@_thStyle">Chủ quán</MudTh>
+                    <MudTh Style="@_thStyle">Thời gian gửi</MudTh>
+                    <MudTh Style="@(_thStyle + " text-align:center;")">Hành động</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    @ShopNameCell(context)
+                    @AddressCell(context)
+                    @OwnerCell(context)
+                    @DateCell(context)
+                    <MudTd DataLabel="Hành động" Style="text-align:center;">
+                        <MudStack Row Spacing="1" Justify="Justify.Center">
+                            <MudTooltip Text="Xem chi tiết & Duyệt">
+                                <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                               Color="Color.Info" Size="Size.Small"
+                                               OnClick="@(() => OpenDetailDialog(context))"
+                                               Style="border-radius:8px;" />
+                            </MudTooltip>
+                            <MudTooltip Text="Duyệt nhanh">
+                                <MudIconButton Icon="@Icons.Material.Filled.CheckCircle"
+                                               Color="Color.Success" Size="Size.Small"
+                                               OnClick="@(() => ApproveSubmission(context))"
+                                               Disabled="@_processingIds.Contains(context.Id)"
+                                               Style="border-radius:8px;" />
+                            </MudTooltip>
+                            <MudTooltip Text="Từ chối">
+                                <MudIconButton Icon="@Icons.Material.Filled.Cancel"
+                                               Color="Color.Error" Size="Size.Small"
+                                               OnClick="@(() => OpenRejectDialog(context))"
+                                               Disabled="@_processingIds.Contains(context.Id)"
+                                               Style="border-radius:8px;" />
+                            </MudTooltip>
+                        </MudStack>
+                    </MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    @EmptyState("Chưa có yêu cầu nào đang chờ duyệt.")
+                </NoRecordsContent>
+                <PagerContent>
+                    <MudTablePager PageSizeOptions="new int[]{10, 25, 50}"
+                                   RowsPerPageString="Số dòng mỗi trang:"
+                                   InfoFormat="{first_item}-{last_item} của {all_items}" />
+                </PagerContent>
+            </MudTable>
+        </MudTabPanel>
+
+        @* ── TAB 2: ĐÃ DUYỆT ── *@
+        <MudTabPanel Icon="@Icons.Material.Filled.CheckCircle" Text="Đã duyệt">
+
+            <MudTextField @bind-Value="_searchApproved" Immediate="true"
+                          Placeholder="Tìm tên quán, địa chỉ, chủ quán..."
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                          Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Style="max-width:420px; margin-bottom:16px;" />
+
+            <MudTable T="ShopSubmission"
+                      Items="@ApprovedList"
+                      Hover="true" Striped="true" Elevation="0"
+                      Style="border-radius:16px; border:1px solid #f1f5f9; overflow:hidden;"
+                      Filter="s => FilterRow(s, _searchApproved)">
+                <ColGroup>
+                    <col style="width:25%;" />
+                    <col style="width:22%;" />
+                    <col style="width:25%;" />
+                    <col style="width:14%;" />
+                    <col style="width:14%;" />
+                </ColGroup>
+                <HeaderContent>
+                    <MudTh Style="@_thStyle">Tên quán</MudTh>
+                    <MudTh Style="@_thStyle">Địa chỉ</MudTh>
+                    <MudTh Style="@_thStyle">Chủ quán</MudTh>
+                    <MudTh Style="@_thStyle">Ngày gửi</MudTh>
+                    <MudTh Style="@_thStyle">Ngày duyệt</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    @ShopNameCell(context)
+                    @AddressCell(context)
+                    @OwnerCell(context)
+                    @DateCell(context)
+                    <MudTd DataLabel="Ngày duyệt">
+                        <MudText Typo="Typo.body2" Style="color:#22c55e; font-weight:600;">
+                            @context.UpdatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                        </MudText>
+                    </MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    @EmptyState("Chưa có yêu cầu nào được duyệt.")
+                </NoRecordsContent>
+                <PagerContent>
+                    <MudTablePager PageSizeOptions="new int[]{10, 25, 50}"
+                                   RowsPerPageString="Số dòng mỗi trang:"
+                                   InfoFormat="{first_item}-{last_item} của {all_items}" />
+                </PagerContent>
+            </MudTable>
+        </MudTabPanel>
+
+        @* ── TAB 3: ĐÃ TỪ CHỐI ── *@
+        <MudTabPanel Icon="@Icons.Material.Filled.Cancel" Text="Đã từ chối">
+
+            <MudTextField @bind-Value="_searchRejected" Immediate="true"
+                          Placeholder="Tìm tên quán, địa chỉ, chủ quán..."
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                          Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Style="max-width:420px; margin-bottom:16px;" />
+
+            <MudTable T="ShopSubmission"
+                      Items="@RejectedList"
+                      Hover="true" Striped="true" Elevation="0"
+                      Style="border-radius:16px; border:1px solid #f1f5f9; overflow:hidden;"
+                      Filter="s => FilterRow(s, _searchRejected)">
+                <ColGroup>
+                    <col style="width:22%;" />
+                    <col style="width:18%;" />
+                    <col style="width:20%;" />
+                    <col style="width:14%;" />
+                    <col style="width:26%;" />
+                </ColGroup>
+                <HeaderContent>
+                    <MudTh Style="@_thStyle">Tên quán</MudTh>
+                    <MudTh Style="@_thStyle">Địa chỉ</MudTh>
+                    <MudTh Style="@_thStyle">Chủ quán</MudTh>
+                    <MudTh Style="@_thStyle">Ngày từ chối</MudTh>
+                    <MudTh Style="@_thStyle">Lý do Admin</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    @ShopNameCell(context)
+                    @AddressCell(context)
+                    @OwnerCell(context)
+                    <MudTd DataLabel="Ngày từ chối">
+                        <MudText Typo="Typo.body2" Style="color:#ef4444; font-weight:600;">
+                            @context.UpdatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                        </MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Lý do">
+                        @if (!string.IsNullOrWhiteSpace(context.AdminNote))
+                        {
+                            <MudText Typo="Typo.body2" Style="color:#64748b; font-style:italic;">
+                                "@context.AdminNote"
+                            </MudText>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.caption" Style="color:#cbd5e1;">Không có ghi chú</MudText>
+                        }
+                    </MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    @EmptyState("Chưa có yêu cầu nào bị từ chối.")
+                </NoRecordsContent>
+                <PagerContent>
+                    <MudTablePager PageSizeOptions="new int[]{10, 25, 50}"
+                                   RowsPerPageString="Số dòng mỗi trang:"
+                                   InfoFormat="{first_item}-{last_item} của {all_items}" />
+                </PagerContent>
+            </MudTable>
+        </MudTabPanel>
+    </MudTabs>
+}
+
+@* ══ SHARED ROW FRAGMENTS ══ *@
+@* Razor không hỗ trợ partial method trả về RenderFragment trong MudTable, dùng helper method *@
+
+@* ══ DIALOG CHI TIẾT & DUYỆT ══ *@
+<MudDialog @bind-Visible="_showDetailDialog" Options="_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6" Style="font-weight:800;">
+            📄 Chi tiết yêu cầu cập nhật
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_selectedSubmission != null)
+        {
+            <MudGrid Spacing="3">
+                <MudItem xs="6">
+                    <MudText Typo="Typo.overline" Style="color:#94a3b8;">Tên quán mới</MudText>
+                    <MudText Typo="Typo.body1" Style="font-weight:700;">@_selectedSubmission.Name</MudText>
+                </MudItem>
+                <MudItem xs="6">
+                    <MudText Typo="Typo.overline" Style="color:#94a3b8;">Chủ quán</MudText>
+                    <MudText Typo="Typo.body1">@_selectedSubmission.Owner?.FullName (@_selectedSubmission.Owner?.Email)</MudText>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudText Typo="Typo.overline" Style="color:#94a3b8;">Địa chỉ mới</MudText>
+                    <MudText Typo="Typo.body1">@_selectedSubmission.Address</MudText>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudText Typo="Typo.overline" Style="color:#94a3b8;">Mô tả / Kịch bản Audio</MudText>
+                    <MudText Typo="Typo.body2" Style="line-height:1.6; max-height:120px; overflow-y:auto; background:#f8fafc; padding:12px; border-radius:8px;">
+                        @_selectedSubmission.Description
+                    </MudText>
+                </MudItem>
+                <MudItem xs="6">
+                    <MudText Typo="Typo.overline" Style="color:#94a3b8;">Rating</MudText>
+                    <MudText Typo="Typo.body1">⭐ @_selectedSubmission.Rating.ToString("F1")</MudText>
+                </MudItem>
+                <MudItem xs="6">
+                    <MudText Typo="Typo.overline" Style="color:#94a3b8;">Tọa độ</MudText>
+                    <MudText Typo="Typo.body2">@_selectedSubmission.Latitude.ToString("F5"), @_selectedSubmission.Longitude.ToString("F5")</MudText>
+                </MudItem>
+                @if (!string.IsNullOrEmpty(_selectedSubmission.ImageUrl))
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.overline" Style="color:#94a3b8;">Ảnh bìa mới</MudText>
+                        <img src="@_selectedSubmission.ImageUrl" alt="Preview"
+                             style="width:100%; max-height:180px; object-fit:cover; border-radius:12px; margin-top:4px;" />
+                    </MudItem>
+                }
+                @if (_showRejectNote)
+                {
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_rejectNote" Label="Ghi chú lý do từ chối (tùy chọn)"
+                                      Variant="Variant.Outlined" Lines="3"
+                                      Placeholder="VD: Địa chỉ không chính xác, vui lòng kiểm tra lại..." />
+                    </MudItem>
+                }
+            </MudGrid>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseDialog" Variant="Variant.Text">Đóng</MudButton>
+        @if (_selectedSubmission?.Status == SubmissionStatus.Pending)
+        {
+            @if (!_showRejectNote)
+            {
+                <MudButton Color="Color.Error" Variant="Variant.Outlined"
+                           StartIcon="@Icons.Material.Filled.Cancel"
+                           OnClick="@(() => _showRejectNote = true)">
+                    Từ chối
+                </MudButton>
+                <MudButton Color="Color.Success" Variant="Variant.Filled"
+                           StartIcon="@Icons.Material.Filled.CheckCircle"
+                           OnClick="@(() => ApproveSubmission(_selectedSubmission!))"
+                           Disabled="@_processingIds.Contains(_selectedSubmission!.Id)">
+                    Duyệt
+                </MudButton>
+            }
+            else
+            {
+                <MudButton Variant="Variant.Text" OnClick="@(() => _showRejectNote = false)">Hủy</MudButton>
+                <MudButton Color="Color.Error" Variant="Variant.Filled"
+                           StartIcon="@Icons.Material.Filled.Cancel"
+                           OnClick="@(() => RejectSubmission(_selectedSubmission!))">
+                    Xác nhận từ chối
+                </MudButton>
+            }
+        }
+    </DialogActions>
+</MudDialog>
+
+@* ══ DIALOG TỪ CHỐI NHANH (từ nút icon trực tiếp trên bảng) ══ *@
+<MudDialog @bind-Visible="_showQuickRejectDialog" Options="_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6" Style="font-weight:800; color:#ef4444;">
+            ❌ Từ chối yêu cầu
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_selectedSubmission != null)
+        {
+            <MudText Typo="Typo.body1" Style="margin-bottom:16px;">
+                Bạn đang từ chối yêu cầu của <strong>@_selectedSubmission.Owner?.FullName</strong>
+                cho quán <strong>@_selectedSubmission.Name</strong>.
+            </MudText>
+            <MudTextField @bind-Value="_rejectNote" Label="Ghi chú lý do (tùy chọn)"
+                          Variant="Variant.Outlined" Lines="3"
+                          Placeholder="VD: Địa chỉ không chính xác, vui lòng kiểm tra lại..." />
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="CloseDialog">Hủy</MudButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled"
+                   StartIcon="@Icons.Material.Filled.Cancel"
+                   OnClick="@(() => RejectSubmission(_selectedSubmission!))">
+            Xác nhận từ chối
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    // ── State ──
+    private bool _isLoading = true;
+    private int _activeTab = 0;
+    private int _pendingCount = 0;
+
+    private List<ShopSubmission> _allSubmissions = new();
+    private HashSet<string> _processingIds = new();
+
+    // Search strings per tab
+    private string _searchPending  = "";
+    private string _searchApproved = "";
+    private string _searchRejected = "";
+
+    // Dialog
+    private bool _showDetailDialog      = false;
+    private bool _showQuickRejectDialog = false;
+    private bool _showRejectNote        = false;
+    private string _rejectNote          = "";
+    private ShopSubmission? _selectedSubmission;
+
+    private readonly DialogOptions _dialogOptions = new()
+    {
+        MaxWidth        = MaxWidth.Medium,
+        FullWidth       = true,
+        CloseButton     = true,
+        BackdropClick   = false,
+    };
+
+    // ── Shared style ──
+    private const string _thStyle = "background:#f8fafc; font-weight:700; color:#475569;";
+
+    // ── Derived lists (theo tab) ──
+    private IEnumerable<ShopSubmission> PendingList  =>
+        _allSubmissions.Where(s => s.Status == SubmissionStatus.Pending)
+                       .OrderByDescending(s => s.CreatedAt);
+
+    private IEnumerable<ShopSubmission> ApprovedList =>
+        _allSubmissions.Where(s => s.Status == SubmissionStatus.Approved)
+                       .OrderByDescending(s => s.UpdatedAt);
+
+    private IEnumerable<ShopSubmission> RejectedList =>
+        _allSubmissions.Where(s => s.Status == SubmissionStatus.Rejected)
+                       .OrderByDescending(s => s.UpdatedAt);
+
+    // ── MudTable Filter function ──
+    private bool FilterRow(ShopSubmission s, string search)
+    {
+        if (string.IsNullOrWhiteSpace(search)) return true;
+        var q = search.Trim();
+        return s.Name.Contains(q, StringComparison.OrdinalIgnoreCase)
+            || s.Address.Contains(q, StringComparison.OrdinalIgnoreCase)
+            || (s.Owner?.FullName?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false)
+            || (s.Owner?.Email?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false);
+    }
+
+    // ── Shared row render helpers ──
+    private RenderFragment ShopNameCell(ShopSubmission s) => __builder =>
+    {
+        <MudTd DataLabel="Tên quán">
+            <MudText Typo="Typo.body2" Style="font-weight:700; color:#1e293b;">@s.Name</MudText>
+            <MudText Typo="Typo.caption" Style="color:#94a3b8;">ID: @s.ShopId[..8]...</MudText>
+        </MudTd>;
+    };
+
+    private RenderFragment AddressCell(ShopSubmission s) => __builder =>
+    {
+        <MudTd DataLabel="Địa chỉ">
+            <MudText Typo="Typo.body2" Style="color:#475569;">@s.Address</MudText>
+        </MudTd>;
+    };
+
+    private RenderFragment OwnerCell(ShopSubmission s) => __builder =>
+    {
+        <MudTd DataLabel="Chủ quán">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <MudAvatar Size="Size.Small"
+                           Style="background:linear-gradient(135deg,#3b82f6,#1d4ed8); color:white; font-size:0.75rem;">
+                    @(s.Owner?.FullName?.Substring(0, 1).ToUpper() ?? "?")
+                </MudAvatar>
+                <div>
+                    <MudText Typo="Typo.body2" Style="font-weight:600; color:#1e293b;">@s.Owner?.FullName</MudText>
+                    <MudText Typo="Typo.caption" Style="color:#94a3b8;">@s.Owner?.Email</MudText>
+                </div>
+            </div>
+        </MudTd>;
+    };
+
+    private RenderFragment DateCell(ShopSubmission s) => __builder =>
+    {
+        <MudTd DataLabel="Thời gian">
+            <MudText Typo="Typo.body2" Style="color:#475569;">
+                @s.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")
+            </MudText>
+            <MudText Typo="Typo.caption" Style="color:#94a3b8;">
+                @s.CreatedAt.ToLocalTime().ToString("HH:mm")
+            </MudText>
+        </MudTd>;
+    };
+
+    // ── Empty state ──
+    private RenderFragment EmptyState(string msg) => __builder =>
+    {
+        <MudStack AlignItems="AlignItems.Center" Style="padding:48px 0;">
+            <MudIcon Icon="@Icons.Material.Filled.Inbox" Style="font-size:64px; color:#cbd5e1;" />
+            <MudText Typo="Typo.h6" Style="font-weight:700; color:#94a3b8;">Không có yêu cầu nào</MudText>
+            <MudText Typo="Typo.body2" Style="color:#b0bec5;">@msg</MudText>
+        </MudStack>;
+    };
+
+    // ══════════════════════════════════════════════════════════
+    // Lifecycle
+    // ══════════════════════════════════════════════════════════
+    protected override async Task OnInitializedAsync() => await LoadDataAsync();
+
+    private async Task LoadDataAsync()
+    {
+        _isLoading = true;
+        StateHasChanged();
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            _allSubmissions = await db.ShopSubmissions
+                .Include(s => s.Owner)
+                .OrderByDescending(s => s.CreatedAt)
+                .ToListAsync();
+
+            _pendingCount = _allSubmissions.Count(s => s.Status == SubmissionStatus.Pending);
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // Dialog helpers
+    // ══════════════════════════════════════════════════════════
+    private void OpenDetailDialog(ShopSubmission submission)
+    {
+        _selectedSubmission     = submission;
+        _showRejectNote         = false;
+        _rejectNote             = "";
+        _showDetailDialog       = true;
+        _showQuickRejectDialog  = false;
+    }
+
+    private void OpenRejectDialog(ShopSubmission submission)
+    {
+        _selectedSubmission     = submission;
+        _rejectNote             = "";
+        _showQuickRejectDialog  = true;
+        _showDetailDialog       = false;
+    }
+
+    private void CloseDialog()
+    {
+        _showDetailDialog       = false;
+        _showQuickRejectDialog  = false;
+        _selectedSubmission     = null;
+        _showRejectNote         = false;
+        _rejectNote             = "";
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // Business logic
+    // ══════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Duyệt submission: ghi đè dữ liệu từ Submission → ShopModel (bản gốc).
+    /// </summary>
+    private async Task ApproveSubmission(ShopSubmission submission)
+    {
+        if (_processingIds.Contains(submission.Id)) return;
+        _processingIds.Add(submission.Id);
+
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            var sub = await db.ShopSubmissions.FindAsync(submission.Id);
+            if (sub == null || sub.Status != SubmissionStatus.Pending)
+            {
+                Snackbar.Add("Yêu cầu không còn ở trạng thái chờ duyệt.", Severity.Warning);
+                return;
+            }
+
+            var shop = await db.Shops
+                .Include(s => s.ShopTranslations)
+                .FirstOrDefaultAsync(s => s.Id == sub.ShopId);
+
+            if (shop == null)
+            {
+                Snackbar.Add("Không tìm thấy quán tương ứng.", Severity.Error);
+                return;
+            }
+
+            // Cập nhật các trường không phụ thuộc dịch thuật
+            shop.ImageUrl  = sub.ImageUrl;
+            shop.Latitude  = sub.Latitude;
+            shop.Longitude = sub.Longitude;
+            shop.Radius    = sub.Radius;
+            shop.Priority  = sub.Priority;
+            shop.Rating    = sub.Rating;
+            shop.UpdatedAt = DateTime.UtcNow;
+
+            // Cập nhật ShopTranslation tiếng Việt
+            var vi = shop.ShopTranslations.FirstOrDefault(t => t.LanguageCode == "vi");
+            if (vi != null)
+            {
+                vi.Name        = sub.Name;
+                vi.Address     = sub.Address;
+                vi.Description = sub.Description;
+            }
+
+            sub.Status    = SubmissionStatus.Approved;
+            sub.UpdatedAt = DateTime.UtcNow;
+
+            await db.SaveChangesAsync();
+
+            // Phản hồi UI ngay — không cần reload
+            submission.Status    = SubmissionStatus.Approved;
+            submission.UpdatedAt = DateTime.UtcNow;
+            _pendingCount        = _allSubmissions.Count(s => s.Status == SubmissionStatus.Pending);
+
+            Snackbar.Add($"✅ Đã duyệt quán '{sub.Name}' thành công!", Severity.Success);
+            CloseDialog();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Lỗi khi duyệt: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _processingIds.Remove(submission.Id);
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Từ chối submission: đổi Status → Rejected, cho phép Owner sửa lại.
+    /// </summary>
+    private async Task RejectSubmission(ShopSubmission submission)
+    {
+        if (_processingIds.Contains(submission.Id)) return;
+        _processingIds.Add(submission.Id);
+
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            var sub = await db.ShopSubmissions.FindAsync(submission.Id);
+            if (sub == null || sub.Status != SubmissionStatus.Pending)
+            {
+                Snackbar.Add("Yêu cầu không còn ở trạng thái chờ duyệt.", Severity.Warning);
+                return;
+            }
+
+            sub.Status    = SubmissionStatus.Rejected;
+            sub.AdminNote = string.IsNullOrWhiteSpace(_rejectNote) ? null : _rejectNote.Trim();
+            sub.UpdatedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+
+            submission.Status    = SubmissionStatus.Rejected;
+            submission.AdminNote = sub.AdminNote;
+            submission.UpdatedAt = DateTime.UtcNow;
+            _pendingCount        = _allSubmissions.Count(s => s.Status == SubmissionStatus.Pending);
+
+            Snackbar.Add($"❌ Đã từ chối yêu cầu của '{submission.Owner?.FullName}'.", Severity.Info);
+            CloseDialog();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Lỗi khi từ chối: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _processingIds.Remove(submission.Id);
+            StateHasChanged();
+        }
+    }
+}

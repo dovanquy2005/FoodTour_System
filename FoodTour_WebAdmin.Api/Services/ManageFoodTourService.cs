@@ -54,7 +54,7 @@ public class ManageFoodTourService
                 Radius = request.Radius,
                 Priority = request.Priority,
                 Rating = request.Rating,
-                IsVisited = request.IsVisited,
+                IsActive  = request.IsActive,
                 ShopTranslations = new List<ShopTranslationModel>()
             };
 
@@ -136,7 +136,7 @@ public class ManageFoodTourService
             shop.Radius = request.Radius;
             shop.Priority = request.Priority;
             shop.Rating = request.Rating;
-            shop.IsVisited = request.IsVisited;
+            shop.IsActive  = request.IsActive;
             shop.UpdatedAt = DateTime.UtcNow;
 
             // Cập nhật bản tiếng Việt

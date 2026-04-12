@@ -1,0 +1,11 @@
+@inject NavigationManager Navigation
+
+@code {
+    // OnAfterRender KHÔNG chạy trong Prerender — đảm bảo chỉ redirect
+    // sau khi circuit đã kết nối và LocalStorage đã sẵn sàng.
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+            Navigation.NavigateTo("/login");
+    }
+}

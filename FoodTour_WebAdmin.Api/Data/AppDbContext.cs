@@ -11,6 +11,7 @@ public class AppDbContext : DbContext
     public DbSet<ShopTranslationModel> ShopTranslations => Set<ShopTranslationModel>();
 
     public DbSet<UserModel> Users => Set<UserModel>();
+    public DbSet<ShopSubmission> ShopSubmissions => Set<ShopSubmission>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -20,6 +21,12 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<ShopModel>(entity =>
         {
             entity.HasKey(e => e.Id);
+
+            // FK: Shop → Owner (SetNull — xóa User thì OwnerId về null, không mất dữ liệu quán)
+            entity.HasOne(e => e.Owner)
+                  .WithMany()
+                  .HasForeignKey(e => e.OwnerId)
+                  .OnDelete(DeleteBehavior.SetNull);
         });
 
         // ShopTranslationModel
@@ -33,6 +40,30 @@ public class AppDbContext : DbContext
                   .WithMany(s => s.ShopTranslations)
                   .HasForeignKey(e => e.ShopId)
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ShopSubmission
+        modelBuilder.Entity<ShopSubmission>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            // Lưu enum thành chuỗi (dễ đọc trong DB, an toàn khi thêm enum value mới)
+            entity.Property(e => e.Status).HasConversion<string>();
+            // Index tăng tốc truy vấn theo OwnerId và Status (Owner dùng thường xuyên)
+            entity.HasIndex(e => e.OwnerId);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.ShopId);
+
+            // FK: Submission → Owner (Restrict — không cho xóa User khi còn submission)
+            entity.HasOne(e => e.Owner)
+                  .WithMany()
+                  .HasForeignKey(e => e.OwnerId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            // FK: Submission → Shop (Restrict — không cho xóa Shop khi còn submission chưa xử lý)
+            entity.HasOne(e => e.Shop)
+                  .WithMany()
+                  .HasForeignKey(e => e.ShopId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
 
