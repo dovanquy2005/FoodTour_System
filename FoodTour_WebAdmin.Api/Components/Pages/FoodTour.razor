@@ -1,4 +1,8 @@
 @page "/foodtour/{Id}"
+
+<!-- Cho phép truy cập mà không cần đăng nhập  -->
+@attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+
 @layout FoodTour_WebAdmin.Api.Components.Layout.PublicLayout
 @inject IDbContextFactory<AppDbContext> DbFactory
 @inject IJSRuntime JS
