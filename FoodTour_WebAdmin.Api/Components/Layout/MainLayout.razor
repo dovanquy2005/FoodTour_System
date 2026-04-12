@@ -12,7 +12,12 @@
             <MudIcon Icon="@Icons.Material.Filled.Fastfood" Size="Size.Large" />
             <MudStack Spacing="0">
                 <MudText Typo="Typo.h6" Style="font-weight: 700; letter-spacing: -0.5px; line-height: 1.2;">
-                    FoodTour Admin
+                    <AuthorizeView>
+                        <Authorized Context="headerAuth">
+                            @(headerAuth.User.IsInRole("Owner") ? "FoodTour Owner" : "FoodTour Admin")
+                        </Authorized>
+                        <NotAuthorized>FoodTour Admin</NotAuthorized>
+                    </AuthorizeView>
                 </MudText>
                 <MudText Typo="Typo.caption" Style="opacity: 0.8; font-size: 0.7rem;">
                     Vinh Khanh Street Eats

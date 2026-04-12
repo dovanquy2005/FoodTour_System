@@ -12,7 +12,7 @@ public class ShopModel
     public double Radius { get; set; } 
     public int Priority { get; set; } 
     public double Rating { get; set; }
-    public bool IsActive { get; set; } = true;  // true = hiển thị trên App
+    public bool IsActive { get; set; } = false;  // true = hiển thị trên App, mặc định false để Admin tự bật
     public string? OwnerId { get; set; }
 
     // Navigation Property — tải kèm thông tin chủ quán khi Include()

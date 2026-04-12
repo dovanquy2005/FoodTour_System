@@ -137,7 +137,8 @@ app.MapHub<UpdateHub>("/api/updatesHub");
 
 // Blazor
 app.MapRazorComponents<FoodTour_WebAdmin.Api.Components.App>()
-    .AddInteractiveServerRenderMode();
+    .AddInteractiveServerRenderMode()
+    .AllowAnonymous(); // Bỏ qua chặn 401 ở tầng HTTP, để AuthorizeRouteView tự xử lý qua LocalStorage.
 
 FoodTour_WebAdmin.Api.Constants.ServiceProvider = app.Services;
 app.Run();

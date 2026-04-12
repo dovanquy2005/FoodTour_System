@@ -8,7 +8,7 @@ public class CreateShopRequest
     public double Radius { get; set; }
     public int Priority { get; set; }
     public double Rating { get; set; }
-    public bool IsActive { get; set; } = true;  // Kích hoạt hiển thị trên App
+    public bool IsActive { get; set; } = false;  // Kích hoạt hiển thị trên App
 
     // Thông tin tiếng Việt (vi) gốc
     public string Name { get; set; } = string.Empty;

@@ -310,7 +310,8 @@
         _editShop = new FoodTour_WebAdmin.Api.DTOs.CreateShopRequest 
         { 
             Latitude = 10.759, 
-            Longitude = 106.708
+            Longitude = 106.708,
+            IsActive = false
         };
         _dialogVisible = true;
     }
@@ -382,6 +383,10 @@
             var toDelete = await Db.Shops.FindAsync(ShopModel.Id);
             if (toDelete != null)
             {
+                // Xóa các ShopSubmissions liên quan trước (Cascade delete thủ công)
+                var relatedSubmissions = Db.ShopSubmissions.Where(s => s.ShopId == ShopModel.Id);
+                Db.ShopSubmissions.RemoveRange(relatedSubmissions);
+
                 Db.Shops.Remove(toDelete);
                 await Db.SaveChangesAsync();
             }

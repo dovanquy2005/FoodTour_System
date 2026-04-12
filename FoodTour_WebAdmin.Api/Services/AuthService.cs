@@ -95,7 +95,7 @@ public class AuthService
                 Radius    = 50,         // Bán kính geofence mặc định 50m
                 Priority  = 0,
                 Rating    = 0,
-                IsActive  = true,           // K\u00edch ho\u1ea1t m\u1eb7c \u0111\u1ecbnh khi \u0111\u0103ng k\u00fd
+                IsActive  = false,           // K\u00edch ho\u1ea1t m\u1eb7c \u0111\u1ecbnh khi \u0111\u0103ng k\u00fd
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
             };

@@ -4,6 +4,7 @@
 @inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
+@inject FoodTour_WebAdmin.Api.Services.ISupabaseStorageService StorageService
 
 <PageTitle>Quán của tôi — FoodTour Owner</PageTitle>
 
@@ -72,7 +73,7 @@ else
                 ✅ Yêu cầu cập nhật đã được Admin duyệt thành công!
             </MudText>
             <MudText Typo="Typo.body2">
-                Thông tin mới đang hiển thị trên App. Bạn có thể tiếp tục đề xuất cập nhật khác nếu muốn.
+                Bạn có thể tiếp tục đề xuất cập nhật khác nếu muốn.
             </MudText>
         </MudAlert>
     }
@@ -164,18 +165,51 @@ else
                                       Placeholder="Giới thiệu về quán..."
                                       Disabled="FormLocked" />
 
-                        <MudTextField @bind-Value="_draft.ImageUrl" Label="URL Ảnh bìa" Variant="Variant.Outlined"
-                                      Placeholder="https://..." Disabled="FormLocked" />
+                        <div style="border: 2px dashed #cbd5e1; border-radius: 12px; padding: 24px; text-align: center; background: #f8fafc; position: relative;">
+                            @if (!string.IsNullOrEmpty(_draft.ImageUrl))
+                            {
+                                <div style="margin-bottom: 16px;">
+                                    <img src="@_draft.ImageUrl" alt="Preview" style="max-height: 180px; object-fit: contain; border-radius: 8px; border: 1px solid #e2e8f0;"/>
+                                </div>
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Size="Size.Large" Style="color: #94a3b8; margin-bottom: 8px;" />
+                                <MudText Typo="Typo.body2" Style="color: #64748b; font-weight: 500;">Chưa có ảnh bìa</MudText>
+                            }
+
+                            <div style="margin-top: 16px;">
+                                <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                                           StartIcon="@Icons.Material.Filled.FileUpload"
+                                           Disabled="@(_isUploadingImage || FormLocked)"
+                                           Style="position: relative; overflow: hidden; background: white;">
+                                    Tải ảnh lên
+                                    <InputFile OnChange="UploadImage" accept=".jpg,.jpeg,.png,.webp"
+                                               style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;"
+                                               disabled="@(_isUploadingImage || FormLocked)"/>
+                                </MudButton>
+                            </div>
+                            @if (_isUploadingImage)
+                            {
+                                <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mt-3"/>
+                                <MudText Typo="Typo.caption" Style="color: #64748b; margin-top: 4px;">Đang tải ảnh lên...</MudText>
+                            }
+                        </div>
 
                         <MudGrid Spacing="3">
-                            <MudItem xs="6">
+                            <MudItem xs="4">
                                 <MudNumericField @bind-Value="_draft.Latitude" Label="Vĩ độ (Latitude)"
                                                  Variant="Variant.Outlined" Format="F6"
                                                  Disabled="FormLocked" />
                             </MudItem>
-                            <MudItem xs="6">
+                            <MudItem xs="4">
                                 <MudNumericField @bind-Value="_draft.Longitude" Label="Kinh độ (Longitude)"
                                                  Variant="Variant.Outlined" Format="F6"
+                                                 Disabled="FormLocked" />
+                            </MudItem>
+                            <MudItem xs="4">
+                                <MudNumericField @bind-Value="_draft.Radius" Label="Bán kính (m)"
+                                                 Variant="Variant.Outlined" Min="0.0" Step="10.0" Required="true"
                                                  Disabled="FormLocked" />
                             </MudItem>
                         </MudGrid>
@@ -213,6 +247,7 @@ else
     private bool _isSubmitting = false;
     private bool _isFormValid = true;
     private bool _isNewShopPendingReview = false;
+    private bool _isUploadingImage = false;
 
     private ShopModel? _shop;
     // Submission mới nhất (bất kể status) — 1 query thay vì 3 query riêng
@@ -231,16 +266,14 @@ else
     protected override async Task OnInitializedAsync()
     {
         // Lấy ID Owner từ Claims
+        // Không cần điều hướng thủ công — [Authorize] + AuthorizeRouteView đã bảo vệ trang này
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         _ownerId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "";
 
-        if (string.IsNullOrEmpty(_ownerId))
+        if (!string.IsNullOrEmpty(_ownerId))
         {
-            Navigation.NavigateTo("/login");
-            return;
+            await LoadShopDataAsync();
         }
-
-        await LoadShopDataAsync();
     }
 
     private async Task LoadShopDataAsync()
@@ -294,7 +327,7 @@ else
     {
         if (_shop == null || IsPending) return;
 
-        await _submitForm!.Validate();
+        await _submitForm!.ValidateAsync();
         if (!_isFormValid) return;
 
         _isSubmitting = true;
@@ -335,6 +368,44 @@ else
         finally
         {
             _isSubmitting = false;
+        }
+    }
+
+    private async Task UploadImage(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file == null) return;
+
+        // Giới hạn 5MB
+        if (file.Size > 5 * 1024 * 1024)
+        {
+            Snackbar.Add("Kích thước file vượt quá 5MB.", Severity.Error);
+            return;
+        }
+
+        _isUploadingImage = true;
+        try
+        {
+            using var stream = file.OpenReadStream(5 * 1024 * 1024);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            ms.Position = 0;
+
+            var ext = Path.GetExtension(file.Name);
+            var fileName = $"shops/{Guid.NewGuid():N}{ext}";
+
+            var imageUrl = await StorageService.UploadImageAsync(ms, fileName);
+            
+            _draft.ImageUrl = imageUrl;
+            Snackbar.Add("Tải ảnh lên thành công!", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Lỗi khi tải ảnh: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isUploadingImage = false;
         }
     }
 }

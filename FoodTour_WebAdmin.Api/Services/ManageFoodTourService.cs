@@ -67,35 +67,38 @@ public class ManageFoodTourService
                 Description = request.Description
             };
 
-            // === BƯỚC 2: Dịch song song sang các ngôn ngữ đích ===
-            var languageTasks = _targetLanguages.Select(async lang =>
-            {
-                var nameTask = _translateService.TranslateTextAsync(request.Name, lang);
-                var addressTask = _translateService.TranslateTextAsync(request.Address, lang);
-                var descTask = _translateService.TranslateTextAsync(request.Description, lang);
-                await Task.WhenAll(nameTask, addressTask, descTask);
-
-                return new ShopTranslationModel
-                {
-                    LanguageCode = lang,
-                    Name = await nameTask,
-                    Address = await addressTask,
-                    Description = await descTask
-                };
-            });
-
-            var translatedResults = await Task.WhenAll(languageTasks);
-
-            // Gom tất cả translations
+            // Khởi tạo danh sách translations với bản tiếng Việt
             var allTranslations = new List<ShopTranslationModel> { viTranslation };
-            allTranslations.AddRange(translatedResults);
 
-            // === BƯỚC 3: TTS + Upload Audio song song cho tất cả ngôn ngữ ===
-            var ttsUploadTasks = allTranslations.Select(async t =>
+            if (request.IsActive)
             {
-                await GenerateAndUploadShopAudioAsync(t, shopId);
-            });
-            await Task.WhenAll(ttsUploadTasks);
+                // === BƯỚC 2: Dịch song song sang các ngôn ngữ đích ===
+                var languageTasks = _targetLanguages.Select(async lang =>
+                {
+                    var nameTask = _translateService.TranslateTextAsync(request.Name, lang);
+                    var addressTask = _translateService.TranslateTextAsync(request.Address, lang);
+                    var descTask = _translateService.TranslateTextAsync(request.Description, lang);
+                    await Task.WhenAll(nameTask, addressTask, descTask);
+
+                    return new ShopTranslationModel
+                    {
+                        LanguageCode = lang,
+                        Name = await nameTask,
+                        Address = await addressTask,
+                        Description = await descTask
+                    };
+                });
+
+                var translatedResults = await Task.WhenAll(languageTasks);
+                allTranslations.AddRange(translatedResults);
+
+                // === BƯỚC 3: TTS + Upload Audio song song cho tất cả ngôn ngữ ===
+                var ttsUploadTasks = allTranslations.Select(async t =>
+                {
+                    await GenerateAndUploadShopAudioAsync(t, shopId);
+                });
+                await Task.WhenAll(ttsUploadTasks);
+            }
 
             // Add translations vào shop
             foreach (var t in allTranslations)
@@ -159,45 +162,48 @@ public class ManageFoodTourService
                 shop.ShopTranslations.Add(viTranslation);
             }
 
-            // Dịch song song
-            var languageTasks = _targetLanguages.Select(async lang =>
+            if (request.IsActive)
             {
-                var nameTask = _translateService.TranslateTextAsync(request.Name, lang);
-                var addressTask = _translateService.TranslateTextAsync(request.Address, lang);
-                var descTask = _translateService.TranslateTextAsync(request.Description, lang);
-                await Task.WhenAll(nameTask, addressTask, descTask);
-                return new { lang, name = await nameTask, address = await addressTask, desc = await descTask };
-            });
-
-            var translatedResults = await Task.WhenAll(languageTasks);
-
-            foreach (var result in translatedResults)
-            {
-                var existingTranslation = shop.ShopTranslations.FirstOrDefault(t => t.LanguageCode == result.lang);
-                if (existingTranslation != null)
+                // Dịch song song
+                var languageTasks = _targetLanguages.Select(async lang =>
                 {
-                    existingTranslation.Name = result.name;
-                    existingTranslation.Address = result.address;
-                    existingTranslation.Description = result.desc;
-                }
-                else
+                    var nameTask = _translateService.TranslateTextAsync(request.Name, lang);
+                    var addressTask = _translateService.TranslateTextAsync(request.Address, lang);
+                    var descTask = _translateService.TranslateTextAsync(request.Description, lang);
+                    await Task.WhenAll(nameTask, addressTask, descTask);
+                    return new { lang, name = await nameTask, address = await addressTask, desc = await descTask };
+                });
+
+                var translatedResults = await Task.WhenAll(languageTasks);
+
+                foreach (var result in translatedResults)
                 {
-                    shop.ShopTranslations.Add(new ShopTranslationModel
+                    var existingTranslation = shop.ShopTranslations.FirstOrDefault(t => t.LanguageCode == result.lang);
+                    if (existingTranslation != null)
                     {
-                        LanguageCode = result.lang,
-                        Name = result.name,
-                        Address = result.address,
-                        Description = result.desc
-                    });
+                        existingTranslation.Name = result.name;
+                        existingTranslation.Address = result.address;
+                        existingTranslation.Description = result.desc;
+                    }
+                    else
+                    {
+                        shop.ShopTranslations.Add(new ShopTranslationModel
+                        {
+                            LanguageCode = result.lang,
+                            Name = result.name,
+                            Address = result.address,
+                            Description = result.desc
+                        });
+                    }
                 }
-            }
 
-            // TTS + Upload Audio cho TẤT CẢ languages (bao gồm vi vừa cập nhật)
-            var ttsUploadTasks = shop.ShopTranslations.Select(async t =>
-            {
-                await GenerateAndUploadShopAudioAsync(t, shopId);
-            });
-            await Task.WhenAll(ttsUploadTasks);
+                // TTS + Upload Audio cho TẤT CẢ languages (bao gồm vi vừa cập nhật)
+                var ttsUploadTasks = shop.ShopTranslations.Select(async t =>
+                {
+                    await GenerateAndUploadShopAudioAsync(t, shopId);
+                });
+                await Task.WhenAll(ttsUploadTasks);
+            }
 
             _context.Shops.Update(shop);
             await _context.SaveChangesAsync();
