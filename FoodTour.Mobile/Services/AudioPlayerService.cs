@@ -111,10 +111,11 @@ public class AudioPlayerService : IAudioPlayerService, IRecipient<AudioFilesUpda
             _player = AudioManager.Current.CreatePlayer(audioStream);
             _player.PlaybackEnded += OnPlaybackEnded;
             RequestAudioFocus();
-            
+
             //dùng thư viện Plungin.MAUI.Audio để phát audio
             _player.Play();
 
+            //Cập nhật biến trạng thái (Status, IsPlaying)
             _playerStatus = _localizationService["Audio_Playing"] ?? "Đang phát audio...";
             _isPlaying = true;
             StartTimer();

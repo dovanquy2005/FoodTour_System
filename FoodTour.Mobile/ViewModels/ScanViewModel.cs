@@ -75,9 +75,21 @@ public partial class ScanViewModel : BaseViewModel
         }
         finally
         {
-            // ── 4. TỰ ĐỘNG ĐÓNG TRANG SCAN (chuyển về MapPage / màn hình trước) ──
-            // Hiện Floating Audio Player trên trang gốc để du khách tiếp tục hành trình
-            await Shell.Current.GoToAsync("..");
+            // ── 4. CHUYỂN SANG TAB BẢN ĐỒ (MapPage) ──
+            // ScanPage là Root Tab → KHÔNG dùng GoToAsync("..") (sẽ crash).
+            // Dùng route tuyệt đối "///MapPage" để nhảy thẳng sang tab Map.
+            // BẮT BUỘC chạy trên MainThread vì Shell navigation đụng UI thread.
+            MainThread.BeginInvokeOnMainThread(async () =>
+            {
+                try
+                {
+                    await Shell.Current.GoToAsync("///MapPage");
+                }
+                catch (Exception navEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[ScanViewModel] Lỗi điều hướng: {navEx.Message}");
+                }
+            });
         }
     }
 
