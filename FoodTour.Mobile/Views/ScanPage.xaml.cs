@@ -1,73 +1,77 @@
-using FoodTour.Mobile.ViewModels;
+using Microsoft.Maui.Controls;
 using ZXing.Net.Maui;
+using ZXing.Net.Maui.Controls;
 
-namespace FoodTour.Mobile.Views;
-
-public partial class ScanPage : ContentPage
+namespace FoodTour.Mobile.Views
 {
-    // Cờ bật/tắt đèn flash
-    private bool _isTorchOn = false;
-    // Cờ ngăn animation chạy lại khi trang đã tắt
-    private bool _isAnimating = false;
-
-    public ScanPage(ScanViewModel viewModel)
+    public partial class ScanPage : ContentPage
     {
-        InitializeComponent();
-        BindingContext = viewModel;
-    }
+        private bool _isAnimating;
+        
+        // Đã bổ sung lại cờ bật/tắt đèn flash
+        private bool _isTorchOn = false;
 
-    // ═══════ LIFECYCLE ═══════
-    // Mỗi khi trang hiện lên: yêu cầu quyền camera + khởi chạy animation đường quét
-    protected override async void OnAppearing()
-    {
-        base.OnAppearing();
-        await RequestCameraPermission();
-
-        // Reset giao diện khung ngắm về trạng thái ban đầu (phòng trường hợp quay lại sau lần quét trước)
-        viewfinderBorder.Stroke = Color.FromArgb("#E8672A");
-        scanLine.Color = Color.FromArgb("#E8672A");
-        scanLine.TranslationY = 20;
-
-        // Bắt đầu animation đường quét laser
-        _isAnimating = true;
-        StartScanLineAnimation();
-
-        // ★ "Bí thuật Delay" — Kích hoạt camera có trễ để tránh Black Screen
-        // ZXing.Net.Maui trên Android cần thời gian để Driver Camera khởi động phần cứng.
-        // Nếu gán IsDetecting = true quá sớm, ống kính chưa sẵn sàng → màn hình đen.
-        // Reset IsScanning TRONG MainThread block để đồng bộ với lúc camera bật,
-        // tránh race condition giữa ViewModel state và hardware callback.
-        MainThread.BeginInvokeOnMainThread(async () =>
+        public ScanPage(ViewModels.ScanViewModel viewModel)
         {
-            // Nhường 300ms cho Driver Camera hoàn tất khởi tạo phần cứng
-            await Task.Delay(300);
+            InitializeComponent();
+            BindingContext = viewModel;
 
-            // Reset trạng thái quét — đặt bên trong MainThread để sync với camera activation
-            if (BindingContext is ScanViewModel vm)
-                vm.IsScanning = true;
-
-            if (barcodeReader != null)
+            barcodeReader.Options = new BarcodeReaderOptions
             {
-                // Ép đánh thức ống kính bằng cách gán lại CameraLocation về camera sau (Rear)
-                barcodeReader.CameraLocation = ZXing.Net.Maui.CameraLocation.Rear;
+                Formats = BarcodeFormats.All, 
+                AutoRotate = true,
+                Multiple = false
+            };
+        }
 
-                // Bật cờ quét SAU KHI phần cứng đã sẵn sàng
-                barcodeReader.IsDetecting = true;
-            }
-        });
-    }
+        // ═══════ LIFECYCLE ═══════
 
-    // Tắt camera + dừng animation khi rời khỏi Tab (tiết kiệm pin, giải phóng tài nguyên)
-    protected override void OnDisappearing()
-    {
-        base.OnDisappearing();
-
-        // Dừng animation đường quét trước (không phụ thuộc MainThread)
-        _isAnimating = false;
-
-        // Ngắt phần cứng camera an toàn trên MainThread
-        MainThread.BeginInvokeOnMainThread(() =>
+        protected override async void OnAppearing()
         {
+            base.OnAppearing();
+            await RequestCameraPermission();
+
+            viewfinderBorder.Stroke = Color.FromArgb("#E8672A");
+            scanLine.Color = Color.FromArgb("#E8672A");
+            scanLine.TranslationY = 20;
+
+            _isAnimating = true;
+            StartScanLineAnimation();
+
+            MainThread.BeginInvokeOnMainThread(async () =>
+            {
+                await Task.Delay(300);
+
+                if (!this.IsVisible) return;
+
+                if (BindingContext is ViewModels.ScanViewModel vm)
+                {
+                    vm.IsScanning = true;
+                }
+
+                if (barcodeReader != null)
+                {
+                    barcodeReader.IsVisible = false;
+                    barcodeReader.IsVisible = true;
+
+                    barcodeReader.CameraLocation = CameraLocation.Front;
+                    barcodeReader.CameraLocation = CameraLocation.Rear;
+
+                    // Khôi phục trạng thái đèn flash nếu trước đó đang bật
+                    barcodeReader.IsTorchOn = _isTorchOn;
+
+                    barcodeReader.IsDetecting = true;
+                }
+            });
+        }
+
+        protected override void OnDisappearing()
+        {
+            base.OnDisappearing();
+            
+            _isAnimating = false;
+            scanLine.CancelAnimations();
+
             if (barcodeReader != null)
             {
                 barcodeReader.IsDetecting = false;
@@ -81,81 +85,89 @@ public partial class ScanPage : ContentPage
                     torchIcon.Text = "🔦";
                 }
             }
-        });
-    }
-
-    // ═══════ XIN QUYỀN CAMERA ═══════
-    private async Task RequestCameraPermission()
-    {
-        var status = await Permissions.CheckStatusAsync<Permissions.Camera>();
-
-        if (status != PermissionStatus.Granted)
-            status = await Permissions.RequestAsync<Permissions.Camera>();
-
-        if (status != PermissionStatus.Granted)
-        {
-            await DisplayAlert("Thông báo",
-                "Vui lòng cấp quyền Camera để sử dụng chức năng quét mã QR.",
-                "Đã hiểu");
-            await Shell.Current.GoToAsync("..");
         }
-    }
 
-    // ═══════ ANIMATION ĐƯỜNG QUÉT (Scan Line) ═══════
-    // Đường gạch ngang chạy lên xuống liên tục bên trong khung ngắm 260px
-    private async void StartScanLineAnimation()
-    {
-        while (_isAnimating)
+        // ═══════ NÚT BẬT/TẮT ĐÈN FLASH (ĐÃ THÊM LẠI) ═══════
+        private void ToggleTorch_Tapped(object? sender, TappedEventArgs e)
         {
-            // Di chuyển từ trên (20px) xuống dưới (230px) trong 1.5 giây
-            await scanLine.TranslateTo(0, 230, 1500, Easing.SinInOut);
-            if (!_isAnimating) break;
-
-            // Di chuyển ngược lại lên trên
-            await scanLine.TranslateTo(0, 20, 1500, Easing.SinInOut);
-        }
-    }
-
-    // ═══════ XỬ LÝ SỰ KIỆN QUÉT THÀNH CÔNG ═══════
-    private void BarcodeReader_BarcodesDetected(object sender, BarcodeDetectionEventArgs e)
-    {
-        var first = e.Results?.FirstOrDefault();
-        if (first == null) return;
-
-        if (BindingContext is ScanViewModel viewModel && viewModel.IsScanning)
-        {
-            Dispatcher.Dispatch(async () =>
+            _isTorchOn = !_isTorchOn;
+            
+            if (barcodeReader != null)
             {
-                // ★ BƯỚC 1 — TẮT CAMERA ĐẦU TIÊN, NGAY LẬP TỨC
-                // Phải là lệnh đầu tiên để ngăn event BarcodesDetected fire liên tục → chống quét lặp & treo máy
-                barcodeReader.IsDetecting = false;
+                barcodeReader.IsTorchOn = _isTorchOn;
+            }
 
-                // ★ BƯỚC 2 — Dừng animation đường quét ngay sau đó
+            // Cập nhật giao diện nút flash
+            torchButton.BackgroundColor = _isTorchOn
+                ? Color.FromArgb("#E8672A")
+                : Color.FromArgb("#44FFFFFF");
+            torchIcon.Text = _isTorchOn ? "💡" : "🔦";
+        }
+
+        // ═══════ KIỂM TRA QUYỀN CAMERA ═══════
+
+        private async Task RequestCameraPermission()
+        {
+            var status = await Permissions.CheckStatusAsync<Permissions.Camera>();
+            if (status != PermissionStatus.Granted)
+            {
+                status = await Permissions.RequestAsync<Permissions.Camera>();
+                if (status != PermissionStatus.Granted)
+                {
+                    await DisplayAlert("Lỗi", "Vui lòng cấp quyền sử dụng camera để quét mã QR", "OK");
+                }
+            }
+        }
+
+        // ═══════ ANIMATION QUÉT LASER ═══════
+
+        private void StartScanLineAnimation()
+        {
+            if (scanLine == null) return;
+
+            var animation = new Animation(v => scanLine.TranslationY = v, 20, 220);
+            animation.Commit(this, "ScanLineAnimation", 16, 2000, Easing.Linear, (v, c) =>
+            {
+                if (_isAnimating)
+                {
+                    var reverseAnimation = new Animation(v => scanLine.TranslationY = v, 220, 20);
+                    reverseAnimation.Commit(this, "ReverseScanLineAnimation", 16, 2000, Easing.Linear, (v, c) =>
+                    {
+                        if (_isAnimating)
+                            StartScanLineAnimation(); 
+                    });
+                }
+            }, () => false);
+        }
+
+        // ═══════ XỬ LÝ KẾT QUẢ QUÉT ═══════
+
+        private void BarcodeReader_BarcodesDetected(object? sender, BarcodeDetectionEventArgs e)
+        {
+            var barcodes = e.Results;
+            if (barcodes == null || barcodes.Length == 0) return;
+
+            var firstBarcode = barcodes[0].Value;
+
+            MainThread.BeginInvokeOnMainThread(async () =>
+            {
+                if (barcodeReader != null)
+                {
+                    barcodeReader.IsDetecting = false;
+                }
+
                 _isAnimating = false;
 
-                // ★ BƯỚC 3 — Hiệu ứng phản hồi thành công: đổi màu khung ngắm sang xanh lá
-                viewfinderBorder.Stroke = Color.FromArgb("#5DAA68");
-                scanLine.Color = Color.FromArgb("#5DAA68");
+                viewfinderBorder.Stroke = Colors.Green;
+                scanLine.Color = Colors.Green;
 
-                // Chờ 0.5s để người dùng nhận biết quét thành công trước khi xử lý
                 await Task.Delay(500);
 
-                // Gọi ViewModel xử lý nội dung QR (dùng ExecuteAsync cho an toàn bất đồng bộ)
-                await viewModel.ProcessQrCodeCommand.ExecuteAsync(first.Value);
+                if (BindingContext is ViewModels.ScanViewModel viewModel && viewModel.IsScanning)
+                {
+                    await viewModel.ProcessQrCodeCommand.ExecuteAsync(firstBarcode);
+                }
             });
         }
-    }
-
-    // ═══════ NÚT BẬT/TẮT ĐÈN FLASH ═══════
-    private void ToggleTorch_Tapped(object? sender, TappedEventArgs e)
-    {
-        _isTorchOn = !_isTorchOn;
-        barcodeReader.IsTorchOn = _isTorchOn;
-
-        // Cập nhật giao diện nút flash
-        torchButton.BackgroundColor = _isTorchOn
-            ? Color.FromArgb("#E8672A")
-            : Color.FromArgb("#44FFFFFF");
-        torchIcon.Text = _isTorchOn ? "💡" : "🔦";
     }
 }
