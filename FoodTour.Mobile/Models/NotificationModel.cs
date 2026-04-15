@@ -1,4 +1,5 @@
 using SQLite;
+using FoodTour.Mobile.Extensions;
 
 namespace FoodTour.Mobile.Models
 {
@@ -33,6 +34,12 @@ namespace FoodTour.Mobile.Models
 
         /// <summary>Thời gian tạo thông báo</summary>
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        /// <summary>
+        /// Thời gian tạo thông báo (Giờ Việt Nam)
+        /// </summary>
+        [Ignore]
+        public DateTime CreatedAtVN => CreatedAt.ToVietnamTime();
 
         /// <summary>
         /// Danh sách ID quán ăn cần cập nhật, lưu dạng JSON string

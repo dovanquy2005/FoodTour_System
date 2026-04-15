@@ -92,27 +92,27 @@ else
 
             @* ── Nền tảng ── *@
             <MudTd DataLabel="Nền tảng">
-                @if (context.Platform.Equals("Android", StringComparison.OrdinalIgnoreCase))
+                @if ("Android".Equals(context.Platform, StringComparison.OrdinalIgnoreCase))
                 {
                     <i class="bi bi-android2" style="color:#34A853; font-size: 1.2rem;" title="Android"></i>
                 }
-                else if (context.Platform.Contains("iOS", StringComparison.OrdinalIgnoreCase) || context.Platform.Contains("Mac", StringComparison.OrdinalIgnoreCase))
+                else if (context.Platform != null && (context.Platform.Contains("iOS", StringComparison.OrdinalIgnoreCase) || context.Platform.Contains("Mac", StringComparison.OrdinalIgnoreCase)))
                 {
                     <i class="bi bi-apple" style="color:#64748b; font-size: 1.2rem;" title="Apple"></i>
                 }
                 else
                 {
-                    <MudText Typo="Typo.body2">@context.Platform</MudText>
+                    <MudText Typo="Typo.body2">@(context.Platform ?? "Unknown")</MudText>
                 }
             </MudTd>
 
             @* ── LastActive ── *@
             <MudTd DataLabel="Hoạt động cuối">
                 <MudText Typo="Typo.body2" Style="color:#475569;">
-                    @context.LastActive.ToLocalTime().ToString("dd/MM/yyyy")
+                    @context.LastActive.ToVietnamTime().ToString("dd/MM/yyyy")
                 </MudText>
                 <MudText Typo="Typo.caption" Style="color:#94a3b8;">
-                    @context.LastActive.ToLocalTime().ToString("HH:mm:ss")
+                    @context.LastActive.ToVietnamTime().ToString("HH:mm:ss")
                 </MudText>
             </MudTd>
 

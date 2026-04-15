@@ -181,7 +181,7 @@
 										</HorizontalStackLayout>
 
 										<!-- Badge Đã cập nhật -->
-										<Label Text="{Binding CreatedAt, StringFormat='{0:dd/MM/yyyy HH:mm}'}"
+										<Label Text="{Binding CreatedAtVN, StringFormat='{0:dd/MM/yyyy HH:mm}'}"
 										       TextColor="{StaticResource TextSecondary}"
 										       FontSize="12"
 											   Opacity="0.6"

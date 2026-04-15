@@ -156,7 +156,7 @@ else
                     @DateCell(context)
                     <MudTd DataLabel="Ngày duyệt">
                         <MudText Typo="Typo.body2" Style="color:#22c55e; font-weight:600;">
-                            @context.UpdatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                            @context.UpdatedAt.ToVietnamTime().ToString("dd/MM/yyyy HH:mm")
                         </MudText>
                     </MudTd>
                 </RowTemplate>
@@ -205,7 +205,7 @@ else
                     @OwnerCell(context)
                     <MudTd DataLabel="Ngày từ chối">
                         <MudText Typo="Typo.body2" Style="color:#ef4444; font-weight:600;">
-                            @context.UpdatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                            @context.UpdatedAt.ToVietnamTime().ToString("dd/MM/yyyy HH:mm")
                         </MudText>
                     </MudTd>
                     <MudTd DataLabel="Lý do">
@@ -445,10 +445,10 @@ else
     {
         <MudTd DataLabel="Thời gian">
             <MudText Typo="Typo.body2" Style="color:#475569;">
-                @s.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")
+                @s.CreatedAt.ToVietnamTime().ToString("dd/MM/yyyy")
             </MudText>
             <MudText Typo="Typo.caption" Style="color:#94a3b8;">
-                @s.CreatedAt.ToLocalTime().ToString("HH:mm")
+                @s.CreatedAt.ToVietnamTime().ToString("HH:mm")
             </MudText>
         </MudTd>;
     };

@@ -227,8 +227,8 @@ public partial class AppShell : Shell
     private async Task ShowUpdateSnackbarAsync(string message)
     {
         // Throttling: không hiện lại nếu chưa quá 10 giây (tránh spam với timer 5s)
-        if ((DateTime.Now - _lastUpdateSnackbarTime).TotalSeconds < 10) return;
-        _lastUpdateSnackbarTime = DateTime.Now;
+        if ((DateTime.UtcNow - _lastUpdateSnackbarTime).TotalSeconds < 10) return;
+        _lastUpdateSnackbarTime = DateTime.UtcNow;
 
         await MainThread.InvokeOnMainThreadAsync(async () =>
         {
