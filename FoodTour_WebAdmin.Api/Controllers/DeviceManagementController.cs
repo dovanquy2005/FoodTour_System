@@ -44,73 +44,28 @@ public class DeviceManagementController : ControllerBase
             {
                 DeviceId   = request.DeviceId,
                 DeviceName = request.DeviceName ?? "Unknown Device",
-                LastActive = DateTime.UtcNow,
-                IsBlocked  = false
+                Platform   = request.Platform ?? "Unknown",
+                LastActive = DateTime.UtcNow
             };
             db.UserDevices.Add(device);
         }
         else
         {
-            // Thiết bị đã biết — chỉ cập nhật LastActive (và DeviceName nếu có)
+            // Thiết bị đã biết — chỉ cập nhật LastActive (và thông tin khác nếu có)
             device.LastActive = DateTime.UtcNow;
             if (!string.IsNullOrWhiteSpace(request.DeviceName))
                 device.DeviceName = request.DeviceName;
+            if (!string.IsNullOrWhiteSpace(request.Platform))
+                device.Platform = request.Platform;
         }
 
         await db.SaveChangesAsync();
 
-        return Ok(new
-        {
-            deviceId  = device.DeviceId,
-            isBlocked = device.IsBlocked,
-            message   = "Đồng bộ thành công."
-        });
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // POST /api/device/block/{deviceId}
-    // Admin khóa một thiết bị.
-    // ─────────────────────────────────────────────────────────────────────────
-    [HttpPost("block/{deviceId}")]
-    public async Task<IActionResult> Block(string deviceId)
-    {
-        await using var db = await _dbFactory.CreateDbContextAsync();
-
-        var device = await db.UserDevices
-            .FirstOrDefaultAsync(d => d.DeviceId == deviceId);
-
-        if (device is null)
-            return NotFound(new { message = $"Không tìm thấy thiết bị '{deviceId}'." });
-
-        device.IsBlocked = true;
-        await db.SaveChangesAsync();
-
-        return Ok(new { message = "Thiết bị đã bị khóa." });
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // POST /api/device/unblock/{deviceId}
-    // Admin mở khóa một thiết bị.
-    // ─────────────────────────────────────────────────────────────────────────
-    [HttpPost("unblock/{deviceId}")]
-    public async Task<IActionResult> Unblock(string deviceId)
-    {
-        await using var db = await _dbFactory.CreateDbContextAsync();
-
-        var device = await db.UserDevices
-            .FirstOrDefaultAsync(d => d.DeviceId == deviceId);
-
-        if (device is null)
-            return NotFound(new { message = $"Không tìm thấy thiết bị '{deviceId}'." });
-
-        device.IsBlocked = false;
-        await db.SaveChangesAsync();
-
-        return Ok(new { message = "Thiết bị đã được mở khóa." });
+        return Ok(new { message = "Đồng bộ thành công." });
     }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DTO — chỉ dùng trong phạm vi API này, không cần tạo file riêng
 // ─────────────────────────────────────────────────────────────────────────────
-public sealed record SyncDeviceRequest(string DeviceId, string? DeviceName);
+public sealed record SyncDeviceRequest(string DeviceId, string? DeviceName, string? Platform);

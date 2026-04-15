@@ -14,11 +14,11 @@ public class UserDeviceModel
     /// <summary>Tên thiết bị (Model máy hoặc do người dùng đặt).</summary>
     public string DeviceName { get; set; } = string.Empty;
 
+    /// <summary>Nền tảng hệ điều hành (Android, iOS, v.v.).</summary>
+    public string Platform { get; set; } = "Unknown";
+
     /// <summary>Lần cuối thiết bị gọi API sync.</summary>
     public DateTime LastActive { get; set; } = DateTime.UtcNow;
-
-    /// <summary>True = thiết bị bị khóa, không được phép truy cập dữ liệu.</summary>
-    public bool IsBlocked { get; set; } = false;
 
     // ── Quan hệ 1-nhiều với UserModel (nullable — thiết bị có thể chưa đăng nhập) ──
     public string? UserId { get; set; }

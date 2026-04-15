@@ -42,26 +42,8 @@ public partial class App : Application
         // Đọc lại DeviceName từ bản ghi đã lưu để dùng khi sync lên API
         DeviceName = DeviceInfo.Model ?? "Unknown Device";
         
-        // Gọi lên Backend kiểm tra trạng thái khóa. Await để chắc chắn có kết quả trước khi tiếp tục.
-        bool isBlocked = await databaseService.SyncDeviceToServerAsync(DeviceId, DeviceName);
-
-        if (isBlocked)
-        {
-            MainThread.BeginInvokeOnMainThread(() =>
-            {
-                var blockedPage = new Views.BlockedPage();
-                if (Application.Current?.Windows.Count > 0)
-                {
-                    Application.Current.Windows[0].Page = blockedPage;
-                }
-                else
-                {
-                    _initialPage = blockedPage;
-                }
-            });
-            // Dừng hoàn toàn quá trình khởi tạo ứng dụng và localization
-            return;
-        }
+        // Đẩy lên Backend nền — không await để không block splash screen
+        _ = databaseService.SyncDeviceToServerAsync(DeviceId, DeviceName);
         // ────────────────────────────────────────────────────────────────────────────
 
         // Auto-Detect & Auto-Translate Logic
@@ -161,22 +143,7 @@ public partial class App : Application
             {
                 if (_databaseService != null && !string.IsNullOrEmpty(DeviceId))
                 {
-                    bool isBlocked = await _databaseService.SyncDeviceToServerAsync(DeviceId, DeviceName);
-                    
-                    // Nếu phát hiện thiết bị vừa bị khóa từ phiên Heartbeat
-                    if (isBlocked)
-                    {
-                        MainThread.BeginInvokeOnMainThread(() =>
-                        {
-                            if (Application.Current?.Windows.Count > 0 && Application.Current.Windows[0].Page is not Views.BlockedPage)
-                            {
-                                Application.Current.Windows[0].Page = new Views.BlockedPage();
-                            }
-                        });
-                        
-                        // Khóa xong rồi thì không cần đập Heartbeat nữa
-                        StopHeartbeat(); 
-                    }
+                    await _databaseService.SyncDeviceToServerAsync(DeviceId, DeviceName);
                 }
             }
         }

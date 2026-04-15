@@ -109,7 +109,8 @@
                     var payload = new
                     {
                         DeviceId   = deviceId,
-                        DeviceName = deviceName
+                        DeviceName = deviceName,
+                        Platform   = DeviceInfo.Platform.ToString()
                     };
 
                     var url = $"{API_BASE_URL}/api/device/sync";
@@ -119,9 +120,8 @@
 
                     if (response.IsSuccessStatusCode)
                     {
-                        var result = await response.Content.ReadFromJsonAsync<SyncDeviceResponse>();
-                        System.Diagnostics.Debug.WriteLine($"[DeviceSync] Đồng bộ thành công: {deviceId}. Bị khóa: {result?.IsBlocked}");
-                        return result?.IsBlocked ?? false;
+                        System.Diagnostics.Debug.WriteLine($"[DeviceSync] Đồng bộ thành công: {deviceId}");
+                        return true;
                     }
                     else
                     {
@@ -135,12 +135,6 @@
                     System.Diagnostics.Debug.WriteLine($"[DeviceSync] Lỗi: {ex.Message}");
                     return false;
                 }
-            }
-
-            private class SyncDeviceResponse
-            {
-                [System.Text.Json.Serialization.JsonPropertyName("isBlocked")]
-                public bool IsBlocked { get; set; }
             }
 
             // ═══════ IMAGE & AUDIO CACHING ═══════

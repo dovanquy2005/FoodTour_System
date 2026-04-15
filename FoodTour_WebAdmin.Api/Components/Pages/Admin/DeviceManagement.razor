@@ -20,13 +20,6 @@
     </div>
 
     <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
-        @if (_blockedCount > 0)
-        {
-            <MudChip T="string" Color="Color.Error" Icon="@Icons.Material.Filled.Block"
-                     Style="font-weight:700;">
-                @_blockedCount thiết bị bị khóa
-            </MudChip>
-        }
         <MudChip T="string" Color="Color.Info" Icon="@Icons.Material.Filled.Devices"
                  Style="font-weight:700;">
             @_devices.Count tổng cộng
@@ -63,19 +56,17 @@ else
               Loading="_isLoading">
         <ColGroup>
             <col style="width:25%;" />
-            <col style="width:18%;" />
-            <col style="width:17%;" />
-            <col style="width:12%;" />
-            <col style="width:12%;" />
-            <col style="width:16%; text-align:center;" />
+            <col style="width:25%;" />
+            <col style="width:15%;" />
+            <col style="width:20%;" />
+            <col style="width:15%;" />
         </ColGroup>
         <HeaderContent>
             <MudTh Style="@_thStyle">Device ID</MudTh>
             <MudTh Style="@_thStyle">Tên thiết bị</MudTh>
+            <MudTh Style="@_thStyle">Nền tảng</MudTh>
             <MudTh Style="@_thStyle">Hoạt động cuối</MudTh>
             <MudTh Style="@_thStyle">Kết nối</MudTh>
-            <MudTh Style="@_thStyle">Tài khoản</MudTh>
-            <MudTh Style="@(_thStyle + " text-align:center;")">Hành động</MudTh>
         </HeaderContent>
         <RowTemplate>
             @* ── DeviceId ── *@
@@ -94,13 +85,25 @@ else
 
             @* ── Tên thiết bị ── *@
             <MudTd DataLabel="Tên thiết bị">
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <MudIcon Icon="@Icons.Material.Filled.PhoneAndroid"
-                             Style="color:#3b82f6; font-size:1.2rem;" />
-                    <MudText Typo="Typo.body2" Style="font-weight:600; color:#1e293b;">
-                        @context.DeviceName
-                    </MudText>
-                </div>
+                <MudText Typo="Typo.body2" Style="font-weight:600; color:#1e293b;">
+                    @context.DeviceName
+                </MudText>
+            </MudTd>
+
+            @* ── Nền tảng ── *@
+            <MudTd DataLabel="Nền tảng">
+                @if (context.Platform.Equals("Android", StringComparison.OrdinalIgnoreCase))
+                {
+                    <i class="bi bi-android2" style="color:#34A853; font-size: 1.2rem;" title="Android"></i>
+                }
+                else if (context.Platform.Contains("iOS", StringComparison.OrdinalIgnoreCase) || context.Platform.Contains("Mac", StringComparison.OrdinalIgnoreCase))
+                {
+                    <i class="bi bi-apple" style="color:#64748b; font-size: 1.2rem;" title="Apple"></i>
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2">@context.Platform</MudText>
+                }
             </MudTd>
 
             @* ── LastActive ── *@
@@ -132,56 +135,6 @@ else
                     </MudChip>
                 }
             </MudTd>
-
-            @* ── Trạng thái (Tài khoản) ── *@
-            <MudTd DataLabel="Tài khoản">
-                @if (context.IsBlocked)
-                {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Error"
-                             Icon="@Icons.Material.Filled.Lock"
-                             Style="font-weight:700;">
-                        Đã khóa
-                    </MudChip>
-                }
-                else
-                {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Success"
-                             Icon="@Icons.Material.Filled.CheckCircle"
-                             Style="font-weight:700;">
-                        Hoạt động
-                    </MudChip>
-                }
-            </MudTd>
-
-            @* ── Hành động ── *@
-            <MudTd DataLabel="Hành động" Style="text-align:center;">
-                @if (context.IsBlocked)
-                {
-                    <MudTooltip Text="Mở khóa thiết bị">
-                        <MudButton Variant="Variant.Filled" Color="Color.Success"
-                                   Size="Size.Small"
-                                   StartIcon="@Icons.Material.Filled.LockOpen"
-                                   OnClick="@(() => ToggleBlockAsync(context, block: false))"
-                                   Disabled="@_processingIds.Contains(context.Id)"
-                                   Style="border-radius:8px; text-transform:none; font-weight:600;">
-                            Mở khóa
-                        </MudButton>
-                    </MudTooltip>
-                }
-                else
-                {
-                    <MudTooltip Text="Khóa thiết bị này">
-                        <MudButton Variant="Variant.Filled" Color="Color.Error"
-                                   Size="Size.Small"
-                                   StartIcon="@Icons.Material.Filled.Block"
-                                   OnClick="@(() => ToggleBlockAsync(context, block: true))"
-                                   Disabled="@_processingIds.Contains(context.Id)"
-                                   Style="border-radius:8px; text-transform:none; font-weight:600;">
-                            Khóa thiết bị
-                        </MudButton>
-                    </MudTooltip>
-                }
-            </MudTd>
         </RowTemplate>
         <NoRecordsContent>
             <MudStack AlignItems="AlignItems.Center" Style="padding:48px 0;">
@@ -208,13 +161,11 @@ else
     private bool _isLoading = true;
     private string _search = string.Empty;
     private List<UserDeviceModel> _devices = new();
-    private HashSet<int> _processingIds = new();
     private System.Threading.Timer? _autoRefreshTimer;
 
     private const string _thStyle = "background:#f8fafc; font-weight:700; color:#475569;";
 
     // ── Derived ────────────────────────────────────────────────────────────
-    private int _blockedCount => _devices.Count(d => d.IsBlocked);
 
     private IEnumerable<UserDeviceModel> FilteredDevices =>
         string.IsNullOrWhiteSpace(_search)
@@ -264,47 +215,5 @@ else
     {
         // Giải phóng timer khi rời trang để tránh Memory Leak
         _autoRefreshTimer?.Dispose();
-    }
-
-    // ── Business Logic ─────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Khóa hoặc mở khóa một thiết bị; cập nhật thẳng vào DB rồi phản hồi UI.
-    /// </summary>
-    private async Task ToggleBlockAsync(UserDeviceModel device, bool block)
-    {
-        if (_processingIds.Contains(device.Id)) return;
-        _processingIds.Add(device.Id);
-
-        try
-        {
-            await using var db = await DbFactory.CreateDbContextAsync();
-            var entity = await db.UserDevices.FindAsync(device.Id);
-            if (entity is null)
-            {
-                Snackbar.Add("Không tìm thấy thiết bị trong CSDL.", Severity.Warning);
-                return;
-            }
-
-            entity.IsBlocked = block;
-            await db.SaveChangesAsync();
-
-            // Cập nhật UI ngay, không cần reload toàn bộ list
-            device.IsBlocked = block;
-
-            var msg = block
-                ? $"🔒 Đã khóa thiết bị '{device.DeviceName}'."
-                : $"🔓 Đã mở khóa thiết bị '{device.DeviceName}'.";
-            Snackbar.Add(msg, block ? Severity.Error : Severity.Success);
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Lỗi: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            _processingIds.Remove(device.Id);
-            StateHasChanged();
-        }
     }
 }
