@@ -92,18 +92,23 @@ else
 
             @* ── Nền tảng ── *@
             <MudTd DataLabel="Nền tảng">
-                @if ("Android".Equals(context.Platform, StringComparison.OrdinalIgnoreCase))
-                {
-                    <i class="bi bi-android2" style="color:#34A853; font-size: 1.2rem;" title="Android"></i>
-                }
-                else if (context.Platform != null && (context.Platform.Contains("iOS", StringComparison.OrdinalIgnoreCase) || context.Platform.Contains("Mac", StringComparison.OrdinalIgnoreCase)))
-                {
-                    <i class="bi bi-apple" style="color:#64748b; font-size: 1.2rem;" title="Apple"></i>
-                }
-                else
-                {
-                    <MudText Typo="Typo.body2">@(context.Platform ?? "Unknown")</MudText>
-                }
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    @if ("Android".Equals(context.Platform, StringComparison.OrdinalIgnoreCase))
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Android" Style="color:#34A853;" />
+                        <MudText Typo="Typo.body2">Android</MudText>
+                    }
+                    else if (context.Platform != null && (context.Platform.Contains("iOS", StringComparison.OrdinalIgnoreCase) || context.Platform.Contains("Mac", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        <MudIcon Icon="@Icons.Custom.Brands.Apple" Style="color:#64748b;" />
+                        <MudText Typo="Typo.body2">@context.Platform</MudText>
+                    }
+                    else
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Smartphone" Style="color:#94a3b8;" />
+                        <MudText Typo="Typo.body2">@(context.Platform ?? "Unknown")</MudText>
+                    }
+                </MudStack>
             </MudTd>
 
             @* ── LastActive ── *@
