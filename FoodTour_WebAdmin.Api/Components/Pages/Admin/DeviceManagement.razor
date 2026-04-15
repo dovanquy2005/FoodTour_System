@@ -1,0 +1,310 @@
+@page "/admin/devices"
+@implements IDisposable
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+@inject IDbContextFactory<AppDbContext> DbFactory
+@inject ISnackbar Snackbar
+@using FoodTour_WebAdmin.Api.Models
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Quản lý thiết bị — FoodTour Admin</PageTitle>
+
+@* ══ HEADER ══ *@
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px;">
+    <div>
+        <MudText Typo="Typo.h4" Style="font-weight:800; color:#1e293b; margin-bottom:4px;">
+            📱 Quản lý thiết bị Mobile
+        </MudText>
+        <MudText Typo="Typo.body2" Style="color:#64748b;">
+            Theo dõi và kiểm soát các thiết bị đã đồng bộ lên hệ thống
+        </MudText>
+    </div>
+
+    <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+        @if (_blockedCount > 0)
+        {
+            <MudChip T="string" Color="Color.Error" Icon="@Icons.Material.Filled.Block"
+                     Style="font-weight:700;">
+                @_blockedCount thiết bị bị khóa
+            </MudChip>
+        }
+        <MudChip T="string" Color="Color.Info" Icon="@Icons.Material.Filled.Devices"
+                 Style="font-weight:700;">
+            @_devices.Count tổng cộng
+        </MudChip>
+        <MudButton StartIcon="@Icons.Material.Filled.Refresh" Variant="Variant.Outlined"
+                   OnClick="@(() => LoadDataAsync(true))" Disabled="_isLoading">
+            Làm mới
+        </MudButton>
+    </MudStack>
+</div>
+
+@* ══ SEARCH BAR ══ *@
+<MudTextField @bind-Value="_search" Immediate="true"
+              Placeholder="Tìm DeviceId, tên thiết bị..."
+              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+              Variant="Variant.Outlined" Margin="Margin.Dense"
+              Style="max-width:440px; margin-bottom:20px;" />
+
+@* ══ LOADING ══ *@
+@if (_isLoading)
+{
+    <div style="display:flex; gap:16px; align-items:center; padding:48px 0;">
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        <MudText Style="color:#64748b;">Đang tải danh sách thiết bị...</MudText>
+    </div>
+}
+else
+{
+    @* ══ BẢNG THIẾT BỊ ══ *@
+    <MudTable T="UserDeviceModel"
+              Items="@FilteredDevices"
+              Hover="true" Striped="true" Elevation="2"
+              Style="border-radius:16px; overflow:hidden;"
+              Loading="_isLoading">
+        <ColGroup>
+            <col style="width:25%;" />
+            <col style="width:18%;" />
+            <col style="width:17%;" />
+            <col style="width:12%;" />
+            <col style="width:12%;" />
+            <col style="width:16%; text-align:center;" />
+        </ColGroup>
+        <HeaderContent>
+            <MudTh Style="@_thStyle">Device ID</MudTh>
+            <MudTh Style="@_thStyle">Tên thiết bị</MudTh>
+            <MudTh Style="@_thStyle">Hoạt động cuối</MudTh>
+            <MudTh Style="@_thStyle">Kết nối</MudTh>
+            <MudTh Style="@_thStyle">Tài khoản</MudTh>
+            <MudTh Style="@(_thStyle + " text-align:center;")">Hành động</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            @* ── DeviceId ── *@
+            <MudTd DataLabel="Device ID">
+                <MudText Typo="Typo.body2"
+                         Style="font-family:monospace; font-size:0.78rem; color:#1e293b; word-break:break-all;">
+                    @context.DeviceId
+                </MudText>
+                @if (context.UserId != null)
+                {
+                    <MudText Typo="Typo.caption" Style="color:#94a3b8;">
+                        User: @context.UserId[..8]...
+                    </MudText>
+                }
+            </MudTd>
+
+            @* ── Tên thiết bị ── *@
+            <MudTd DataLabel="Tên thiết bị">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <MudIcon Icon="@Icons.Material.Filled.PhoneAndroid"
+                             Style="color:#3b82f6; font-size:1.2rem;" />
+                    <MudText Typo="Typo.body2" Style="font-weight:600; color:#1e293b;">
+                        @context.DeviceName
+                    </MudText>
+                </div>
+            </MudTd>
+
+            @* ── LastActive ── *@
+            <MudTd DataLabel="Hoạt động cuối">
+                <MudText Typo="Typo.body2" Style="color:#475569;">
+                    @context.LastActive.ToLocalTime().ToString("dd/MM/yyyy")
+                </MudText>
+                <MudText Typo="Typo.caption" Style="color:#94a3b8;">
+                    @context.LastActive.ToLocalTime().ToString("HH:mm:ss")
+                </MudText>
+            </MudTd>
+
+            @* ── Kết nối (Heartbeat) ── *@
+            <MudTd DataLabel="Kết nối">
+                @if ((DateTime.UtcNow - context.LastActive).TotalMinutes <= 2)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Success"
+                             Icon="@Icons.Material.Filled.Wifi"
+                             Style="font-weight:700;">
+                        Online
+                    </MudChip>
+                }
+                else
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default"
+                             Icon="@Icons.Material.Filled.WifiOff"
+                             Style="font-weight:700; color:#94a3b8;">
+                        Offline
+                    </MudChip>
+                }
+            </MudTd>
+
+            @* ── Trạng thái (Tài khoản) ── *@
+            <MudTd DataLabel="Tài khoản">
+                @if (context.IsBlocked)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Error"
+                             Icon="@Icons.Material.Filled.Lock"
+                             Style="font-weight:700;">
+                        Đã khóa
+                    </MudChip>
+                }
+                else
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Success"
+                             Icon="@Icons.Material.Filled.CheckCircle"
+                             Style="font-weight:700;">
+                        Hoạt động
+                    </MudChip>
+                }
+            </MudTd>
+
+            @* ── Hành động ── *@
+            <MudTd DataLabel="Hành động" Style="text-align:center;">
+                @if (context.IsBlocked)
+                {
+                    <MudTooltip Text="Mở khóa thiết bị">
+                        <MudButton Variant="Variant.Filled" Color="Color.Success"
+                                   Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.LockOpen"
+                                   OnClick="@(() => ToggleBlockAsync(context, block: false))"
+                                   Disabled="@_processingIds.Contains(context.Id)"
+                                   Style="border-radius:8px; text-transform:none; font-weight:600;">
+                            Mở khóa
+                        </MudButton>
+                    </MudTooltip>
+                }
+                else
+                {
+                    <MudTooltip Text="Khóa thiết bị này">
+                        <MudButton Variant="Variant.Filled" Color="Color.Error"
+                                   Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.Block"
+                                   OnClick="@(() => ToggleBlockAsync(context, block: true))"
+                                   Disabled="@_processingIds.Contains(context.Id)"
+                                   Style="border-radius:8px; text-transform:none; font-weight:600;">
+                            Khóa thiết bị
+                        </MudButton>
+                    </MudTooltip>
+                }
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudStack AlignItems="AlignItems.Center" Style="padding:48px 0;">
+                <MudIcon Icon="@Icons.Material.Filled.DevicesOther"
+                         Style="font-size:64px; color:#cbd5e1;" />
+                <MudText Typo="Typo.h6" Style="font-weight:700; color:#94a3b8;">
+                    Chưa có thiết bị nào
+                </MudText>
+                <MudText Typo="Typo.body2" Style="color:#b0bec5;">
+                    Các thiết bị sẽ xuất hiện khi Mobile gọi API sync lần đầu.
+                </MudText>
+            </MudStack>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new int[]{10, 25, 50}"
+                           RowsPerPageString="Số dòng mỗi trang:"
+                           InfoFormat="{first_item}-{last_item} của {all_items}" />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    // ── State ──────────────────────────────────────────────────────────────
+    private bool _isLoading = true;
+    private string _search = string.Empty;
+    private List<UserDeviceModel> _devices = new();
+    private HashSet<int> _processingIds = new();
+    private System.Threading.Timer? _autoRefreshTimer;
+
+    private const string _thStyle = "background:#f8fafc; font-weight:700; color:#475569;";
+
+    // ── Derived ────────────────────────────────────────────────────────────
+    private int _blockedCount => _devices.Count(d => d.IsBlocked);
+
+    private IEnumerable<UserDeviceModel> FilteredDevices =>
+        string.IsNullOrWhiteSpace(_search)
+            ? _devices.OrderByDescending(d => d.LastActive)
+            : _devices
+                .Where(d =>
+                    d.DeviceId.Contains(_search, StringComparison.OrdinalIgnoreCase) ||
+                    d.DeviceName.Contains(_search, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(d => d.LastActive);
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync(true);
+        
+        // Auto-refresh sau mỗi 30s kể từ khi khởi tạo xong, lặp lại mỗi 30s
+        _autoRefreshTimer = new System.Threading.Timer(_ =>
+        {
+            // InvokeAsync để đảm bảo chạy trên luồng dispatcher của Blazor
+            InvokeAsync(async () => await LoadDataAsync(false));
+        }, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+    }
+
+    private async Task LoadDataAsync(bool showLoading = true)
+    {
+        if (showLoading)
+        {
+            _isLoading = true;
+            StateHasChanged();
+        }
+
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            _devices = await db.UserDevices
+                .OrderByDescending(d => d.LastActive)
+                .ToListAsync();
+        }
+        finally
+        {
+            if (showLoading) _isLoading = false;
+            StateHasChanged(); // Ép buộc UI render lại để reflect Heartbeat nếu chạy ngầm
+        }
+    }
+
+    public void Dispose()
+    {
+        // Giải phóng timer khi rời trang để tránh Memory Leak
+        _autoRefreshTimer?.Dispose();
+    }
+
+    // ── Business Logic ─────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Khóa hoặc mở khóa một thiết bị; cập nhật thẳng vào DB rồi phản hồi UI.
+    /// </summary>
+    private async Task ToggleBlockAsync(UserDeviceModel device, bool block)
+    {
+        if (_processingIds.Contains(device.Id)) return;
+        _processingIds.Add(device.Id);
+
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var entity = await db.UserDevices.FindAsync(device.Id);
+            if (entity is null)
+            {
+                Snackbar.Add("Không tìm thấy thiết bị trong CSDL.", Severity.Warning);
+                return;
+            }
+
+            entity.IsBlocked = block;
+            await db.SaveChangesAsync();
+
+            // Cập nhật UI ngay, không cần reload toàn bộ list
+            device.IsBlocked = block;
+
+            var msg = block
+                ? $"🔒 Đã khóa thiết bị '{device.DeviceName}'."
+                : $"🔓 Đã mở khóa thiết bị '{device.DeviceName}'.";
+            Snackbar.Add(msg, block ? Severity.Error : Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Lỗi: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _processingIds.Remove(device.Id);
+            StateHasChanged();
+        }
+    }
+}

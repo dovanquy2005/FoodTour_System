@@ -12,6 +12,7 @@ public class AppDbContext : DbContext
 
     public DbSet<UserModel> Users => Set<UserModel>();
     public DbSet<ShopSubmission> ShopSubmissions => Set<ShopSubmission>();
+    public DbSet<UserDeviceModel> UserDevices => Set<UserDeviceModel>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -64,6 +65,23 @@ public class AppDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(e => e.ShopId)
                   .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // UserDeviceModel
+        modelBuilder.Entity<UserDeviceModel>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            // DeviceId phải là duy nhất trên toàn bảng
+            entity.HasIndex(e => e.DeviceId).IsUnique();
+            entity.Property(e => e.DeviceId).HasMaxLength(36).IsRequired();
+            entity.Property(e => e.DeviceName).HasMaxLength(200);
+
+            // FK: Device → User (SetNull — xóa User không mất lịch sử thiết bị)
+            entity.HasOne(e => e.User)
+                  .WithMany()
+                  .HasForeignKey(e => e.UserId)
+                  .OnDelete(DeleteBehavior.SetNull);
         });
 
 

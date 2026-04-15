@@ -45,6 +45,9 @@
                 // Migration V4: Thêm bảng NotificationModel cho hệ thống cập nhật qua thông báo
                 await _database.CreateTableAsync<NotificationModel>();
 
+                // Migration V5: Bảng LocalDevice lưu DeviceID bền vững (thay thế Preferences)
+                await _database.CreateTableAsync<LocalDeviceModel>();
+
                 _isInitialized = true;
             }
             finally
@@ -52,6 +55,93 @@
                 _initLock.Release();
             }
         }
+
+            // ═══════ DEVICE ID ═══════
+
+            /// <summary>
+            /// Trả về DeviceId từ SQLite (bền vững, không mất khi clear Preferences).
+            /// Lần đầu chạy: tạo GUID mới + lấy tên máy, lưu vào DB.
+            /// Các lần sau: đọc thẳng từ dòng đã có.
+            /// </summary>
+            public async Task<string> GetOrCreateDeviceIdAsync()
+            {
+                await Init();
+
+                // Đọc dòng duy nhất trong bảng LocalDevice
+                var existing = await _database!.Table<LocalDeviceModel>().FirstOrDefaultAsync();
+                if (existing is not null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[DeviceId] Load từ SQLite: {existing.DeviceId} | Model: {existing.DeviceName}");
+                    return existing.DeviceId;
+                }
+                    
+                // Lần đầu — tạo GUID mới và ghi vào SQLite
+                var newDevice = new LocalDeviceModel
+                {
+                    DeviceId   = Guid.NewGuid().ToString(),
+                    DeviceName = DeviceInfo.Model ?? "Unknown Device",
+                    CreatedAt  = DateTime.UtcNow
+                };
+
+                await _database.InsertAsync(newDevice);
+                System.Diagnostics.Debug.WriteLine($"[DeviceId] Tạo mới: {newDevice.DeviceId} | Model: {newDevice.DeviceName}");
+                return newDevice.DeviceId;
+            }
+
+            /// <summary>
+            /// Đẩy DeviceId và DeviceName lên Backend (POST /api/device/sync).
+            /// Nếu đã đồng bộ thành công rồi thì chỉ cập nhật LastActive.
+            /// Không throw — lỗi mạng được log im lặng để không ảnh hưởng startup.
+            /// Trả về true nếu thiết bị đang bị Khóa (Blocked), ngược lại false.
+            /// </summary>
+            public async Task<bool> SyncDeviceToServerAsync(string deviceId, string deviceName)
+            {
+                if (Connectivity.Current.NetworkAccess != NetworkAccess.Internet)
+                {
+                    System.Diagnostics.Debug.WriteLine("[DeviceSync] Không có mạng, bỏ qua sync.");
+                    return false;
+                }
+
+                try
+                {
+                    using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+
+                    var payload = new
+                    {
+                        DeviceId   = deviceId,
+                        DeviceName = deviceName
+                    };
+
+                    var url = $"{API_BASE_URL}/api/device/sync";
+                    System.Diagnostics.Debug.WriteLine($"[DeviceSync] Calling URL: {url}");
+
+                    var response = await httpClient.PostAsJsonAsync(url, payload);
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var result = await response.Content.ReadFromJsonAsync<SyncDeviceResponse>();
+                        System.Diagnostics.Debug.WriteLine($"[DeviceSync] Đồng bộ thành công: {deviceId}. Bị khóa: {result?.IsBlocked}");
+                        return result?.IsBlocked ?? false;
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[DeviceSync] Server trả về {response.StatusCode}");
+                        return false;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Offline hoặc server chưa khởi — im lặng, không crash app
+                    System.Diagnostics.Debug.WriteLine($"[DeviceSync] Lỗi: {ex.Message}");
+                    return false;
+                }
+            }
+
+            private class SyncDeviceResponse
+            {
+                [System.Text.Json.Serialization.JsonPropertyName("isBlocked")]
+                public bool IsBlocked { get; set; }
+            }
 
             // ═══════ IMAGE & AUDIO CACHING ═══════
 

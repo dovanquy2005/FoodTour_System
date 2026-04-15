@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="FoodTour.Mobile.Views.BlockedPage"
+             NavigationPage.HasNavigationBar="False"
+             BackgroundColor="{AppThemeBinding Light=#F8FAFC, Dark=#0F172A}">
+
+    <VerticalStackLayout Spacing="24" HorizontalOptions="Center" VerticalOptions="Center" Padding="32">
+        
+        <Label Text="🔒" FontSize="72" HorizontalOptions="Center" />
+        
+        <Label Text="Thiết Bị Đã Bị Khóa" 
+               FontSize="24" 
+               FontAttributes="Bold" 
+               TextColor="{AppThemeBinding Light=#EF4444, Dark=#F87171}" 
+               HorizontalOptions="Center" />
+               
+        <Label Text="Thiết bị của bạn đã bị khóa bởi Quản trị viên hệ thống. Vui lòng liên hệ Admin để được hỗ trợ mở khóa."
+               FontSize="16"
+               LineHeight="1.5"
+               HorizontalTextAlignment="Center"
+               TextColor="{AppThemeBinding Light=#475569, Dark=#94A3B8}" />
+               
+    </VerticalStackLayout>
+</ContentPage>
