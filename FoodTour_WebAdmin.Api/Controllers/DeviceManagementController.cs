@@ -34,6 +34,7 @@ public class DeviceManagementController : ControllerBase
 
         await using var db = await _dbFactory.CreateDbContextAsync();
 
+        // lấy thông tin thiết bị theo DeviceId
         var device = await db.UserDevices
             .FirstOrDefaultAsync(d => d.DeviceId == request.DeviceId);
 
@@ -47,6 +48,7 @@ public class DeviceManagementController : ControllerBase
                 Platform   = request.Platform ?? "Unknown",
                 LastActive = DateTime.UtcNow
             };
+            // thêm thiết bị mới vào database
             db.UserDevices.Add(device);
         }
         else

@@ -22,6 +22,9 @@ builder.Services.AddSingleton<FoodTour_WebAdmin.Api.Services.IQrCodeService, Foo
 builder.Services.AddScoped<FoodTour_WebAdmin.Api.Services.ManageFoodTourService>();
 builder.Services.AddScoped<FoodTour_WebAdmin.Api.Services.AuthService>();
 
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient<FoodTour_WebAdmin.Api.Services.GitHubReleaseService>();
+
 // SignalR — cho phép Server đẩy thông báo cập nhật tới Mobile App theo thời gian thực
 builder.Services.AddSignalR();
 

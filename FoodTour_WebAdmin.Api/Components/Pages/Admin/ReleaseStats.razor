@@ -1,0 +1,222 @@
+@page "/admin/release-stats"
+@using FoodTour_WebAdmin.Api.Data
+@using FoodTour_WebAdmin.Api.Models
+@using Microsoft.EntityFrameworkCore
+@using QRCoder
+@using MudBlazor
+@using FoodTour_WebAdmin.Api.Services
+@inject AppDbContext DbContext
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@inject GitHubReleaseService GitHubReleaseService
+
+<PageTitle>Thống kê phát hành — FoodTour Admin</PageTitle>
+
+@* ══ HEADER ══ *@
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px;">
+    <div>
+        <MudText Typo="Typo.h4" Style="font-weight:800; color:#1e293b; margin-bottom:4px;">
+            🚀 Thống kê phát hành
+        </MudText>
+        <MudText Typo="Typo.body2" Style="color:#64748b;">
+            Theo dõi xu hướng cài đặt và vận hành phiên bản ứng dụng Mobile
+        </MudText>
+    </div>
+</div>
+
+@* ══ DASHBOARD CARDS ══ *@
+<MudGrid Spacing="3" Class="mb-4">
+    <MudItem xs="12" sm="4">
+        <MudPaper Class="pa-4 d-flex flex-column justify-center" Elevation="0" Style="border-radius:16px; border:1px solid #f1f5f9; background:#fff; height:100%;">
+            <MudText Typo="Typo.overline" Style="color:#64748b; font-weight:600; letter-spacing:1px;" Class="mb-1">
+                📥 TỔNG LƯỢT TẢI
+            </MudText>
+            <MudText Typo="Typo.h4" Style="font-weight:800; color:#1e293b;">@totalDownloads.ToString("N0")</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" sm="4">
+        <MudPaper Class="pa-4 d-flex flex-column justify-center" Elevation="0" Style="border-radius:16px; border:1px solid #f1f5f9; background:#fff; height:100%;">
+            <MudText Typo="Typo.overline" Style="color:#64748b; font-weight:600; letter-spacing:1px;" Class="mb-1">
+                🔥 LƯỢT TẢI 24H QUA
+            </MudText>
+            <MudText Typo="Typo.h4" Style="font-weight:800; color:#1e293b;">@todayDownloads.ToString("N0")</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" sm="4">
+        <MudPaper Class="pa-4 d-flex flex-column justify-center" Elevation="0" Style="border-radius:16px; border:1px solid #f1f5f9; background:#fff; height:100%;">
+            <MudText Typo="Typo.overline" Style="color:#64748b; font-weight:600; letter-spacing:1px;" Class="mb-1">
+                📌 PHIÊN BẢN HIỆN TẠI
+            </MudText>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <MudText Typo="Typo.h4" Style="font-weight:800; color:#1e293b;">@latestVersion</MudText>
+                <MudChip T="string" Color="Color.Success" Size="Size.Small" Style="font-weight:600; margin:0;">Hoạt động</MudChip>
+            </div>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<MudGrid Spacing="3">
+    @* ══ CỘT CHÍNH (TRÁI) ══ *@
+    <MudItem xs="12" md="8">
+        @* Biểu đồ *@
+        <MudPaper Class="pa-4 mb-4" Elevation="0" Style="border-radius:16px; border:1px solid #f1f5f9; background:#fff;">
+            <MudText Typo="Typo.h6" Style="font-weight:700; color:#1e293b; margin-bottom:12px;">📈 Xu hướng tải App (30 ngày)</MudText>
+            @if (chartSeries.Count > 0)
+            {
+                <MudChart ChartType="ChartType.Line" ChartSeries="@chartSeries" XAxisLabels="@xAxisLabels" Width="100%" Height="300px" ChartOptions="@chartOptions" />
+            }
+            else
+            {
+                <div style="display:flex; justify-content:center; align-items:center; height:300px;">
+                    <MudText Typo="Typo.body2" Style="color:#94a3b8;">Chưa có dữ liệu thống kê nào.</MudText>
+                </div>
+            }
+        </MudPaper>
+
+        @* Bảng dữ liệu *@
+        <MudPaper Class="pa-4" Elevation="0" Style="border-radius:16px; border:1px solid #f1f5f9; background:#fff;">
+            <MudText Typo="Typo.h6" Style="font-weight:700; color:#1e293b; margin-bottom:12px;">📋 Nhật ký tải xuống</MudText>
+            <MudTable T="DownloadLog" Items="@recentDownloads"
+                      Hover="true" Striped="true" Elevation="0"
+                      Style="border-radius:12px; border:1px solid #e2e8f0; overflow:hidden;">
+                <HeaderContent>
+                    <MudTh Style="@_thStyle">Thời gian</MudTh>
+                    <MudTh Style="@_thStyle">Loại thiết bị</MudTh>
+                    <MudTh Style="@_thStyle">Phiên bản</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Thời gian">
+                        <MudText Typo="Typo.body2" Style="font-weight:600; color:#1e293b;">@context.DownloadedAt.ToLocalTime().ToString("dd/MM/yyyy")</MudText>
+                        <MudText Typo="Typo.caption" Style="color:#64748b;">@context.DownloadedAt.ToLocalTime().ToString("HH:mm")</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Loại thiết bị">
+                        <MudText Typo="Typo.body2" Style="color:#475569;">@context.DeviceType</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Phiên bản">
+                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Text" Style="font-weight:600;">@context.VersionDownloaded</MudChip>
+                    </MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <MudText Typo="Typo.body2" Style="color:#94a3b8; padding:20px;">Không có lượt tải nào gần đây</MudText>
+                </NoRecordsContent>
+            </MudTable>
+        </MudPaper>
+    </MudItem>
+
+    @* ══ CỘT SIDEBAR (PHẢI) ══ *@
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pa-6" Elevation="0" Style="border-radius:16px; border:1px solid #f1f5f9; text-align:center; background:#fff; height:fit-content; display:flex; flex-direction:column; align-items:center;">
+            
+            <MudText Typo="Typo.h6" Style="font-weight:700; color:#1e293b; margin-bottom:8px;">📱 Chia sẻ mã tải App</MudText>
+            <MudText Typo="Typo.body2" Style="color:#64748b; margin-bottom:24px;">Khách hàng có thể quét mã này để cài đặt trực tiếp</MudText>
+
+            <div style="background:#f8fafc; padding:16px; border-radius:16px; display:inline-block; margin-bottom:24px; border:1px solid #e2e8f0;">
+                @if (!string.IsNullOrEmpty(qrCodeImageData))
+                {
+                    <img src="@qrCodeImageData" alt="Download QR Code" style="width:160px; height:160px; display:block;" />
+                }
+            </div>
+
+            <MudStack Spacing="3" Style="width:100%; max-width:240px; margin-bottom:16px;">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" 
+                        StartIcon="@Icons.Material.Filled.Download" 
+                        FullWidth="true" Style="border-radius:8px; font-weight:700;" 
+                        OnClick="DownloadQrImage">
+                    Tải ảnh QR
+                </MudButton>
+
+                <MudButton Variant="Variant.Outlined" Color="Color.Dark" 
+                        StartIcon="@Icons.Material.Filled.ContentCopy" 
+                        FullWidth="true" Style="border-radius:8px; font-weight:600;" 
+                        OnClick="CopyLink">
+                    Sao chép Link
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+    </MudItem>
+
+</MudGrid>
+
+@code {
+    private List<ChartSeries<double>> chartSeries = new();
+    private string[] xAxisLabels = Array.Empty<string>();
+    private List<DownloadLog> recentDownloads = new();
+    
+    private int totalDownloads = 0;
+    private int todayDownloads = 0;
+
+    private string qrCodeImageData = "";
+    private string downloadUrl = "";
+    
+    private const string _thStyle = "background:#f8fafc; font-weight:700; color:#475569;";
+
+    private string latestVersion = "v...";
+
+    private ChartOptions chartOptions = new ChartOptions
+    {
+        ChartPalette = new[] { "#3b82f6" } // Bright blue match tailwind standard
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        latestVersion = await GitHubReleaseService.GetLatestVersionAsync();
+        downloadUrl = NavigationManager.BaseUri + "api/app/download";
+        GenerateStaticQrCode();
+        await LoadAnalyticsData();
+    }
+
+    private void GenerateStaticQrCode() 
+    {
+        using var qrGenerator = new QRCodeGenerator();
+        using var qrCodeData = qrGenerator.CreateQrCode(downloadUrl, QRCodeGenerator.ECCLevel.Q);
+        using var qrCode = new PngByteQRCode(qrCodeData);
+        byte[] qrCodeImage = qrCode.GetGraphic(20);
+        qrCodeImageData = $"data:image/png;base64,{Convert.ToBase64String(qrCodeImage)}";
+    }
+
+    private async Task LoadAnalyticsData()
+    {
+        totalDownloads = await DbContext.DownloadLogs.CountAsync();
+        
+        var today = DateTime.UtcNow.Date;
+        todayDownloads = await DbContext.DownloadLogs.CountAsync(x => x.DownloadedAt >= today);
+
+        recentDownloads = await DbContext.DownloadLogs
+            .OrderByDescending(x => x.DownloadedAt)
+            .Take(10)
+            .ToListAsync();
+
+        var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
+        var stats = await DbContext.DownloadLogs
+            .Where(x => x.DownloadedAt >= thirtyDaysAgo)
+            .GroupBy(x => x.DownloadedAt.Date)
+            .Select(g => new { Date = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Date, x => x.Count);
+
+        var data = new List<double>();
+        var labels = new List<string>();
+
+        for (int i = 29; i >= 0; i--)
+        {
+            var day = DateTime.UtcNow.Date.AddDays(-i);
+            labels.Add(day.ToString("dd/MM"));
+            data.Add(stats.ContainsKey(day) ? stats[day] : 0);
+        }
+
+        xAxisLabels = labels.ToArray();
+        chartSeries = new List<ChartSeries<double>>
+        {
+            new ChartSeries<double> { Name = "Lượt tải", Data = data.ToArray() }
+        };
+    }
+
+    private async Task CopyLink()
+    {
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", downloadUrl);
+    }
+
+    private async Task DownloadQrImage()
+    {
+        await JSRuntime.InvokeVoidAsync("downloadBase64File", qrCodeImageData, "FoodTour_QRCode.png");
+    }
+}

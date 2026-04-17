@@ -129,3 +129,32 @@ window.reloadAndPlayAudio = function (audioElementId) {
         window.playAudioAuto(audioElementId);
     }, { once: true });
 };
+
+// ═══════ HỖ TRỢ TẢI ẢNH TỪ BASE64 ═══════
+window.downloadBase64File = function (base64String, fileName) {
+    var a = document.createElement("a");
+    a.href = base64String;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+};
+
+// ═══════ SERVER-SIDE TRACKING TRIAL ═══════
+window.recordServerTrial = async function () {
+    try {
+        const response = await fetch('/api/trial/record', {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            return data.success === true;
+        } else if (response.status === 403) {
+            return false; // Limit reached
+        }
+    } catch (err) {
+        console.error('[FoodTour] Lỗi server tracking IP:', err);
+    }
+    return false; // Chặn nếu lỗi ngầm định
+};

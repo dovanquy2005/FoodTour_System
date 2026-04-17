@@ -13,6 +13,10 @@ public class AppDbContext : DbContext
     public DbSet<UserModel> Users => Set<UserModel>();
     public DbSet<ShopSubmission> ShopSubmissions => Set<ShopSubmission>();
     public DbSet<UserDeviceModel> UserDevices => Set<UserDeviceModel>();
+    public DbSet<DownloadLog> DownloadLogs => Set<DownloadLog>();
+    
+    // Thêm bảng TrialLogs để kiểm soát 3 lần nghe thử qua IP
+    public DbSet<TrialLog> TrialLogs => Set<TrialLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -82,6 +86,13 @@ public class AppDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(e => e.UserId)
                   .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // DownloadLog
+        modelBuilder.Entity<DownloadLog>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.DownloadedAt);
         });
 
 

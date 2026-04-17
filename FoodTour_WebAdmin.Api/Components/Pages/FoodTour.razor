@@ -6,6 +6,7 @@
 @inject IDbContextFactory<AppDbContext> DbFactory
 @inject IJSRuntime JS
 @inject IWebHostEnvironment Env
+@inject ISnackbar Snackbar
 @using System.Text.Json
 
 <PageTitle>FoodTour — Vĩnh Khánh Street Eats</PageTitle>
@@ -100,6 +101,29 @@
     .ft-audio-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(232,103,42,0.4); }
     .ft-audio-btn:active { transform: translateY(0); }
     .ft-audio-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    
+    .ft-cta-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        padding: 16px;
+        border: none;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        font-size: 1.05rem;
+        font-weight: 800;
+        cursor: pointer;
+        transition: all 0.3s;
+        box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
+        margin-top: 16px;
+        text-decoration: none;
+    }
+    .ft-cta-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(16, 185, 129, 0.5); }
+    .ft-cta-btn:active { transform: translateY(0); }
+
     .ft-section-title {
         font-size: 0.8rem;
         font-weight: 700;
@@ -178,6 +202,7 @@
 
         <!-- Content -->
         <div class="ft-content">
+
             <!-- Main Card -->
             <div class="ft-card">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
@@ -218,24 +243,41 @@
                 </div>
             }
 
-            <!-- Audio Card -->
+            <!-- Audio Card (Lazy Access - No Loaders) -->
             <div class="ft-card">
-                <p class="ft-section-title">🎧 @Ui("Landing_AudioGuideTitle")</p>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <p class="ft-section-title" style="margin:0;">🎧 @Ui("Landing_AudioGuideTitle")</p>
+                    @if (_isPremium)
+                    {
+                        <MudChip T="string" Color="Color.Warning" Size="Size.Small" Icon="@Icons.Material.Filled.WorkspacePremium">@Ui("BadgePremium")</MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Color="Color.Info" Size="Size.Small" Icon="@Icons.Material.Filled.Headphones">@Ui("BadgeTrial")</MudChip>
+                    }
+                </div>
+                
                 @if (!string.IsNullOrEmpty(_currentTranslation?.AudioUrl) && _currentTranslation.IsAudioGenerated)
                 {
                     <audio id="ft-audio-player" src="@_currentTranslation.AudioUrl" preload="auto"></audio>
                     <button class="ft-audio-btn" @onclick="ToggleAudio">
                         <span style="font-size: 1.2rem;">@(_isPlaying ? "⏸" : "▶")</span>
-                        @(_isPlaying ? Ui("Landing_AudioPlaying") : Ui("Landing_AudioPlay"))
+                        @(_isPlaying ? Ui("AudioPlaying") : Ui("AudioPlay"))
                     </button>
                 }
                 else
                 {
                     <button class="ft-audio-btn" disabled>
                         <span>🔇</span>
-                        @Ui("Landing_AudioNotReady")
+                        @Ui("AudioNotReady")
                     </button>
                 }
+
+                <!-- CTA App Download -->
+                <a href="/api/app/download" class="ft-cta-btn">
+                    <MudIcon Icon="@Icons.Material.Filled.InstallMobile" Size="Size.Medium" />
+                    @Ui("CtaApp")
+                </a>
             </div>
 
             <!-- Footer -->
@@ -244,6 +286,26 @@
             </div>
         </div>
     }
+
+    <!-- Payment Modal -->
+    <MudDialog @bind-Visible="_showPaymentModal" Options="_dialogOptions">
+        <TitleContent>
+            <MudText Typo="Typo.h6" Style="font-weight:700;">@Ui("PaymentTitle")</MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudStack AlignItems="AlignItems.Center" Spacing="3" Style="padding: 16px 0;">
+                <MudIcon Icon="@Icons.Material.Filled.QrCode2" Style="font-size: 120px; color:#2D1F14;" />
+                <MudText Typo="Typo.h6" Style="font-weight: 800; color:#E8672A;">@Ui("PaymentPrice")</MudText>
+                <MudText Typo="Typo.body2" Style="text-align: center; color:#5C4A3D;">
+                    @((MarkupString)Ui("PaymentDesc"))
+                </MudText>
+            </MudStack>
+        </DialogContent>
+        <DialogActions>
+            <MudButton Variant="Variant.Text" OnClick="() => _showPaymentModal = false">@Ui("BtnCancel")</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="ConfirmPayment">@Ui("BtnConfirm")</MudButton>
+        </DialogActions>
+    </MudDialog>
 </div>
 
 @code {
@@ -261,9 +323,6 @@
     // Danh sách ngôn ngữ hỗ trợ
     private static readonly HashSet<string> SupportedLanguages = new() { "vi", "en", "ja", "zh", "ru" };
 
-    /// <summary>
-    /// Đọc file JSON từ wwwroot/locales/{langCode}.json và nạp vào Dictionary _ui.
-    /// </summary>
     private void LoadUiStrings(string langCode)
     {
         var filePath = Path.Combine(Env.WebRootPath, "locales", $"{langCode}.json");
@@ -290,10 +349,93 @@
         }
     }
 
-    /// <summary>
-    /// Helper để lấy chuỗi UI từ dictionary, trả về key nếu không tìm thấy.
-    /// </summary>
-    private string Ui(string key) => _ui.GetValueOrDefault(key, key);
+    private static readonly Dictionary<string, Dictionary<string, string>> _localFallback = new()
+    {
+        { "vi", new() {
+            { "BadgePremium", "Đã kích hoạt Gói 24h" },
+            { "BadgeTrial", "Nghe thử miễn phí" },
+            { "AudioPlaying", "Đang phát..." },
+            { "AudioPlay", "Nghe thử Audio" },
+            { "AudioNotReady", "Audio không khả dụng" },
+            { "CtaApp", "Tải App FoodTour để nghe không giới hạn" },
+            { "PaymentTitle", "💳 Nâng cấp Gói 24h" },
+            { "PaymentPrice", "10.000đ" },
+            { "PaymentDesc", "Quét mã để chuyển khoản 10.000đ.<br/>Bạn sẽ có 24h nghe audio không giới hạn cho mọi địa điểm!" },
+            { "BtnCancel", "Hủy" },
+            { "BtnConfirm", "Xác nhận đã chuyển (Demo)" },
+            { "ToastSuccess", "✅ Kích hoạt thành công Gói 24h!" },
+            { "ToastTrial", "Còn {0} lần nghe thử. Chọn 'Tải App' để nghe không giới hạn!" }
+        }},
+        { "en", new() {
+            { "BadgePremium", "24h Premium Active" },
+            { "BadgeTrial", "Free Trial" },
+            { "AudioPlaying", "Playing..." },
+            { "AudioPlay", "Play Audio" },
+            { "AudioNotReady", "Audio Unavailable" },
+            { "CtaApp", "Download FoodTour App for Unlimited Audio" },
+            { "PaymentTitle", "💳 Upgrade to 24h Premium" },
+            { "PaymentPrice", "10.000đ" },
+            { "PaymentDesc", "Scan QR to transfer 10.000đ.<br/>Get 24h unlimited audio for all locations!" },
+            { "BtnCancel", "Cancel" },
+            { "BtnConfirm", "Confirm Transfer (Demo)" },
+            { "ToastSuccess", "✅ 24h Premium successfully activated!" },
+            { "ToastTrial", "{0} free trials left. Download the App for unlimited access!" }
+        }},
+        { "ja", new() {
+            { "BadgePremium", "24時間プレミアム有効" },
+            { "BadgeTrial", "無料体験" },
+            { "AudioPlaying", "再生中..." },
+            { "AudioPlay", "音声を再生" },
+            { "AudioNotReady", "音声利用不可" },
+            { "CtaApp", "FoodTourアプリをダウンロードして無制限の音声を聞く" },
+            { "PaymentTitle", "💳 24時間プレミアムにアップグレード" },
+            { "PaymentPrice", "10.000đ" },
+            { "PaymentDesc", "QRをスキャンして送金してください。<br/>全場所の24時間無制限音声を取得！" },
+            { "BtnCancel", "キャンセル" },
+            { "BtnConfirm", "送金確認（デモ）" },
+            { "ToastSuccess", "✅ 24時間プレミアムが有効化されました！" },
+            { "ToastTrial", "残り{0}回の試聴。アプリをダウンロードして無制限アクセス！" }
+        }},
+        { "zh", new() {
+            { "BadgePremium", "24小时高级版已激活" },
+            { "BadgeTrial", "免费试听" },
+            { "AudioPlaying", "播放中..." },
+            { "AudioPlay", "播放语音" },
+            { "AudioNotReady", "语音不可用" },
+            { "CtaApp", "下载 FoodTour 应用以获得无限语音" },
+            { "PaymentTitle", "💳 升级到 24 小时高级版" },
+            { "PaymentPrice", "10.000đ" },
+            { "PaymentDesc", "扫描二维码汇款10.000đ。<br/>获得所有地点的 24 小时无限语音！" },
+            { "BtnCancel", "取消" },
+            { "BtnConfirm", "确认汇款（演示）" },
+            { "ToastSuccess", "✅ 24 小时高级版已成功激活！" },
+            { "ToastTrial", "剩余 {0} 次试听。下载应用获取无限访问权限！" }
+        }},
+        { "ru", new() {
+            { "BadgePremium", "Активирован премиум на 24ч" },
+            { "BadgeTrial", "Бесплатная попытка" },
+            { "AudioPlaying", "Воспроизведение..." },
+            { "AudioPlay", "Воспроизвести аудио" },
+            { "AudioNotReady", "Аудио недоступно" },
+            { "CtaApp", "Скачайте приложение FoodTour для безлимитного аудио" },
+            { "PaymentTitle", "💳 Обновить до 24ч Premium" },
+            { "PaymentPrice", "10.000đ" },
+            { "PaymentDesc", "Отсканируйте QR для перевода 10.000đ.<br/>Получите безлимитное аудио на 24 часа!" },
+            { "BtnCancel", "Отмена" },
+            { "BtnConfirm", "Подтвердить перевод (Демо)" },
+            { "ToastSuccess", "✅ 24-часовой Premium успешно активирован!" },
+            { "ToastTrial", "Осталось {0} бесплатных попыток. Скачайте приложение!" }
+        }}
+    };
+
+    private string Ui(string key, params object[] args)
+    {
+        if (_ui.TryGetValue(key, out var val)) return args.Length > 0 ? string.Format(val, args) : val;
+        var lang = string.IsNullOrEmpty(_selectedLang) ? "en" : _selectedLang;
+        if (!_localFallback.ContainsKey(lang)) lang = "en";
+        if (_localFallback[lang].TryGetValue(key, out var fallback)) return args.Length > 0 ? string.Format(fallback, args) : fallback;
+        return key;
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -303,90 +445,143 @@
             .AsNoTracking()
             .FirstOrDefaultAsync(s => s.Id == Id);
 
-        // Nạp UI strings mặc định (tiếng Anh) để trang hiển thị đúng khi chưa detect browser language
-        LoadUiStrings(_selectedLang);
+        // Auto-Detect: Tự động lấy ngôn ngữ trình duyệt
+        try
+        {
+            var browserLang = await JS.InvokeAsync<string>("getBrowserLanguage");
+            _selectedLang = MapBrowserLanguage(browserLang);
+        }
+        catch
+        {
+            _selectedLang = MapBrowserLanguage(System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
+        }
+
+        // Tách biệt việc set nội dung Text
+        SwitchLanguage(_selectedLang);
 
         _loading = false;
+        
+        // Force Render: Nội dung hiện ra ngay lập tức
+        StateHasChanged();
+    }
+
+    private bool _isPremium = false;
+    private int _freeTrialCount = 0;
+    private bool _showPaymentModal = false;
+
+    private readonly DialogOptions _dialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+
+    private void OpenPaymentModal() => _showPaymentModal = true;
+
+    private async Task ConfirmPayment()
+    {
+        var expiry = DateTime.UtcNow.AddHours(24);
+        await JS.InvokeVoidAsync("localStorage.setItem", "foodtour_premiumExpiry", expiry.ToString("O"));
+        _isPremium = true;
+        _showPaymentModal = false;
+        StateHasChanged();
+        Snackbar.Add(Ui("ToastSuccess"), Severity.Success);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender && _shop != null)
         {
-            // Nhận diện ngôn ngữ trình duyệt
-            var browserLang = await JS.InvokeAsync<string>("getBrowserLanguage");
-            var detectedLang = MapBrowserLanguage(browserLang);
-            SwitchLanguage(detectedLang);
-            StateHasChanged();
-
-            // Tự động phát audio ngay khi trang render xong (Autoplay UX)
-            // Delay nhỏ để DOM cập nhật xong thẻ <audio> với src đúng ngôn ngữ
-            await Task.Delay(300);
-            if (!string.IsNullOrEmpty(_currentTranslation?.AudioUrl) && _currentTranslation.IsAudioGenerated)
+            try
             {
-                await JS.InvokeVoidAsync("playAudioAuto", "ft-audio-player");
-                _isPlaying = true;
-                StateHasChanged();
+                // Retrieve Premium Status
+                var expiryStr = await JS.InvokeAsync<string>("localStorage.getItem", "foodtour_premiumExpiry");
+                if (DateTime.TryParse(expiryStr, out var expiry) && expiry.ToUniversalTime() > DateTime.UtcNow)
+                {
+                    _isPremium = true;
+                }
+
+                // Retrieve Trial Count
+                var trialStr = await JS.InvokeAsync<string>("localStorage.getItem", "foodtour_freeTrialCount");
+                if (int.TryParse(trialStr, out var trialCount))
+                {
+                    _freeTrialCount = trialCount;
+                }
             }
+            catch
+            {
+                // Bỏ qua nếu localStorage bị tắt hoặc lỗi JS
+            }
+
+            StateHasChanged();
         }
     }
 
     private string MapBrowserLanguage(string browserLang)
     {
         if (string.IsNullOrEmpty(browserLang)) return "en";
-
-        // Lấy 2 ký tự đầu (ví dụ: "vi-VN" → "vi", "ja" → "ja", "zh-TW" → "zh")
         var shortCode = browserLang.Length >= 2 ? browserLang[..2].ToLower() : browserLang.ToLower();
-
         return SupportedLanguages.Contains(shortCode) ? shortCode : "en";
     }
 
-    private async void SwitchLanguage(string langCode)
+    private void SwitchLanguage(string langCode)
     {
         _selectedLang = langCode;
-        _currentTranslation = _shop?.ShopTranslations
-            .FirstOrDefault(t => t.LanguageCode == langCode)
+        _currentTranslation = _shop?.ShopTranslations.FirstOrDefault(t => t.LanguageCode == langCode)
             ?? _shop?.ShopTranslations.FirstOrDefault(t => t.LanguageCode == "en")
             ?? _shop?.ShopTranslations.FirstOrDefault();
 
-        // Cập nhật UI strings theo ngôn ngữ mới
         LoadUiStrings(langCode);
-
-        // Cập nhật DOM trước rồi mới gọi JS (để thẻ <audio> có src mới)
-        StateHasChanged();
-
-        // Tự động phát audio ngôn ngữ mới (không cần user bấm Play lại)
-        await Task.Delay(200); // Chờ Blazor re-render xong thẻ <audio>
-        if (!string.IsNullOrEmpty(_currentTranslation?.AudioUrl) && _currentTranslation.IsAudioGenerated)
-        {
-            try
-            {
-                await JS.InvokeVoidAsync("reloadAndPlayAudio", "ft-audio-player");
-                _isPlaying = true;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[FoodTour] Auto-play error: {ex.Message}");
-                _isPlaying = false;
-            }
-        }
-        else
-        {
-            _isPlaying = false;
-        }
+        
+        _isPlaying = false;
         StateHasChanged();
     }
 
     private async Task ToggleAudio()
     {
-        _isPlaying = !_isPlaying;
-        if (_isPlaying)
+        if (!_isPlaying)
         {
-            await JS.InvokeVoidAsync("playAudio", "ft-audio-player");
+            if (_isPremium)
+            {
+                await TryPlay("playAudio");
+            }
+            else
+            {
+                // Kiểm tra bằng quyền lực tuyệt đối của Server (theo IP)
+                // Chặn Incognito / F5 Loophole
+                bool isAllowedFromServer = await JS.InvokeAsync<bool>("recordServerTrial");
+
+                if (isAllowedFromServer)
+                {
+                    _freeTrialCount++;
+                    try { await JS.InvokeVoidAsync("localStorage.setItem", "foodtour_freeTrialCount", _freeTrialCount.ToString()); } catch {}
+                    
+                    int remaining = 3 - _freeTrialCount;
+                    if (remaining < 0) remaining = 0; // fallback UI an toàn
+                    
+                    Snackbar.Add(Ui("ToastTrial", remaining), Severity.Info);
+                    await TryPlay("playAudio");
+                }
+                else
+                {
+                    _showPaymentModal = true;
+                    StateHasChanged(); // Đảm bảo đồng bộ ngay lập tức popup modal
+                }
+            }
         }
         else
         {
             await JS.InvokeVoidAsync("pauseAudio", "ft-audio-player");
+            _isPlaying = false;
+        }
+    }
+
+    private async Task TryPlay(string jsMethod)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync(jsMethod, "ft-audio-player");
+            _isPlaying = true;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[FoodTour] Audio error: {ex.Message}");
+            _isPlaying = false;
         }
     }
 }
