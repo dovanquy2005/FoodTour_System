@@ -2,7 +2,7 @@ name: Build and Deploy FoodTour APK
 
 on:
   push:
-    branches: [ "main" ]
+    #branches: [ "main" ]  <-- DÒNG NÀY ĐI COMMENT ĐỂ CHỈ CHẠY KHI TẠO TAG
     tags:
       - 'v*' # Chạy khi bạn tạo tag mới như v1.0, v1.1...
 

@@ -5,6 +5,7 @@
 @using QRCoder
 @using MudBlazor
 @using FoodTour_WebAdmin.Api.Services
+@using FoodTour_WebAdmin.Api.Extensions
 @inject AppDbContext DbContext
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
@@ -86,8 +87,8 @@
                 </HeaderContent>
                 <RowTemplate>
                     <MudTd DataLabel="Thời gian">
-                        <MudText Typo="Typo.body2" Style="font-weight:600; color:#1e293b;">@context.DownloadedAt.ToLocalTime().ToString("dd/MM/yyyy")</MudText>
-                        <MudText Typo="Typo.caption" Style="color:#64748b;">@context.DownloadedAt.ToLocalTime().ToString("HH:mm")</MudText>
+                        <MudText Typo="Typo.body2" Style="font-weight:600; color:#1e293b;">@context.DownloadedAt.ToVietnamTime().ToString("dd/MM/yyyy")</MudText>
+                        <MudText Typo="Typo.caption" Style="color:#64748b;">@context.DownloadedAt.ToVietnamTime().ToString("HH:mm")</MudText>
                     </MudTd>
                     <MudTd DataLabel="Loại thiết bị">
                         <MudText Typo="Typo.body2" Style="color:#475569;">@context.DeviceType</MudText>
