@@ -38,23 +38,30 @@ jobs:
         /p:AndroidSigningKeyPass=${{ secrets.KEYSTORE_PASSWORD }} `
         /p:AndroidSigningStorePass=${{ secrets.KEYSTORE_PASSWORD }}
 
-    # 1. Vẫn giữ Artifact để bạn kiểm tra nội bộ nhanh
+    # BƯỚC MỚI: TỰ ĐỘNG ĐỔI TÊN FILE
+    - name: Rename APK to foodtour.apk
+      shell: pwsh
+      run: |
+        $oldFile = Get-ChildItem -Path "FoodTour.Mobile/bin/Release/net9.0-android/android-arm64/" -Filter "*-Signed.apk" | Select-Object -First 1
+        $newPath = "FoodTour.Mobile/bin/Release/net9.0-android/android-arm64/foodtour.apk"
+        Move-Item -Path $oldFile.FullName -Destination $newPath
+        Write-Host "Đã đổi tên file thành: $newPath"
+
+    # Cập nhật lại đường dẫn ở bước Artifact
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: FoodTour-App-Debug
-        path: FoodTour.Mobile/bin/Release/net9.0-android/android-arm64/*-Signed.apk
-        retention-days: 90
+        name: FoodTour-App
+        path: FoodTour.Mobile/bin/Release/net9.0-android/android-arm64/foodtour.apk
+        retention-days: 30
 
-    # 2. Tự động tạo Release khi bạn gắn thẻ (Tag) phiên bản
+    # Cập nhật lại đường dẫn ở bước Release
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
       if: startsWith(github.ref, 'refs/tags/')
       with:
-        files: FoodTour.Mobile/bin/Release/net9.0-android/android-arm64/*-Signed.apk
+        files: FoodTour.Mobile/bin/Release/net9.0-android/android-arm64/foodtour.apk
         name: Release ${{ github.ref_name }}
         body: "Bản cập nhật mới nhất cho ứng dụng FoodTour."
-        draft: false
-        prerelease: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
