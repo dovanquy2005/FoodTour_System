@@ -25,17 +25,19 @@ jobs:
 
     - name: Build and Publish APK
       run: |
-        dotnet publish FoodTour.Mobile/FoodTour.Mobile.csproj -f net9.0-android -c Release -r android-arm64 --self-contained true /p:AndroidKeyStore=true /p:AndroidSigningKeyStore=FoodTour.Mobile/foodtour.keystore /p:AndroidSigningKeyAlias=foodtour_alias /p:AndroidSigningKeyPass=123456 /p:AndroidSigningStorePass=123456
+        dotnet publish FoodTour.Mobile/FoodTour.Mobile.csproj -f net9.0-android -c Release -r android-arm64 --self-contained true /p:AndroidKeyStore=true /p:AndroidSigningKeyStore=foodtour.keystore /p:AndroidSigningKeyAlias=${{ secrets.KEY_ALIAS }} /p:AndroidSigningKeyPass=${{ secrets.KEYSTORE_PASSWORD }} /p:AndroidSigningStorePass=${{ secrets.KEYSTORE_PASSWORD }}
 
     - name: Upload to Supabase Storage
       shell: pwsh
       run: |
-        # Đường dẫn tới file APK sau khi build xong trên GitHub
-        $filePath = "FoodTour.Mobile/bin/Release/net9.0-android/android-arm64/publish/com.companyname.foodtour.mobile-Signed.apk"
+        # Tự động quét và tìm file APK đã được ký tên (Signed)
+        $filePath = Get-ChildItem -Path "FoodTour.Mobile\bin\Release\net9.0-android" -Filter "*-Signed.apk" -Recurse | Select-Object -First 1 -ExpandProperty FullName
         
+        Write-Host "Đã tìm thấy file APK tại: $filePath"
+            
         # Link API của bạn
         $url = "${{ secrets.SUPABASE_URL }}/storage/v1/object/app/foodtour.apk"
-        
+            
         # Lệnh đẩy file lên và ghi đè (upsert)
         Invoke-RestMethod -Uri $url `
           -Method Post `
