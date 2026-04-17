@@ -45,5 +45,6 @@ jobs:
           -ContentType "application/vnd.android.package-archive" `
           -Headers @{ 
             "Authorization" = "Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}";
+            "apikey" = "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}";
             "x-upsert" = "true" 
           }
