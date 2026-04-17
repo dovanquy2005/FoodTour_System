@@ -2,7 +2,7 @@ name: Build and Deploy FoodTour APK
 
 on:
   push:
-    branches: [ "main" ] # Nó sẽ chạy mỗi khi bạn push code lên nhánh main
+    branches: [ "main" ] # Tự động chạy khi bạn push code lên nhánh main
 
 jobs:
   build:
@@ -25,26 +25,23 @@ jobs:
 
     - name: Build and Publish APK
       run: |
-        dotnet publish FoodTour.Mobile/FoodTour.Mobile.csproj -f net9.0-android -c Release -r android-arm64 --self-contained true /p:AndroidKeyStore=true /p:AndroidSigningKeyStore=foodtour.keystore /p:AndroidSigningKeyAlias=${{ secrets.KEY_ALIAS }} /p:AndroidSigningKeyPass=${{ secrets.KEYSTORE_PASSWORD }} /p:AndroidSigningStorePass=${{ secrets.KEYSTORE_PASSWORD }}
+        dotnet publish FoodTour.Mobile/FoodTour.Mobile.csproj `
+        -f net9.0-android `
+        -c Release `
+        -r android-arm64 `
+        --self-contained true `
+        /p:AndroidKeyStore=true `
+        /p:AndroidSigningKeyStore=foodtour.keystore `
+        /p:AndroidSigningKeyAlias=${{ secrets.KEY_ALIAS }} `
+        /p:AndroidSigningKeyPass=${{ secrets.KEYSTORE_PASSWORD }} `
+        /p:AndroidSigningStorePass=${{ secrets.KEYSTORE_PASSWORD }}
 
-    - name: Upload to Supabase Storage
-      shell: pwsh
-      run: |
-        # Lục soát toàn bộ thư mục FoodTour.Mobile để tìm file -Signed.apk
-        $filePath = Get-ChildItem -Path "FoodTour.Mobile" -Filter "*-Signed.apk" -Recurse | Select-Object -First 1 -ExpandProperty FullName
-        
-        Write-Host "Đã tìm thấy file APK tại: $filePath"
-            
-        # Link API của bạn
-        $url = "${{ secrets.SUPABASE_URL }}/storage/v1/object/app/foodtour.apk"
-            
-        # Lệnh đẩy file lên và ghi đè (upsert)
-        Invoke-RestMethod -Uri $url `
-          -Method Post `
-          -InFile $filePath `
-          -ContentType "application/vnd.android.package-archive" `
-          -Headers @{ 
-            "Authorization" = "Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}";
-            "apikey" = "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}";
-            "x-upsert" = "true" 
-          }
+    # THAY THẾ BƯỚC SUPABASE BẰNG GITHUB ARTIFACTS
+    - name: Upload APK to GitHub Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: FoodTour-App
+        # Đường dẫn tìm file APK đã ký sau khi build
+        path: FoodTour.Mobile/bin/Release/net9.0-android/android-arm64/*-Signed.apk
+        # Lưu trữ trong 7 ngày để tiết kiệm dung lượng repo
+        retention-days: 7
