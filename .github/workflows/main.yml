@@ -30,8 +30,8 @@ jobs:
     - name: Upload to Supabase Storage
       shell: pwsh
       run: |
-        # Tự động quét và tìm file APK đã được ký tên (Signed)
-        $filePath = Get-ChildItem -Path "FoodTour.Mobile\bin\Release\net9.0-android" -Filter "*-Signed.apk" -Recurse | Select-Object -First 1 -ExpandProperty FullName
+        # Lục soát toàn bộ thư mục FoodTour.Mobile để tìm file -Signed.apk
+        $filePath = Get-ChildItem -Path "FoodTour.Mobile" -Filter "*-Signed.apk" -Recurse | Select-Object -First 1 -ExpandProperty FullName
         
         Write-Host "Đã tìm thấy file APK tại: $filePath"
             
