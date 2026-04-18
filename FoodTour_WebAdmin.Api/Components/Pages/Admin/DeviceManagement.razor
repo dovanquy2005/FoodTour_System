@@ -9,7 +9,8 @@
 <PageTitle>Quản lý thiết bị — FoodTour Admin</PageTitle>
 
 @* ══ HEADER ══ *@
-<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px;">
+<div
+    style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px;">
     <div>
         <MudText Typo="Typo.h4" Style="font-weight:800; color:#1e293b; margin-bottom:4px;">
             📱 Quản lý thiết bị Mobile
@@ -20,8 +21,7 @@
     </div>
 
     <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
-        <MudChip T="string" Color="Color.Info" Icon="@Icons.Material.Filled.Devices"
-                 Style="font-weight:700;">
+        <MudChip T="string" Color="Color.Info" Icon="@Icons.Material.Filled.Devices" Style="font-weight:700;">
             @_devices.Count tổng cộng
         </MudChip>
         <MudButton StartIcon="@Icons.Material.Filled.Refresh" Variant="Variant.Outlined"
@@ -32,11 +32,9 @@
 </div>
 
 @* ══ SEARCH BAR ══ *@
-<MudTextField @bind-Value="_search" Immediate="true"
-              Placeholder="Tìm DeviceId, tên thiết bị..."
-              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
-              Variant="Variant.Outlined" Margin="Margin.Dense"
-              Style="max-width:440px; margin-bottom:20px;" />
+<MudTextField @bind-Value="_search" Immediate="true" Placeholder="Tìm DeviceId, tên thiết bị..."
+              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Variant="Variant.Outlined"
+              Margin="Margin.Dense" Style="max-width:440px; margin-bottom:20px;" />
 
 @* ══ LOADING ══ *@
 @if (_isLoading)
@@ -49,11 +47,8 @@
 else
 {
     @* ══ BẢNG THIẾT BỊ ══ *@
-    <MudTable T="UserDeviceModel"
-              Items="@FilteredDevices"
-              Hover="true" Striped="true" Elevation="2"
-              Style="border-radius:16px; overflow:hidden;"
-              Loading="_isLoading">
+    <MudTable T="UserDeviceModel" Items="@FilteredDevices" Hover="true" Striped="true" Elevation="2"
+              Style="border-radius:16px; overflow:hidden;" Loading="_isLoading">
         <ColGroup>
             <col style="width:25%;" />
             <col style="width:25%;" />
@@ -98,7 +93,9 @@ else
                         <MudIcon Icon="@Icons.Material.Filled.Android" Style="color:#34A853;" />
                         <MudText Typo="Typo.body2">Android</MudText>
                     }
-                    else if (context.Platform != null && (context.Platform.Contains("iOS", StringComparison.OrdinalIgnoreCase) || context.Platform.Contains("Mac", StringComparison.OrdinalIgnoreCase)))
+                    else if (context.Platform != null && (context.Platform.Contains("iOS",
+                StringComparison.OrdinalIgnoreCase) || context.Platform.Contains("Mac",
+                StringComparison.OrdinalIgnoreCase)))
                     {
                         <MudIcon Icon="@Icons.Custom.Brands.Apple" Style="color:#64748b;" />
                         <MudText Typo="Typo.body2">@context.Platform</MudText>
@@ -125,16 +122,14 @@ else
             <MudTd DataLabel="Kết nối">
                 @if ((DateTime.UtcNow - context.LastActive).TotalSeconds <= 10)
                 {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Success"
-                             Icon="@Icons.Material.Filled.Wifi"
+                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.Wifi"
                              Style="font-weight:700;">
                         Online
                     </MudChip>
                 }
                 else
                 {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Default"
-                             Icon="@Icons.Material.Filled.WifiOff"
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.WifiOff"
                              Style="font-weight:700; color:#94a3b8;">
                         Offline
                     </MudChip>
@@ -143,8 +138,7 @@ else
         </RowTemplate>
         <NoRecordsContent>
             <MudStack AlignItems="AlignItems.Center" Style="padding:48px 0;">
-                <MudIcon Icon="@Icons.Material.Filled.DevicesOther"
-                         Style="font-size:64px; color:#cbd5e1;" />
+                <MudIcon Icon="@Icons.Material.Filled.DevicesOther" Style="font-size:64px; color:#cbd5e1;" />
                 <MudText Typo="Typo.h6" Style="font-weight:700; color:#94a3b8;">
                     Chưa có thiết bị nào
                 </MudText>
@@ -154,8 +148,7 @@ else
             </MudStack>
         </NoRecordsContent>
         <PagerContent>
-            <MudTablePager PageSizeOptions="new int[]{10, 25, 50}"
-                           RowsPerPageString="Số dòng mỗi trang:"
+            <MudTablePager PageSizeOptions="new int[]{10, 25, 50}" RowsPerPageString="Số dòng mỗi trang:"
                            InfoFormat="{first_item}-{last_item} của {all_items}" />
         </PagerContent>
     </MudTable>
