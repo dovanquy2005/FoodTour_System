@@ -5,6 +5,7 @@ using MudBlazor.Services;
 using Microsoft.AspNetCore.Identity;
 using FoodTour_WebAdmin.Api.Models;
 using FoodTour_WebAdmin.Api.Hubs;
+using ApexCharts;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -61,6 +62,10 @@ builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.Cookies.C
 builder.Services.AddScoped<Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider, FoodTour_WebAdmin.Api.Services.CustomAuthStateProvider>();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+// ApexCharts
+builder.Services.AddApexCharts();
+
 
 // MudBlazor
 builder.Services.AddMudServices(config =>
@@ -119,9 +124,10 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
     app.UseHsts();
+    app.UseHttpsRedirection();
 }
 
-app.UseHttpsRedirection();
+
 app.UseStaticFiles();
 app.UseAntiforgery();
 

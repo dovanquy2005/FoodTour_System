@@ -43,9 +43,9 @@ public class DeviceManagementController : ControllerBase
             // Lần đầu gặp thiết bị này — tạo mới
             device = new UserDeviceModel
             {
-                DeviceId   = request.DeviceId,
+                DeviceId = request.DeviceId,
                 DeviceName = request.DeviceName ?? "Unknown Device",
-                Platform   = request.Platform ?? "Unknown",
+                Platform = request.Platform ?? "Unknown",
                 LastActive = DateTime.UtcNow
             };
             // thêm thiết bị mới vào database
