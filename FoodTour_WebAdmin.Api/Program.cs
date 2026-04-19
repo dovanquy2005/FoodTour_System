@@ -94,6 +94,9 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.AddSingleton<FoodTour_WebAdmin.Api.Services.IDataUpdateNotifier,
+                              FoodTour_WebAdmin.Api.Services.DataUpdateNotifier>();
+
 var app = builder.Build();
 
 // ═══════ ĐOẠN MÃ TẠO MÃ HASH (Tạm thời) ═══════

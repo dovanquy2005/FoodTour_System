@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FoodTour_WebAdmin.Api.Data;
 using FoodTour_WebAdmin.Api.Models;
+using FoodTour_WebAdmin.Api.Services;
 
 namespace FoodTour_WebAdmin.Api.Controllers;
 
@@ -16,10 +17,12 @@ namespace FoodTour_WebAdmin.Api.Controllers;
 public class DeviceManagementController : ControllerBase
 {
     private readonly IDbContextFactory<AppDbContext> _dbFactory;
+    private readonly IDataUpdateNotifier _notifier;
 
-    public DeviceManagementController(IDbContextFactory<AppDbContext> dbFactory)
+    public DeviceManagementController(IDbContextFactory<AppDbContext> dbFactory, IDataUpdateNotifier notifier)
     {
         _dbFactory = dbFactory;
+        _notifier = notifier;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -62,6 +65,9 @@ public class DeviceManagementController : ControllerBase
         }
 
         await db.SaveChangesAsync();
+
+        // Dashboard re-render qua Blazor circuit
+        _notifier.NotifyDeviceUpdated();
 
         return Ok(new { message = "Đồng bộ thành công." });
     }
