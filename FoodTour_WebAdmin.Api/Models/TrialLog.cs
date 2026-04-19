@@ -24,4 +24,6 @@ public class TrialLog
     
     // Thời điểm mà người dùng nhấn nút Play để nghe thử
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public string? BrowserFingerprint { get; set; }
 }

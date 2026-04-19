@@ -140,21 +140,61 @@ window.downloadBase64File = function (base64String, fileName) {
     document.body.removeChild(a);
 };
 
-// ═══════ SERVER-SIDE TRACKING TRIAL ═══════
+// ═══════ HÀM HỖ TRỢ: LẤY MÃ VÂN TAY TRÌNH DUYỆT ═══════
+window.getBrowserFingerprint = async function () {
+    try {
+        // Load động thư viện FingerprintJS bản mã nguồn mở
+        const fpPromise = import('https://openfpcdn.io/fingerprintjs/v4')
+            .then(FingerprintJS => FingerprintJS.load());
+
+        const fp = await fpPromise;
+        const result = await fp.get();
+        return result.visitorId; // Trả về chuỗi ID duy nhất (VD: "9b1deb4d-3b7d-...")
+    } catch (error) {
+        console.error('[FoodTour] Lỗi khi tạo Fingerprint, dùng fallback:', error);
+        // Fallback tự tạo một chuỗi ngẫu nhiên lưu vào localStorage nếu tải thư viện xịt
+        let fallbackId = localStorage.getItem('foodtour_fallback_id');
+        if (!fallbackId) {
+            fallbackId = 'fb_' + Math.random().toString(36).substring(2);
+            localStorage.setItem('foodtour_fallback_id', fallbackId);
+        }
+        return fallbackId;
+    }
+};
+
+// ═══════ SERVER-SIDE TRACKING TRIAL (BẢN MỚI) ═══════
 window.recordServerTrial = async function (shopId) {
     try {
-        const response = await fetch(`/api/trial/record?shopId=${shopId}`, {
-            method: 'POST'
+        // 1. Lấy mã Fingerprint của thiết bị
+        const deviceFingerprint = await window.getBrowserFingerprint();
+
+        console.log(`[FoodTour] Đang gửi lượt nghe với Fingerprint: ${deviceFingerprint}`);
+
+        // 2. Gọi API mới (Gửi dữ liệu qua JSON Body)
+        const response = await fetch(`/api/trial/record`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json', // Bắt buộc phải có để báo cho C# biết đây là JSON
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                fingerprint: deviceFingerprint,
+                shopId: shopId
+            })
         });
 
         if (response.ok) {
             const data = await response.json();
             return data.success === true;
         } else if (response.status === 403) {
+            console.warn('[FoodTour] Đã hết 3 lượt nghe miễn phí!');
             return false; // Limit reached
+        } else {
+            console.error('[FoodTour] API trả về lỗi:', response.status);
         }
     } catch (err) {
-        console.error('[FoodTour] Lỗi server tracking IP:', err);
+        console.error('[FoodTour] Lỗi gọi API server tracking:', err);
     }
-    return false; // Chặn nếu lỗi ngầm định
+
+    return false; // Chặn nếu có lỗi mạng hoặc lỗi ngầm định
 };
