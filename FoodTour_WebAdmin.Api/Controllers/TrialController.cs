@@ -1,10 +1,12 @@
 using FoodTour_WebAdmin.Api.Data;
 using FoodTour_WebAdmin.Api.Models;
+using FoodTour_WebAdmin.Api.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
 
 namespace FoodTour_WebAdmin.Api.Controllers;
+
 
 [Route("api/trial")]
 [ApiController]
@@ -18,30 +20,36 @@ public class TrialController : ControllerBase
     }
 
     [HttpPost("record")]
-    public async Task<IActionResult> RecordTrial([FromQuery] string? shopId)
+    public async Task<IActionResult> RecordTrial([FromBody] TrialRequest request) // Chuyển sang nhận Body
     {
+        if (string.IsNullOrEmpty(request.Fingerprint))
+        {
+            return BadRequest(new { success = false, message = "Missing fingerprint" });
+        }
+
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
         var userAgent = Request.Headers.UserAgent.ToString();
-
-        // 1. Kiểm tra xem IP này đã dùng bao nhiêu lần trong 24h qua
         var twentyFourHoursAgo = DateTime.UtcNow.AddHours(-24);
+
+        // FIX: Kiểm tra theo BrowserFingerprint thay vì IPAddress
         var trialCount = await _context.TrialLogs
-            .Where(t => t.IPAddress == ipAddress && t.CreatedAt >= twentyFourHoursAgo)
+            .Where(t => t.BrowserFingerprint == request.Fingerprint 
+                     && t.ShopId == request.ShopId 
+                     && t.CreatedAt >= twentyFourHoursAgo)
             .CountAsync();
 
-        // 2. Chặn nếu vượt quá 3 lần
         if (trialCount >= 3)
         {
             return StatusCode(StatusCodes.Status403Forbidden, new { success = false, reason = "limit_reached" });
         }
 
-        // 3. Nếu chưa vượt quá, thêm log mới
         var log = new TrialLog
         {
-            IPAddress = ipAddress,
+            BrowserFingerprint = request.Fingerprint, // Lưu mã vân tay vào đây
+            IPAddress = ipAddress, // Vẫn lưu IP để bạn theo dõi/đối soát khi cần
             UserAgent = userAgent,
             CreatedAt = DateTime.UtcNow,
-            ShopId = shopId
+            ShopId = request.ShopId
         };
 
         _context.TrialLogs.Add(log);
