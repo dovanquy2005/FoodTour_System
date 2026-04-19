@@ -4,6 +4,7 @@
 @using System.Threading
 @inject IDbContextFactory<AppDbContext> DbFactory
 @inject ILogger<Dashboard> Logger
+@inject FoodTour_WebAdmin.Api.Services.IDataUpdateNotifier DataUpdateNotifier
 @using ApexCharts
 
 <PageTitle>Dashboard — FoodTour Admin</PageTitle>
@@ -36,9 +37,6 @@
                                    Style="background: linear-gradient(135deg, #E8672A, #F4A574);">
                             <MudIcon Icon="@Icons.Material.Filled.Storefront" Style="color: white;" />
                         </MudAvatar>
-                        <MudChip T="string" Size="MudBlazor.Size.Small" Color="MudBlazor.Color.Success"
-                                 Variant="Variant.Text">+12%
-                        </MudChip>
                     </MudStack>
                     <MudText Typo="Typo.h4" Style="font-weight: 800; color: #2D1F14;">@_totalShops</MudText>
                     <MudText Typo="Typo.body2" Style="color: #8C7B6B;">Tổng quán ăn</MudText>
@@ -56,12 +54,9 @@
                                    Style="background: linear-gradient(135deg, #5DAA68, #7BC87F);">
                             <MudIcon Icon="@Icons.Material.Filled.People" Style="color: white;" />
                         </MudAvatar>
-                        <MudChip T="string" Size="MudBlazor.Size.Small" Color="MudBlazor.Color.Success"
-                                 Variant="Variant.Text">+24%
-                        </MudChip>
                     </MudStack>
-                    <MudText Typo="Typo.h4" Style="font-weight: 800; color: #2D1F14;">1,284</MudText>
-                    <MudText Typo="Typo.body2" Style="color: #8C7B6B;">Người dùng hôm nay</MudText>
+                    <MudText Typo="Typo.h4" Style="font-weight: 800; color: #2D1F14;">@_visitsLast24h</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #8C7B6B;">Lượt truy cập 24h qua</MudText>
                 </MudStack>
             </MudPaper>
         </MudItem>
@@ -72,15 +67,12 @@
                 <MudStack Spacing="2">
                     <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
                         <MudAvatar Size="MudBlazor.Size.Medium"
-                                   Style="background: linear-gradient(135deg, #E8A838, #F0C060);">
-                            <MudIcon Icon="@Icons.Material.Filled.Star" Style="color: white;" />
+                                   Style="background: linear-gradient(135deg, #3B82F6, #60A5FA);">
+                            <MudIcon Icon="@Icons.Material.Filled.Devices" Style="color: white;" />
                         </MudAvatar>
-                        <MudChip T="string" Size="MudBlazor.Size.Small" Color="MudBlazor.Color.Success"
-                                 Variant="Variant.Text">+0.2
-                        </MudChip>
                     </MudStack>
-                    <MudText Typo="Typo.h4" Style="font-weight: 800; color: #2D1F14;">@_avgRating</MudText>
-                    <MudText Typo="Typo.body2" Style="color: #8C7B6B;">Đánh giá trung bình</MudText>
+                    <MudText Typo="Typo.h4" Style="font-weight: 800; color: #2D1F14;">@_onlineDevices</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #8C7B6B;">Thiết bị đang online</MudText>
                 </MudStack>
             </MudPaper>
         </MudItem>
@@ -88,12 +80,12 @@
 
     <!-- ═══════ CHARTS ROW ═══════ -->
     <MudGrid Spacing="4">
-        <MudItem xs="12" md="8">
+        <MudItem xs="12" md="12">
             <MudPaper Elevation="0" Style="padding: 24px; border-radius: 16px; border: 1px solid #F0E8E0;">
                 <MudStack Spacing="3">
                     <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
                         <MudText Typo="Typo.h6" Style="font-weight: 700; color:#2D1F14;">
-                            🔥 Hoạt động thiết bị (@(_viewMode == "Week" ? "Giờ & Ngày" : "Tháng trong năm"))
+                            🔥 Hoạt động thiết bị (@(_viewMode == "Week" ? "Ngày trong tuần" : "Tháng trong năm"))
                         </MudText>
                         <MudToggleGroup T="string" Value="@_viewMode" ValueChanged="OnViewModeChanged"
                                         Size="MudBlazor.Size.Small" Color="MudBlazor.Color.Primary" Variant="Variant.Outlined">
@@ -105,7 +97,7 @@
                     <div style="margin-top: 10px;">
                         @if (_heatmapData != null && _heatmapData.Any())
                         {
-                            <ApexChart @key="_viewMode" TItem="HeatmapDataPoint" Height="320" Options="_heatmapOptions">
+                            <ApexChart @key="_viewMode" TItem="HeatmapDataPoint" Height="380" Options="_heatmapOptions">
                                 @if (_viewMode == "Week")
                                 {
                                     @foreach (var day in DayNames)
@@ -132,43 +124,13 @@
                         {
                             @* Hiển thị Loading mượt mà trong khi chờ dữ liệu nạp song song từ Task.WhenAll *@
                             <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center"
-                                      Style="height:320px; background: #fafafa; border-radius: 8px;">
+                                      Style="height:380px; background: #fafafa; border-radius: 8px;">
                                 <MudProgressCircular Color="MudBlazor.Color.Primary" Indeterminate="true"
                                                      Size="MudBlazor.Size.Medium" />
                                 <MudText Typo="Typo.caption" Class="mt-2">Đang tải dữ liệu hoạt động...</MudText>
                             </MudStack>
                         }
                     </div>
-                </MudStack>
-            </MudPaper>
-        </MudItem>
-
-        <MudItem xs="12" md="4">
-            <MudPaper Elevation="0"
-                      Style="padding: 24px; border-radius: 16px; border: 1px solid #F0E8E0; height: 100%;">
-                <MudStack Spacing="3">
-                    <MudText Typo="Typo.h6" Style="font-weight: 700;">🏆 Top quán ăn</MudText>
-                    @if (_topShops is not null)
-                    {
-                        @foreach (var ShopModel in _topShops)
-                        {
-                            <MudStack Row AlignItems="AlignItems.Center" Spacing="3"
-                                      Style="padding: 8px 0; border-bottom: 1px solid #F0E8E0;">
-                                <MudAvatar Size="MudBlazor.Size.Small"
-                                           Style="background: #FFF0E6; color: #E8672A; font-weight: 700; font-size: 0.75rem;">
-                                    @ShopModel.Rating.ToString("0.0")
-                                </MudAvatar>
-                                <MudStack Spacing="0" Style="flex: 1;">
-                                    <MudText Typo="Typo.body2" Style="font-weight: 600; color: #2D1F14;">@ShopModel.Name
-                                    </MudText>
-                                    <MudText Typo="Typo.caption" Style="color: #8C7B6B;">@ShopModel.Address</MudText>
-                                </MudStack>
-                                <MudRating ReadOnly="true" SelectedValue="@((int)Math.Round(ShopModel.Rating))"
-                                           Size="MudBlazor.Size.Small" FullIcon="@Icons.Material.Filled.Star"
-                                           EmptyIcon="@Icons.Material.Filled.StarBorder" />
-                            </MudStack>
-                        }
-                    }
                 </MudStack>
             </MudPaper>
         </MudItem>
@@ -224,12 +186,10 @@
 
 @code {
     private int _totalShops;
-    private string _avgRating = "0";
-    private List<ShopModel>? _topShops;
+    private int _visitsLast24h;
+    private int _onlineDevices;
     private List<ShopModel>? _recentShops;
-    // ── Timer Variables ───────────────────────────────────────────────────────
-    private PeriodicTimer? _heatmapTimer;
-    private CancellationTokenSource _cts = new();
+ 
     // ── Heatmap Data ──────────────────────────────────────────────────────────
     private string _viewMode = "Week";
     private static readonly string[] DayNames = { "CN", "T2", "T3", "T4", "T5", "T6", "T7" };
@@ -266,14 +226,7 @@
         },
         States = new States
         {
-            Hover = new StatesHover
-            {
-                Filter = new StatesFilter
-                {
-                    // Sử dụng chính xác Enum StatesFilterType
-                    Type = (StatesFilterType)0
-                }
-            },
+            Hover = new StatesHover { Filter = new StatesFilter { Type = (StatesFilterType)0 } },
             Active = new StatesActive
             {
                 AllowMultipleDataPointsSelection = false,
@@ -283,15 +236,8 @@
                 }
             }
         },
-        Legend = new Legend
-        {
-            Show = true,
-            Position = LegendPosition.Bottom
-        },
-        DataLabels = new DataLabels
-        {
-            Enabled = false
-        }
+        Legend = new Legend { Show = true, Position = LegendPosition.Bottom },
+        DataLabels = new DataLabels { Enabled = false }
     };
 
     // Class tổng quát dùng chung cho cả 2 chế độ
@@ -311,14 +257,11 @@
             return await db.Shops.CountAsync();
         });
 
-        var topShopsTask = Task.Run(async () =>
+        var visitsTask = Task.Run(async () =>
         {
             using var db = await DbFactory.CreateDbContextAsync();
-            return await db.Shops
-                .Include(s => s.ShopTranslations)
-                .OrderByDescending(s => s.Rating)
-                .Take(5)
-                .ToListAsync();
+            var cutoff = DateTime.UtcNow.AddHours(-24);
+            return await db.TrialLogs.CountAsync(t => t.CreatedAt >= cutoff);
         });
 
         var recentShopsTask = Task.Run(async () =>
@@ -331,52 +274,43 @@
                 .ToListAsync();
         });
 
-        var avgRatingTask = Task.Run(async () =>
+        var onlineDevicesTask = Task.Run(async () =>
         {
             using var db = await DbFactory.CreateDbContextAsync();
-            // Ép kiểu double? để tránh lỗi khi DB chưa có dữ liệu
-            return await db.Shops.Select(s => (double?)s.Rating).AverageAsync();
+            var cutoff = DateTime.UtcNow.AddMinutes(-15);
+            return await db.UserDevices.CountAsync(d => d.LastActive >= cutoff);
         });
 
-        // Hàm LoadHeatmapData() của bạn đã có 'using var db' bên trong nên có thể gọi trực tiếp
         var heatmapTask = LoadHeatmapData();
 
+        DataUpdateNotifier.OnDeviceUpdated += OnDeviceUpdatedHandler;
         // Chờ tất cả các tác vụ hoàn thành đồng thời mà không xung đột
-        await Task.WhenAll(totalShopsTask, topShopsTask, recentShopsTask, avgRatingTask, heatmapTask);
+        await Task.WhenAll(totalShopsTask, recentShopsTask, onlineDevicesTask, heatmapTask, visitsTask);
 
         // Gán kết quả sau khi tất cả đã xong
         _totalShops = await totalShopsTask;
-        _topShops = await topShopsTask;
+        _visitsLast24h = await visitsTask;
         _recentShops = await recentShopsTask;
-        var avgResult = await avgRatingTask;
-        _avgRating = (avgResult ?? 0.0).ToString("0.0");
-
-        // Start the background timer for the heatmap (e.g., updates every 1 minute)
-        _heatmapTimer = new PeriodicTimer(TimeSpan.FromSeconds(10));
-        _ = AutoUpdateHeatmapAsync(); // Fire and forget the background loop
+        _onlineDevices = await onlineDevicesTask;
     }
 
-    private async Task AutoUpdateHeatmapAsync()
+    // Gọi bởi IDataUpdateNotifier khi thiết bị mobile đồng bộ
+    private async void OnDeviceUpdatedHandler()
     {
         try
         {
-            while (await _heatmapTimer!.WaitForNextTickAsync(_cts.Token))
-            {
-                try
-                {
-                    await LoadHeatmapData();
-                    await InvokeAsync(StateHasChanged);
-                }
-                catch (Exception ex)
-                {
-                    // Logs the DB error, but the while-loop continues to the next tick!
-                    Logger.LogError(ex, "Failed to load heatmap data this tick.");
-                }
-            }
+            using var db = await DbFactory.CreateDbContextAsync();
+            var cutoff = DateTime.UtcNow.AddHours(-24);
+            _visitsLast24h = await db.TrialLogs.CountAsync(t => t.CreatedAt >= cutoff);
+            var cutoff15 = DateTime.UtcNow.AddMinutes(-15);
+            _onlineDevices = await db.UserDevices.CountAsync(d => d.LastActive >= cutoff15);
+
+            await LoadHeatmapData();
+            await InvokeAsync(StateHasChanged);
         }
-        catch (OperationCanceledException)
+        catch (Exception ex)
         {
-            Logger.LogInformation("Heatmap auto-update gracefully stopped.");
+            Logger.LogError(ex, "Failed to refresh heatmap on device update.");
         }
     }
 
@@ -451,9 +385,7 @@
 
     public void Dispose()
     {
-        // Cancel the token to break out of the while loop safely
-        _cts.Cancel();
-        _heatmapTimer?.Dispose();
-        _cts.Dispose();
+        // Tránh rò rỉ bộ nhớ
+        DataUpdateNotifier.OnDeviceUpdated -= OnDeviceUpdatedHandler;
     }
 }
