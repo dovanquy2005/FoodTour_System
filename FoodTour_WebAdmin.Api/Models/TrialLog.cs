@@ -15,6 +15,12 @@ public class TrialLog
     
     // Lưu tạm User-Agent để nhận dạng thêm thiết bị (tránh block lầm người dùng chung IP mạng)
     public string UserAgent { get; set; } = string.Empty;
+
+    // Hardware ID của thiết bị mobile (AndroidId) — dùng để kiểm soát trial chính xác hơn IP
+    public string? DeviceId { get; set; } = string.Empty;
+
+    // ID của quán đã nghe thử — ghi log shop nào được nghe
+    public string? ShopId { get; set; } = string.Empty;
     
     // Thời điểm mà người dùng nhấn nút Play để nghe thử
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

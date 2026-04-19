@@ -39,7 +39,7 @@ public class AppController : ControllerBase
         {
             // Các thiết bị khác (Windows, Mac, Linux,...) được gom nhóm là "Máy tính/Khác"
             // Điều này giúp khách hàng hiểu đây là các lượt truy cập không từ di động
-            deviceType = "Máy tính/Khác"; 
+            deviceType = "Máy tính"; 
         }
 
         var log = new DownloadLog

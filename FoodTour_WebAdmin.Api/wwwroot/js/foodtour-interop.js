@@ -141,12 +141,12 @@ window.downloadBase64File = function (base64String, fileName) {
 };
 
 // ═══════ SERVER-SIDE TRACKING TRIAL ═══════
-window.recordServerTrial = async function () {
+window.recordServerTrial = async function (shopId) {
     try {
-        const response = await fetch('/api/trial/record', {
+        const response = await fetch(`/api/trial/record?shopId=${shopId}`, {
             method: 'POST'
         });
-        
+
         if (response.ok) {
             const data = await response.json();
             return data.success === true;

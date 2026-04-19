@@ -8,4 +8,7 @@ public class DownloadLog
     public string UserAgent { get; set; } = string.Empty;
     public string DeviceType { get; set; } = string.Empty;
     public string VersionDownloaded { get; set; } = "v1.1";
+
+    // Hardware ID của thiết bị mobile — liên kết lượt tải với thiết bị cụ thể
+    public string? DeviceId { get; set; } = string.Empty;
 }

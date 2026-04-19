@@ -544,7 +544,7 @@
             {
                 // Kiểm tra bằng quyền lực tuyệt đối của Server (theo IP)
                 // Chặn Incognito / F5 Loophole
-                bool isAllowedFromServer = await JS.InvokeAsync<bool>("recordServerTrial");
+                bool isAllowedFromServer = await JS.InvokeAsync<bool>("recordServerTrial", Id);
 
                 if (isAllowedFromServer)
                 {

@@ -37,6 +37,41 @@
 			<!-- Content area -->
 			<VerticalStackLayout Padding="20,16" Spacing="10">
 
+				<!-- ── Deep Link Loading Indicator ── -->
+				<ActivityIndicator IsRunning="{Binding IsDeepLinkLoading}"
+				                   IsVisible="{Binding IsDeepLinkLoading}"
+				                   Color="{StaticResource Primary}"
+				                   HorizontalOptions="Center"
+				                   VerticalOptions="Center"
+				                   HeightRequest="40" />
+
+				<!-- ── Banner trạng thái Trial / Premium (chỉ hiện khi mở từ Deep Link) ── -->
+				<Border IsVisible="{Binding ShowTrialBanner}"
+				        BackgroundColor="#1A667EEA"
+				        StrokeShape="RoundRectangle 12"
+				        Stroke="#667EEA"
+				        StrokeThickness="1"
+				        Padding="14,10">
+					<VerticalStackLayout Spacing="8">
+						<Label Text="{Binding TrialBannerText}"
+						       FontSize="13"
+						       TextColor="{StaticResource TextPrimary}"
+						       LineHeight="1.4" />
+
+						<!-- Nút nâng cấp Premium (chỉ hiện nếu chưa phải Premium) -->
+						<Button IsVisible="{Binding ShowUpgradeButton}"
+						        Text="⭐ Nâng cấp Premium"
+						        BackgroundColor="#667EEA"
+						        TextColor="White"
+						        CornerRadius="20"
+						        FontAttributes="Bold"
+						        FontSize="13"
+						        HeightRequest="36"
+						        Padding="16,0"
+						        HorizontalOptions="Start" />
+					</VerticalStackLayout>
+				</Border>
+
 				<!-- Shop name -->
 				<Label Text="{Binding Shop.Name}"
 				       FontSize="24" FontAttributes="Bold"

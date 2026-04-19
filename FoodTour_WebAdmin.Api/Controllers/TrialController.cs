@@ -18,7 +18,7 @@ public class TrialController : ControllerBase
     }
 
     [HttpPost("record")]
-    public async Task<IActionResult> RecordTrial()
+    public async Task<IActionResult> RecordTrial([FromQuery] string? shopId)
     {
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
         var userAgent = Request.Headers.UserAgent.ToString();
@@ -40,7 +40,8 @@ public class TrialController : ControllerBase
         {
             IPAddress = ipAddress,
             UserAgent = userAgent,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            ShopId = shopId
         };
 
         _context.TrialLogs.Add(log);

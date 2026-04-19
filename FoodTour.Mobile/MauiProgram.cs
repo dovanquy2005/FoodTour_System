@@ -55,6 +55,12 @@ public static class MauiProgram
         builder.Services.AddSingleton<WalkingSimulationService>();
         builder.Services.AddSingleton<PlayerViewModel>();
 
+        // Đăng ký dịch vụ lấy Hardware ID (Android-specific: AndroidId)
+        // Phục vụ Deep Link: định danh thiết bị không cần đăng nhập
+#if ANDROID
+        builder.Services.AddSingleton<IHardwareIdService, FoodTour.Mobile.Services.HardwareIdService>();
+#endif
+
         // Đăng ký cho tab MainPage (OTA Localization Test)
         builder.Services.AddTransient<MainPage>();
 

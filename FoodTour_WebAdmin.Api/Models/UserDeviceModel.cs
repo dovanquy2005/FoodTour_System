@@ -20,6 +20,12 @@ public class UserDeviceModel
     /// <summary>Lần cuối thiết bị gọi API sync.</summary>
     public DateTime LastActive { get; set; } = DateTime.UtcNow;
 
+    /// <summary>Đánh dấu thiết bị có quyền nghe toàn bộ audio (Premium Pass).</summary>
+    public bool IsPremium { get; set; } = false;
+
+    /// <summary>Thời điểm hết hạn Premium (null = chưa mua hoặc vĩnh viễn).</summary>
+    public DateTime? PremiumExpiry { get; set; }
+
     // ── Quan hệ 1-nhiều với UserModel (nullable — thiết bị có thể chưa đăng nhập) ──
     public string? UserId { get; set; }
     public UserModel? User { get; set; }

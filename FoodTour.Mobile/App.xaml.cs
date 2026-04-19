@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace FoodTour.Mobile;
@@ -23,12 +24,23 @@ public partial class App : Application
 
     private readonly ViewModels.PlayerViewModel _playerVm;
     private readonly Services.WalkingSimulationService _locationService;
+    private Services.ILocalizationService? _localizationService;
+
+    // ── Deep Link: Lưu URI chờ xử lý khi app chưa khởi tạo xong ──
+    private Uri? _pendingDeepLinkUri;
+    private bool _isAppReady;
+
+    // Regex trích xuất GUID (shopId) từ URL Deep Link
+    private static readonly Regex GuidRegex = new(
+        @"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})",
+        RegexOptions.Compiled);
 
     public App(Services.ILocalizationService localizationService, Services.DatabaseService databaseService, ViewModels.PlayerViewModel playerVm, Services.WalkingSimulationService locationService)
     {
         InitializeComponent();
         _playerVm = playerVm;
         _locationService = locationService;
+        _localizationService = localizationService;
 
         InitializeAppAsync(localizationService, databaseService);
     }
@@ -101,7 +113,160 @@ public partial class App : Application
             {
                 _initialPage = newPage;
             }
+
+            // ── Đánh dấu app đã sẵn sàng, xử lý Deep Link đang chờ nếu có ──
+            _isAppReady = true;
+            if (_pendingDeepLinkUri != null)
+            {
+                var uri = _pendingDeepLinkUri;
+                _pendingDeepLinkUri = null;
+                _ = HandleDeepLinkAsync(uri);
+            }
         });
+    }
+
+    // ═══════ DEEP LINK HANDLING ═══════
+
+    /// <summary>
+    /// Được gọi từ MainActivity (Android) khi nhận Intent chứa Deep Link URI.
+    /// Nếu app chưa khởi tạo xong, URI sẽ được lưu tạm để xử lý sau.
+    /// </summary>
+    public void SendDeepLink(Uri uri)
+    {
+        System.Diagnostics.Debug.WriteLine($"[DeepLink] SendDeepLink: {uri}");
+
+        if (_isAppReady)
+        {
+            // App đã sẵn sàng — xử lý ngay
+            _ = HandleDeepLinkAsync(uri);
+        }
+        else
+        {
+            // App đang splash/loading — lưu tạm, xử lý khi InitializeAppAsync xong
+            _pendingDeepLinkUri = uri;
+        }
+    }
+
+    /// <summary>
+    /// Xử lý logic Deep Link chính:
+    /// 1. Trích xuất shopId từ URI
+    /// 2. Lấy Hardware ID thực tế của thiết bị
+    /// 3. Gọi API kiểm tra trạng thái Premium
+    /// 4. Điều hướng vào ShopDetailPage kèm thông tin Premium/Trial
+    /// </summary>
+    private async Task HandleDeepLinkAsync(Uri uri)
+    {
+        try
+        {
+            System.Diagnostics.Debug.WriteLine($"[DeepLink] Đang xử lý URI: {uri}");
+
+            // ── 1. Trích xuất ShopId từ path: /foodtour/{shopId} ──
+            string? shopId = ExtractShopIdFromUri(uri);
+            if (string.IsNullOrEmpty(shopId))
+            {
+                System.Diagnostics.Debug.WriteLine("[DeepLink] Không tìm thấy ShopId trong URI.");
+                return;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[DeepLink] ShopId: {shopId}");
+
+            // ── 2. Lấy Hardware ID thực tế (AndroidId) ──
+            string hardwareId = GetHardwareId();
+            System.Diagnostics.Debug.WriteLine($"[DeepLink] HardwareId: {hardwareId}");
+
+            // ── 3. Gọi API kiểm tra trạng thái Premium ──
+            bool isPremium = false;
+            int trialRemaining = 3;
+
+            if (_databaseService != null)
+            {
+                var status = await _databaseService.CheckDeviceStatusAsync(hardwareId);
+                if (status != null)
+                {
+                    isPremium = status.IsPremium;
+                    trialRemaining = status.TrialRemaining;
+                }
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[DeepLink] Premium: {isPremium}, TrialRemaining: {trialRemaining}");
+
+            // ── 4. Điều hướng vào ShopDetailPage kèm thông tin ──
+            MainThread.BeginInvokeOnMainThread(async () =>
+            {
+                try
+                {
+                    // Truyền dữ liệu qua Query Parameters cho Shell Navigation
+                    var navigationParams = new Dictionary<string, object>
+                    {
+                        { "ShopId", shopId },
+                        { "IsFromDeepLink", true },
+                        { "IsPremium", isPremium },
+                        { "TrialRemaining", trialRemaining },
+                        { "HardwareId", hardwareId }
+                    };
+
+                    await Shell.Current.GoToAsync(
+                        nameof(Views.ShopDetailPage),
+                        navigationParams);
+
+                    System.Diagnostics.Debug.WriteLine("[DeepLink] Đã điều hướng vào ShopDetailPage.");
+                }
+                catch (Exception navEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[DeepLink] Lỗi điều hướng: {navEx.Message}");
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[DeepLink] Lỗi xử lý: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Trích xuất Shop ID (GUID) từ URI Deep Link.
+    /// Hỗ trợ format: /foodtour/{guid}
+    /// </summary>
+    private static string? ExtractShopIdFromUri(Uri uri)
+    {
+        // Thử lấy từ path segments: /foodtour/{shopId}
+        var path = uri.AbsolutePath.TrimEnd('/');
+        if (path.StartsWith("/foodtour/", StringComparison.OrdinalIgnoreCase))
+        {
+            var shopId = path.Substring("/foodtour/".Length);
+            if (!string.IsNullOrEmpty(shopId))
+                return shopId;
+        }
+
+        // Fallback: dùng Regex tìm GUID bất kỳ trong URL
+        var match = GuidRegex.Match(uri.ToString());
+        return match.Success ? match.Groups[1].Value : null;
+    }
+
+    /// <summary>
+    /// Lấy Hardware ID — ưu tiên dùng IHardwareIdService (Android-specific),
+    /// fallback về DeviceId từ SQLite nếu service không khả dụng.
+    /// </summary>
+    private string GetHardwareId()
+    {
+        try
+        {
+            // Lấy service từ DI container
+            var hardwareIdService = Handler?.MauiContext?.Services.GetService<Services.IHardwareIdService>();
+            if (hardwareIdService != null)
+            {
+                var hwId = hardwareIdService.GetHardwareId();
+                if (!string.IsNullOrEmpty(hwId) && hwId != "unknown-hardware-id")
+                    return hwId;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[DeepLink] Lỗi lấy HardwareId: {ex.Message}");
+        }
+
+        // Fallback: dùng DeviceId từ SQLite (GUID đã tạo sẵn)
+        return DeviceId;
     }
 
     protected override Window CreateWindow(IActivationState? activationState)

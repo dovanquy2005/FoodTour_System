@@ -901,5 +901,97 @@
                 await Init();
                 await _database!.UpdateAsync(notification);
             }
+
+            // ═══════ DEEP LINK — DEVICE STATUS & TRIAL ═══════
+
+            /// <summary>
+            /// Gọi API kiểm tra trạng thái Premium và số lần trial còn lại của thiết bị.
+            /// Dùng cho luồng Deep Link: kiểm tra quyền trước khi phát audio.
+            /// </summary>
+            public async Task<DeviceStatusResult?> CheckDeviceStatusAsync(string hardwareId)
+            {
+                if (string.IsNullOrEmpty(hardwareId))
+                    return null;
+
+                try
+                {
+                    using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+                    var url = $"{API_BASE_URL}/api/device/status/{Uri.EscapeDataString(hardwareId)}";
+
+                    System.Diagnostics.Debug.WriteLine($"[DeviceStatus] Đang gọi: {url}");
+                    var response = await httpClient.GetAsync(url);
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var result = await response.Content.ReadFromJsonAsync<DeviceStatusResult>();
+                        System.Diagnostics.Debug.WriteLine($"[DeviceStatus] Premium: {result?.IsPremium}, TrialRemaining: {result?.TrialRemaining}");
+                        return result;
+                    }
+
+                    System.Diagnostics.Debug.WriteLine($"[DeviceStatus] Server trả về: {response.StatusCode}");
+                    return null;
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[DeviceStatus] Lỗi: {ex.Message}");
+                    return null;
+                }
+            }
+
+            /// <summary>
+            /// Ghi log một lượt nghe thử (Trial) cho thiết bị qua API.
+            /// Trả về kết quả cho biết có được phép nghe tiếp hay không.
+            /// </summary>
+            public async Task<TrialResult?> RecordTrialAsync(string hardwareId, string shopId)
+            {
+                if (string.IsNullOrEmpty(hardwareId))
+                    return null;
+
+                try
+                {
+                    using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+                    var url = $"{API_BASE_URL}/api/device/trial";
+
+                    var payload = new { DeviceId = hardwareId, ShopId = shopId };
+                    System.Diagnostics.Debug.WriteLine($"[Trial] Ghi log trial cho device: {hardwareId}, shop: {shopId}");
+
+                    var response = await httpClient.PostAsJsonAsync(url, payload);
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var result = await response.Content.ReadFromJsonAsync<TrialResult>();
+                        System.Diagnostics.Debug.WriteLine($"[Trial] Allowed: {result?.Allowed}, Remaining: {result?.Remaining}");
+                        return result;
+                    }
+
+                    System.Diagnostics.Debug.WriteLine($"[Trial] Server trả về: {response.StatusCode}");
+                    return null;
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Trial] Lỗi: {ex.Message}");
+                    return null;
+                }
+            }
         }
-    }
+
+        // ═══════ DTO cho Deep Link API Response ═══════
+
+        /// <summary>Kết quả kiểm tra trạng thái thiết bị từ API /api/device/status.</summary>
+        public class DeviceStatusResult
+        {
+            public bool IsPremium { get; set; }
+            public DateTime? PremiumExpiry { get; set; }
+            public int TrialCount { get; set; }
+            public int MaxTrial { get; set; }
+            public int TrialRemaining { get; set; }
+        }
+
+        /// <summary>Kết quả ghi trial từ API /api/device/trial.</summary>
+        public class TrialResult
+        {
+            public bool Allowed { get; set; }
+            public int Remaining { get; set; }
+            public string? Reason { get; set; }
+        }
+    }
