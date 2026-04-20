@@ -35,12 +35,21 @@ public partial class App : Application
         @"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})",
         RegexOptions.Compiled);
 
-    public App(Services.ILocalizationService localizationService, Services.DatabaseService databaseService, ViewModels.PlayerViewModel playerVm, Services.WalkingSimulationService locationService)
+    public App(
+        Services.ILocalizationService localizationService, 
+        Services.DatabaseService databaseService, 
+        ViewModels.PlayerViewModel playerVm, 
+        Services.WalkingSimulationService locationService, 
+        Services.IHardwareIdService hardwareIdService)
     {
         InitializeComponent();
         _playerVm = playerVm;
-        _locationService = locationService;
+        _locationService = locationService; 
         _localizationService = localizationService;
+
+        // Gán ngay DeviceId bằng HardwareId thay vì chờ DB
+        DeviceId = hardwareIdService.GetHardwareId();
+        DeviceName = DeviceInfo.Model ?? "Unknown Device";
 
         InitializeAppAsync(localizationService, databaseService);
     }
@@ -49,11 +58,6 @@ public partial class App : Application
     {
         _databaseService = databaseService;
 
-        // ── Khởi tạo DeviceID từ SQLite (bền vững, không mất khi clear Preferences) ──
-        DeviceId = await databaseService.GetOrCreateDeviceIdAsync();
-        // Đọc lại DeviceName từ bản ghi đã lưu để dùng khi sync lên API
-        DeviceName = DeviceInfo.Model ?? "Unknown Device";
-        
         // Đẩy lên Backend nền — không await để không block splash screen
         _ = databaseService.SyncDeviceToServerAsync(DeviceId, DeviceName);
         // ────────────────────────────────────────────────────────────────────────────
@@ -205,6 +209,11 @@ public partial class App : Application
                         { "HardwareId", hardwareId }
                     };
 
+                    // FIX: Delay 800ms để đảm bảo MAUI Shell đã khởi tạo xong
+                    // UI Tree / Navigation Stack ở COLD Boot.
+                    // Ngăn lỗi Race Condition gây trắng màn hình và mất FloatingAudioPlayer.
+                    await Task.Delay(800);
+
                     await Shell.Current.GoToAsync(
                         nameof(Views.ShopDetailPage),
                         navigationParams);
@@ -249,23 +258,6 @@ public partial class App : Application
     /// </summary>
     private string GetHardwareId()
     {
-        try
-        {
-            // Lấy service từ DI container
-            var hardwareIdService = Handler?.MauiContext?.Services.GetService<Services.IHardwareIdService>();
-            if (hardwareIdService != null)
-            {
-                var hwId = hardwareIdService.GetHardwareId();
-                if (!string.IsNullOrEmpty(hwId) && hwId != "unknown-hardware-id")
-                    return hwId;
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[DeepLink] Lỗi lấy HardwareId: {ex.Message}");
-        }
-
-        // Fallback: dùng DeviceId từ SQLite (GUID đã tạo sẵn)
         return DeviceId;
     }
 

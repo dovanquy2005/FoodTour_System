@@ -46,7 +46,7 @@
                 await _database.CreateTableAsync<NotificationModel>();
 
                 // Migration V5: Bảng LocalDevice lưu DeviceID bền vững (thay thế Preferences)
-                await _database.CreateTableAsync<LocalDeviceModel>();
+                //await _database.CreateTableAsync<LocalDeviceModel>();
 
                 _isInitialized = true;
             }
@@ -55,39 +55,7 @@
                 _initLock.Release();
             }
         }
-
-            // ═══════ DEVICE ID ═══════
-
-            /// <summary>
-            /// Trả về DeviceId từ SQLite (bền vững, không mất khi clear Preferences).
-            /// Lần đầu chạy: tạo GUID mới + lấy tên máy, lưu vào DB.
-            /// Các lần sau: đọc thẳng từ dòng đã có.
-            /// </summary>
-            public async Task<string> GetOrCreateDeviceIdAsync()
-            {
-                await Init();
-
-                // Đọc dòng duy nhất trong bảng LocalDevice
-                var existing = await _database!.Table<LocalDeviceModel>().FirstOrDefaultAsync();
-                if (existing is not null)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[DeviceId] Load từ SQLite: {existing.DeviceId} | Model: {existing.DeviceName}");
-                    return existing.DeviceId;
-                }
-                    
-                // Lần đầu — tạo GUID mới và ghi vào SQLite
-                var newDevice = new LocalDeviceModel
-                {
-                    DeviceId   = Guid.NewGuid().ToString(),
-                    DeviceName = DeviceInfo.Model ?? "Unknown Device",
-                    CreatedAt  = DateTime.UtcNow
-                };
-
-                await _database.InsertAsync(newDevice);
-                System.Diagnostics.Debug.WriteLine($"[DeviceId] Tạo mới: {newDevice.DeviceId} | Model: {newDevice.DeviceName}");
-                return newDevice.DeviceId;
-            }
-
+        
             /// <summary>
             /// Đẩy DeviceId và DeviceName lên Backend (POST /api/device/sync).
             /// Nếu đã đồng bộ thành công rồi thì chỉ cập nhật LastActive.
@@ -994,4 +962,4 @@
             public int Remaining { get; set; }
             public string? Reason { get; set; }
         }
-    }
+    }

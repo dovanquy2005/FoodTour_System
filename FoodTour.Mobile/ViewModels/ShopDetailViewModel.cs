@@ -7,13 +7,9 @@ using FoodTour.Mobile.Services;
 
 namespace FoodTour.Mobile.ViewModels
 {
-    [QueryProperty(nameof(Shop), "ShopData")]
-    [QueryProperty(nameof(ShopId), "ShopId")]
-    [QueryProperty(nameof(IsFromDeepLink), "IsFromDeepLink")]
-    [QueryProperty(nameof(IsPremium), "IsPremium")]
-    [QueryProperty(nameof(TrialRemaining), "TrialRemaining")]
-    [QueryProperty(nameof(HardwareId), "HardwareId")]
-    public partial class ShopDetailViewModel : BaseViewModel, IRecipient<LanguageChangedMessage>, IDisposable
+    // FIX: Xóa bỏ [QueryProperty] — chuyển sang IQueryAttributable để bọc try-catch,
+    // tránh Exception ngầm bị nuốt ở tầng SDK khiến UI kẹt trắng.
+    public partial class ShopDetailViewModel : BaseViewModel, IRecipient<LanguageChangedMessage>, IDisposable, IQueryAttributable
     {
         private readonly DatabaseService _dbService;
         private readonly IAudioPlayerService _audioService;
@@ -78,15 +74,72 @@ namespace FoodTour.Mobile.ViewModels
             WeakReferenceMessenger.Default.Register(this);
         }
 
+        // ═══════ FIX: IQueryAttributable — Bọc try-catch toàn bộ logic nhận tham số ═══════
+
+        /// <summary>
+        /// Nhận tham số từ Shell Navigation một cách an toàn.
+        /// ShopId được gán CUỐI CÙNG để đảm bảo các flag Premium/Trial đã sẵn sàng
+        /// trước khi OnShopIdChanged kích hoạt LoadShopAndAutoPlayAsync.
+        /// </summary>
+        public void ApplyQueryAttributes(IDictionary<string, object> query)
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"[ShopDetailVM] ApplyQueryAttributes — {query.Count} params");
+
+                if (query.TryGetValue("ShopData", out var shopObj) && shopObj is ShopModel shopData)
+                {
+                    Shop = shopData;
+                }
+
+                if (query.TryGetValue("IsFromDeepLink", out var isDeepLinkObj) && isDeepLinkObj != null)
+                {
+                    IsFromDeepLink = Convert.ToBoolean(isDeepLinkObj);
+                }
+
+                if (query.TryGetValue("IsPremium", out var isPremiumObj) && isPremiumObj != null)
+                {
+                    IsPremium = Convert.ToBoolean(isPremiumObj);
+                }
+
+                if (query.TryGetValue("TrialRemaining", out var trialObj) && trialObj != null)
+                {
+                    TrialRemaining = Convert.ToInt32(trialObj);
+                }
+
+                if (query.TryGetValue("HardwareId", out var hardwareIdObj) && hardwareIdObj != null)
+                {
+                    HardwareId = hardwareIdObj.ToString();
+                }
+
+                // Gán ShopId CUỐI CÙNG — vì setter sẽ trigger OnShopIdChanged → AutoPlay
+                if (query.TryGetValue("ShopId", out var idObj) && idObj != null)
+                {
+                    ShopId = idObj.ToString();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ShopDetailVM] ❌ Lỗi ApplyQueryAttributes: {ex}");
+            }
+        }
+
         /// <summary>
         /// Được gọi tự động khi ShopId thay đổi (từ Deep Link navigation).
         /// Load shop từ DB rồi kích hoạt auto-play.
         /// </summary>
         partial void OnShopIdChanged(string? value)
         {
-            if (!string.IsNullOrEmpty(value) && IsFromDeepLink)
+            try
             {
-                _ = LoadShopAndAutoPlayAsync(value);
+                if (!string.IsNullOrEmpty(value) && IsFromDeepLink)
+                {
+                    _ = LoadShopAndAutoPlayAsync(value);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ShopDetailVM] ❌ Lỗi OnShopIdChanged: {ex}");
             }
         }
 
