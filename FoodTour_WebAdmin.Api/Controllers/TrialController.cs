@@ -1,6 +1,7 @@
 using FoodTour_WebAdmin.Api.Data;
 using FoodTour_WebAdmin.Api.Models;
 using FoodTour_WebAdmin.Api.DTOs;
+using FoodTour_WebAdmin.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -13,10 +14,12 @@ namespace FoodTour_WebAdmin.Api.Controllers;
 public class TrialController : ControllerBase
 {
     private readonly AppDbContext _context;
+    private readonly IDataUpdateNotifier _notifier;
 
-    public TrialController(AppDbContext context)
+    public TrialController(AppDbContext context, IDataUpdateNotifier notifier)
     {
         _context = context;
+        _notifier = notifier;
     }
 
     [HttpPost("record")]
@@ -33,8 +36,8 @@ public class TrialController : ControllerBase
 
         // FIX: Kiểm tra theo BrowserFingerprint thay vì IPAddress
         var trialCount = await _context.TrialLogs
-            .Where(t => t.BrowserFingerprint == request.Fingerprint 
-                     && t.ShopId == request.ShopId 
+            .Where(t => t.BrowserFingerprint == request.Fingerprint
+                     && t.ShopId == request.ShopId
                      && t.CreatedAt >= twentyFourHoursAgo)
             .CountAsync();
 
@@ -54,6 +57,8 @@ public class TrialController : ControllerBase
 
         _context.TrialLogs.Add(log);
         await _context.SaveChangesAsync();
+
+        _notifier.NotifyTrialRecorded();
 
         return Ok(new { success = true, remaining = 3 - trialCount - 1 });
     }

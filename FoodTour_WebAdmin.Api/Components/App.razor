@@ -16,6 +16,9 @@
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
     <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
 
+    <!-- Leaflet Heatmap -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
     <HeadOutlet @rendermode="new InteractiveServerRenderMode(prerender: false)" />
 
     <style>
@@ -69,5 +72,22 @@
     <script src="js/qrcode.min.js"></script>
     <!-- FoodTour JS Interop -->
     <script src="js/foodtour-interop.js"></script>
+
+    <!-- Leaflet Geographic Heatmap -->
+    <script>
+        // Patch canvas to suppress willReadFrequently warning from leaflet-heat
+        (function () {
+            var orig = HTMLCanvasElement.prototype.getContext;
+            HTMLCanvasElement.prototype.getContext = function (type, attrs) {
+                if (type === '2d') {
+                    attrs = Object.assign({ willReadFrequently: true }, attrs || {});
+                }
+                return orig.call(this, type, attrs);
+            };
+        })();
+    </script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    <script src="js/heatmap.js"></script>
 </body>
 </html>

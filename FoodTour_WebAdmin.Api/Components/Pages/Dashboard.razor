@@ -2,10 +2,12 @@
 @page "/dashboard"
 @implements IDisposable
 @using System.Threading
+@inject IJSRuntime JSRuntime
+@inject IHttpClientFactory HttpClientFactory
+@using System.Net.Http.Json
 @inject IDbContextFactory<AppDbContext> DbFactory
 @inject ILogger<Dashboard> Logger
 @inject FoodTour_WebAdmin.Api.Services.IDataUpdateNotifier DataUpdateNotifier
-@using ApexCharts
 
 <PageTitle>Dashboard — FoodTour Admin</PageTitle>
 
@@ -78,60 +80,77 @@
         </MudItem>
     </MudGrid>
 
-    <!-- ═══════ CHARTS ROW ═══════ -->
+    <!-- ═══════ GEOGRAPHIC HEATMAP ═══════ -->
     <MudGrid Spacing="4">
-        <MudItem xs="12" md="12">
+        <MudItem xs="12">
             <MudPaper Elevation="0" Style="padding: 24px; border-radius: 16px; border: 1px solid #F0E8E0;">
-                <MudStack Spacing="3">
-                    <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+                    <MudStack Spacing="0">
                         <MudText Typo="Typo.h6" Style="font-weight: 700; color:#2D1F14;">
-                            🔥 Hoạt động thiết bị (@(_viewMode == "Week" ? "Ngày trong tuần" : "Tháng trong năm"))
+                            🗺️ Bản đồ nhiệt — Khu vực nghe thuyết minh
                         </MudText>
-                        <MudToggleGroup T="string" Value="@_viewMode" ValueChanged="OnViewModeChanged"
-                                        Size="MudBlazor.Size.Small" Color="MudBlazor.Color.Primary" Variant="Variant.Outlined">
-                            <MudToggleItem Value="@("Week")">Theo Tuần</MudToggleItem>
-                            <MudToggleItem Value="@("Month")">Theo Năm</MudToggleItem>
-                        </MudToggleGroup>
+                        <MudText Typo="Typo.body2" Style="color:#8C7B6B;">
+                            Vị trí các quán được nghe nhiều nhất trong @_heatmapHours giờ qua
+                        </MudText>
                     </MudStack>
 
-                    <div style="margin-top: 10px;">
-                        @if (_heatmapData != null && _heatmapData.Any())
-                        {
-                            <ApexChart @key="_viewMode" TItem="HeatmapDataPoint" Height="380" Options="_heatmapOptions">
-                                @if (_viewMode == "Week")
-                                {
-                                    @foreach (var day in DayNames)
-                                    {
-                                        <ApexPointSeries TItem="HeatmapDataPoint"
-                                                         Items="@(_heatmapData.Where(d => d.LabelY == day).OrderBy(d => d.ValueX).ToList())"
-                                                         Name="@day" SeriesType="SeriesType.Heatmap" XValue="@(e => e.ValueX.ToString())"
-                                                         YValue="@(e => (decimal)e.Count)" />
-                                    }
-                                }
-                                else
-                                {
-                                    @foreach (var month in MonthNames)
-                                    {
-                                        <ApexPointSeries TItem="HeatmapDataPoint"
-                                                         Items="@(_heatmapData.Where(d => d.LabelY == month).OrderBy(d => d.ValueX).ToList())"
-                                                         Name="@month" SeriesType="SeriesType.Heatmap" XValue="@(e => "T" + e.ValueX)"
-                                                         YValue="@(e => (decimal)e.Count)" />
-                                    }
-                                }
-                            </ApexChart>
-                        }
-                        else
-                        {
-                            @* Hiển thị Loading mượt mà trong khi chờ dữ liệu nạp song song từ Task.WhenAll *@
-                            <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center"
-                                      Style="height:380px; background: #fafafa; border-radius: 8px;">
-                                <MudProgressCircular Color="MudBlazor.Color.Primary" Indeterminate="true"
-                                                     Size="MudBlazor.Size.Medium" />
-                                <MudText Typo="Typo.caption" Class="mt-2">Đang tải dữ liệu hoạt động...</MudText>
-                            </MudStack>
-                        }
-                    </div>
+                    <MudStack Row Spacing="2" AlignItems="AlignItems.Center">
+                        <MudToggleGroup T="string" Value="@_heatmapMode" ValueChanged="OnHeatmapModeChanged"
+                                        Size="MudBlazor.Size.Small" Color="MudBlazor.Color.Primary" Variant="Variant.Outlined">
+                            <MudToggleItem Value="@("unique")">Khách duy nhất</MudToggleItem>
+                            <MudToggleItem Value="@("total")">Tổng lượt nghe</MudToggleItem>
+                        </MudToggleGroup>
+
+                        <MudSelect T="int" Value="_heatmapHours" ValueChanged="OnHeatmapHoursChanged"
+                                   Label="Khoảng thời gian" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                   Style="min-width:130px;">
+                            <MudSelectItem T="int" Value="1">1 giờ</MudSelectItem>
+                            <MudSelectItem T="int" Value="6">6 giờ</MudSelectItem>
+                            <MudSelectItem T="int" Value="24">24 giờ</MudSelectItem>
+                            <MudSelectItem T="int" Value="168">7 ngày</MudSelectItem>
+                        </MudSelect>
+                    </MudStack>
                 </MudStack>
+
+                <div @key="@("heatmap-container")" style="position:relative;">
+                    @if (_heatmapPoints.Count == 0 && !_heatmapLoading)
+                    {
+                        <div
+                            style="position:absolute; inset:0; z-index:1000; display:flex; align-items:center; justify-content:center; background:rgba(250,250,250,0.85); border-radius:12px;">
+                            <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.LocationOff" Style="font-size:48px; color:#B5A899;" />
+                                <MudText Typo="Typo.body2" Style="color:#8C7B6B;">
+                                    Chưa có dữ liệu nghe thử trong khoảng thời gian này
+                                </MudText>
+                            </MudStack>
+                        </div>
+                    }
+
+                    @if (_heatmapLoading)
+                    {
+                        <div
+                            style="position:absolute; inset:0; z-index:1000; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.7); border-radius:12px;">
+                            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                        </div>
+                    }
+
+                    <div id="geo-heatmap" @key="@("geo-heatmap-id")"
+                         style="height:420px; border-radius:12px; border:1px solid #F0E8E0; overflow:hidden; z-index:0;">
+                    </div>
+                </div>
+
+                @if (_heatmapPoints.Count > 0)
+                {
+                    <MudStack Row Spacing="3" Class="mt-3" Style="flex-wrap:wrap;">
+                        <MudText Typo="Typo.caption" Style="color:#8C7B6B;">
+                            📍 @_heatmapPoints.Count quán có dữ liệu
+                        </MudText>
+                        <MudText Typo="Typo.caption" Style="color:#8C7B6B;">
+                            🔥 Cao nhất: @(_heatmapPoints.Any() ? _heatmapPoints.Max(p => p.Weight) : 0)
+                            @(_heatmapMode == "unique" ? "khách duy nhất" : "lượt nghe")
+                        </MudText>
+                    </MudStack>
+                }
             </MudPaper>
         </MudItem>
     </MudGrid>
@@ -189,68 +208,112 @@
     private int _visitsLast24h;
     private int _onlineDevices;
     private List<ShopModel>? _recentShops;
- 
-    // ── Heatmap Data ──────────────────────────────────────────────────────────
-    private string _viewMode = "Week";
-    private static readonly string[] DayNames = { "CN", "T2", "T3", "T4", "T5", "T6", "T7" };
-    private static readonly string[] MonthNames = { "Th1", "Th2", "Th3", "Th4", "Th5", "Th6", "Th7", "Th8", "Th9", "Th10",
-"Th11", "Th12" };
-    
-    private List<HeatmapDataPoint> _heatmapData = new();
+    private bool _isDisposed = false;
+    // ── Geographic Heatmap ────────────────────────────────────────────────────
+    private record HeatPoint(double Lat, double Lng, int Weight);
 
-    private ApexChartOptions<HeatmapDataPoint> _heatmapOptions = new()
+    private List<HeatPoint> _heatmapPoints = new();
+    private string _heatmapMode = "unique";
+    private int _heatmapHours = 24;
+    private bool _heatmapLoading = false;
+    private bool _heatmapReady = false;
+
+    // Vĩnh Khánh Street center coordinates
+    private const double MapCenterLat = 10.7593;
+    private const double MapCenterLng = 106.7081;
+
+    private async Task LoadHeatmapPoints()
     {
-        PlotOptions = new PlotOptions
-        {
-            Heatmap = new PlotOptionsHeatmap
-            {
-                Distributed = true,
-                Radius = 4,
-                EnableShades = true,
-                ShadeIntensity = 0.5,
-                ColorScale = new PlotOptionsHeatmapColorScale
-                {
-                    Ranges = new List<PlotOptionsHeatmapColorScaleRange>
-                    {
-                        // Giữ nguyên màu xám cho giá trị bằng 0
-                        new() { From = 0, To = 0, Name = "Không có", Color = "#F3F4F6" },
+        _heatmapLoading = true;
+        StateHasChanged();
 
-                        // Các tông đỏ (Red) từ nhạt đến đậm dần
-                        new() { From = 1, To = 5, Name = "Thấp", Color = "#FCA5A5" }, // Red 300
-                        new() { From = 6, To = 15, Name = "Trung bình", Color = "#EF4444" }, // Red 500
-                        new() { From = 16, To = 30, Name = "Cao", Color = "#991B1B" }, // Red 800
-                        new() { From = 31, To = 9999, Name = "Rất cao", Color = "#7F1D1D" } // Red 900
-                    }
-                }
-            }
-        },
-        States = new States
+        try
         {
-            Hover = new StatesHover { Filter = new StatesFilter { Type = (StatesFilterType)0 } },
-            Active = new StatesActive
-            {
-                AllowMultipleDataPointsSelection = false,
-                Filter = new StatesFilter
-                {
-                    Type = (StatesFilterType)0
-                }
-            }
-        },
-        Legend = new Legend { Show = true, Position = LegendPosition.Bottom },
-        DataLabels = new DataLabels { Enabled = false }
-    };
+            using var db = await DbFactory.CreateDbContextAsync();
+            var since = DateTime.UtcNow.AddHours(-_heatmapHours);
 
-    // Class tổng quát dùng chung cho cả 2 chế độ
-    private class HeatmapDataPoint
+            // Pull raw join data to memory first — avoids EF translation failure
+            var raw = await db.TrialLogs
+                .Where(t => t.CreatedAt >= since
+                         && t.ShopId != null
+                         && t.ShopId != string.Empty)
+                .Join(db.Shops,
+                      t => t.ShopId,
+                      s => s.Id,
+                      (t, s) => new
+                      {
+                          t.IPAddress,
+                          s.Latitude,
+                          s.Longitude,
+                          ShopId = s.Id
+                      })
+                .ToListAsync(); // ← pull to memory HERE
+            Logger.LogInformation("Raw rows: {Count}, sample: {Sample}",
+                    raw.Count,
+                    raw.FirstOrDefault() is { } r ? $"lat={r.Latitude} lng={r.Longitude} shop={r.ShopId}" : "none");
+
+            _heatmapPoints = raw
+                .GroupBy(x => new { x.ShopId, x.Latitude, x.Longitude })
+                .Select(g => new HeatPoint(
+                    g.Key.Latitude,
+                    g.Key.Longitude,
+                    _heatmapMode == "unique"
+                        ? g.Select(x => x.IPAddress).Distinct().Count()
+                        : g.Count()
+                ))
+                .Where(p => p.Lat != 0 && p.Lng != 0 && p.Weight > 0)
+                .OrderByDescending(p => p.Weight)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load heatmap points.");
+            _heatmapPoints = new();
+        }
+        finally
+        {
+            _heatmapLoading = false;
+        }
+    }
+
+    private async Task RefreshHeatmapOnUI()
     {
-        public string LabelY { get; set; } = string.Empty; // Chứa tên Ngày (CN, T2...) hoặc tên Tháng (Th1, Th2...)
-        public int ValueX { get; set; } // Chứa Giờ (0-23) hoặc Tuần trong tháng (1-4)
-        public int Count { get; set; }
+        await LoadHeatmapPoints();
+
+        if (!_heatmapReady) return;
+
+        var jsPoints = _heatmapPoints
+        .Select(p => new
+        {
+            lat = p.Lat,
+            lng = p.Lng,
+            weight = p.Weight
+        })
+        .ToArray();
+
+        await JSRuntime.InvokeVoidAsync("heatmap.update", jsPoints);
+    }
+
+    private async Task OnHeatmapModeChanged(string mode)
+    {
+        _heatmapMode = mode;
+        await RefreshHeatmapOnUI();
+    }
+
+    private async Task OnHeatmapHoursChanged(int hours)
+    {
+        _heatmapHours = hours;
+        await RefreshHeatmapOnUI();
     }
 
     protected override async Task OnInitializedAsync()
     {
+        DataUpdateNotifier.OnDeviceUpdated += OnDeviceUpdatedHandler;
+        DataUpdateNotifier.OnTrialRecorded += OnTrialRecordedHandler;
+
         // Khởi tạo các Task. Mỗi Task sử dụng một DbContext riêng biệt từ Factory.
+        var heatmapTask = LoadHeatmapPoints();
+
         var totalShopsTask = Task.Run(async () =>
         {
             using var db = await DbFactory.CreateDbContextAsync();
@@ -281,9 +344,6 @@
             return await db.UserDevices.CountAsync(d => d.LastActive >= cutoff);
         });
 
-        var heatmapTask = LoadHeatmapData();
-
-        DataUpdateNotifier.OnDeviceUpdated += OnDeviceUpdatedHandler;
         // Chờ tất cả các tác vụ hoàn thành đồng thời mà không xung đột
         await Task.WhenAll(totalShopsTask, recentShopsTask, onlineDevicesTask, heatmapTask, visitsTask);
 
@@ -294,98 +354,76 @@
         _onlineDevices = await onlineDevicesTask;
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        // Init map with empty points first
+        await JSRuntime.InvokeVoidAsync(
+            "heatmap.init",
+            "geo-heatmap",
+            Array.Empty<object>(),
+            MapCenterLat,
+            MapCenterLng,
+            16);
+
+        _heatmapReady = true;
+
+        // Then push actual data if already loaded
+        if (_heatmapPoints.Count > 0)
+        {
+            var jsPoints = _heatmapPoints
+                .Select(p => new { lat = p.Lat, lng = p.Lng, weight = p.Weight })
+                .ToArray();
+
+            await JSRuntime.InvokeVoidAsync("heatmap.update", jsPoints);
+        }
+
+        StateHasChanged();
+    }
+
     // Gọi bởi IDataUpdateNotifier khi thiết bị mobile đồng bộ
     private async void OnDeviceUpdatedHandler()
     {
         try
         {
             using var db = await DbFactory.CreateDbContextAsync();
-            var cutoff = DateTime.UtcNow.AddHours(-24);
-            _visitsLast24h = await db.TrialLogs.CountAsync(t => t.CreatedAt >= cutoff);
+            var cutoff24 = DateTime.UtcNow.AddHours(-24);
+            _visitsLast24h = await db.TrialLogs.CountAsync(t => t.CreatedAt >= cutoff24);
             var cutoff15 = DateTime.UtcNow.AddMinutes(-15);
             _onlineDevices = await db.UserDevices.CountAsync(d => d.LastActive >= cutoff15);
-
-            await LoadHeatmapData();
             await InvokeAsync(StateHasChanged);
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to refresh heatmap on device update.");
+            Logger.LogError(ex, "Dashboard refresh error.");
         }
     }
 
-    private async Task OnViewModeChanged(string newMode)
+    private async void OnTrialRecordedHandler()
     {
-        if (newMode == _viewMode) return;
-    
-        // Xóa dữ liệu cũ để giao diện không bị render sai trong lúc chờ nạp mới
-        _heatmapData.Clear();
-        _viewMode = newMode;
-    
-        await LoadHeatmapData();
-    
-        // Chỉ render lại sau khi _heatmapData đã được nạp đầy đủ
-        StateHasChanged();
-    }
-
-    private async Task LoadHeatmapData()
-    {
-        // Chỉ lấy cột LastActive
-        using var db = await DbFactory.CreateDbContextAsync();
-        var data = new List<HeatmapDataPoint>();
-        
-        var activityDates = await db.UserDevices
-            .Select(d => d.LastActive)
-            .ToListAsync();
-
-        var activities = activityDates.Select(dt => dt.ToVietnamTime()).ToList();
-
-        if (_viewMode == "Week")
+        if (_isDisposed) return;
+        try
         {
-            // Tạo Lookup dựa trên Tuple (Thứ, Giờ)
-            var lookup = activities.ToLookup(dt => ((int)dt.DayOfWeek, dt.Hour));
-
-            for (int dow = 0; dow < 7; dow++)
+            await InvokeAsync(async () =>
             {
-                for (int hr = 0; hr < 24; hr++)
+                if (!_isDisposed)
                 {
-                    data.Add(new HeatmapDataPoint
-                    {
-                        LabelY = DayNames[dow],
-                        ValueX = hr,
-                        Count = lookup[(dow, hr)].Count() // Truy xuất O(1)
-                    });
+                    await RefreshHeatmapOnUI();
                 }
-            }
+            });
         }
-        else
+        catch (Exception ex)
         {
-            var currentYear = DateTime.UtcNow.ToVietnamTime().Year;
-            // Tạo Lookup dựa trên Tuple (Tháng, Tuần trong tháng)
-            var lookup = activities
-                .Where(dt => dt.Year == currentYear)
-                .ToLookup(dt => (dt.Month, (dt.Day - 1) / 7 + 1));
-
-            for (int m = 1; m <= 12; m++)
-            {
-                for (int w = 1; w <= 5; w++)
-                {
-                    data.Add(new HeatmapDataPoint
-                    {
-                        LabelY = MonthNames[m - 1],
-                        ValueX = w,
-                        Count = lookup[(m, w)].Count()
-                    });
-                }
-            }
+            Logger.LogError(ex, "Heatmap real-time refresh failed.");
         }
-
-        _heatmapData = data; // Gán dữ liệu mới một lần duy nhất
     }
 
     public void Dispose()
     {
+        _isDisposed = true;
         // Tránh rò rỉ bộ nhớ
         DataUpdateNotifier.OnDeviceUpdated -= OnDeviceUpdatedHandler;
+        DataUpdateNotifier.OnTrialRecorded -= OnTrialRecordedHandler;
     }
 }
