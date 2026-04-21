@@ -250,5 +250,203 @@ public class ManageFoodTourService
         }
     }
 
+    // ═══════ CRUD CHO SHOP ITEMS (PREMIUM) ═══════
+
+    public async Task<ShopItem> CreateShopItemWithTranslationAsync(string shopId, CreateShopItemRequest request)
+    {
+        using var _context = await _contextFactory.CreateDbContextAsync();
+        using var transaction = await _context.Database.BeginTransactionAsync();
+        try
+        {
+            var shop = await _context.Shops.FindAsync(shopId);
+            if (shop == null) throw new Exception("Shop not found");
+
+            var shopItemId = Guid.NewGuid();
+            var item = new ShopItem
+            {
+                Id = shopItemId,
+                ShopId = shopId, // using string because ShopId is string
+                IsPremiumOnly = request.IsPremiumOnly,
+                ShopItemTranslations = new List<ShopItemTranslation>()
+            };
+
+            // === BƯỚC 1: Tạo bản gốc tiếng Việt ===
+            var viTranslation = new ShopItemTranslation
+            {
+                LanguageCode = "vi",
+                Title = request.Title,
+                Description = request.Description
+            };
+
+            var allTranslations = new List<ShopItemTranslation> { viTranslation };
+
+            // === BƯỚC 2: Dịch song song sang các ngôn ngữ đích ===
+            var languageTasks = _targetLanguages.Select(async lang =>
+            {
+                var titleTask = _translateService.TranslateTextAsync(request.Title, lang);
+                var descTask = _translateService.TranslateTextAsync(request.Description, lang);
+                await Task.WhenAll(titleTask, descTask);
+
+                return new ShopItemTranslation
+                {
+                    LanguageCode = lang,
+                    Title = await titleTask,
+                    Description = await descTask
+                };
+            });
+
+            var translatedResults = await Task.WhenAll(languageTasks);
+            allTranslations.AddRange(translatedResults);
+
+            // === BƯỚC 3: TTS + Upload Audio song song cho tất cả ngôn ngữ ===
+            var ttsUploadTasks = allTranslations.Select(async t =>
+            {
+                await GenerateAndUploadShopItemAudioAsync(t, shopItemId);
+            });
+            await Task.WhenAll(ttsUploadTasks);
+
+            foreach (var t in allTranslations)
+            {
+                item.ShopItemTranslations.Add(t);
+            }
+
+            // === BƯỚC 4: Lưu vào DB ===
+            _context.ShopItems.Add(item);
+            
+            // Cập nhật Shop UpdatedAt
+            shop.UpdatedAt = DateTime.UtcNow;
+            _context.Shops.Update(shop);
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            await _hubContext.Clients.All.SendAsync("ReceiveUpdate", shopId);
+
+            return item;
+        }
+        catch (Exception)
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    public async Task UpdateShopItemWithTranslationAsync(string shopId, Guid itemId, CreateShopItemRequest request)
+    {
+        using var _context = await _contextFactory.CreateDbContextAsync();
+        using var transaction = await _context.Database.BeginTransactionAsync();
+        try
+        {
+            var item = await _context.ShopItems.Include(i => i.ShopItemTranslations).Include(i => i.Shop).FirstOrDefaultAsync(i => i.Id == itemId && i.ShopId.ToString() == shopId);
+            if (item == null) return;
+
+            item.IsPremiumOnly = request.IsPremiumOnly;
+            item.Shop.UpdatedAt = DateTime.UtcNow;
+
+            // Cập nhật bản tiếng Việt
+            var viTranslation = item.ShopItemTranslations.FirstOrDefault(t => t.LanguageCode == "vi");
+            if (viTranslation != null)
+            {
+                viTranslation.Title = request.Title;
+                viTranslation.Description = request.Description;
+            }
+            else
+            {
+                viTranslation = new ShopItemTranslation
+                {
+                    LanguageCode = "vi",
+                    Title = request.Title,
+                    Description = request.Description
+                };
+                item.ShopItemTranslations.Add(viTranslation);
+            }
+
+            // Dịch song song
+            var languageTasks = _targetLanguages.Select(async lang =>
+            {
+                var titleTask = _translateService.TranslateTextAsync(request.Title, lang);
+                var descTask = _translateService.TranslateTextAsync(request.Description, lang);
+                await Task.WhenAll(titleTask, descTask);
+                return new { lang, title = await titleTask, desc = await descTask };
+            });
+
+            var translatedResults = await Task.WhenAll(languageTasks);
+
+            foreach (var result in translatedResults)
+            {
+                var existingTranslation = item.ShopItemTranslations.FirstOrDefault(t => t.LanguageCode == result.lang);
+                if (existingTranslation != null)
+                {
+                    existingTranslation.Title = result.title;
+                    existingTranslation.Description = result.desc;
+                }
+                else
+                {
+                    item.ShopItemTranslations.Add(new ShopItemTranslation
+                    {
+                        LanguageCode = result.lang,
+                        Title = result.title,
+                        Description = result.desc
+                    });
+                }
+            }
+
+            // TTS + Upload Audio
+            var ttsUploadTasks = item.ShopItemTranslations.Select(async t =>
+            {
+                await GenerateAndUploadShopItemAudioAsync(t, item.Id);
+            });
+            await Task.WhenAll(ttsUploadTasks);
+
+            _context.ShopItems.Update(item);
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            await _hubContext.Clients.All.SendAsync("ReceiveUpdate", shopId);
+        }
+        catch (Exception)
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    public async Task DeleteShopItemAsync(string shopId, Guid itemId)
+    {
+        using var _context = await _contextFactory.CreateDbContextAsync();
+        var item = await _context.ShopItems.Include(i => i.Shop).FirstOrDefaultAsync(i => i.Id == itemId && i.ShopId.ToString() == shopId);
+        if (item == null) return;
+
+        item.Shop.UpdatedAt = DateTime.UtcNow;
+        _context.ShopItems.Remove(item);
+        await _context.SaveChangesAsync();
+        
+        await _hubContext.Clients.All.SendAsync("ReceiveUpdate", shopId);
+    }
+
+    // ═══════ HELPER: TTS + Upload cho ShopItem ═══════
+    private async Task GenerateAndUploadShopItemAudioAsync(ShopItemTranslation translation, Guid shopItemId)
+    {
+        try
+        {
+            var ttsText = translation.Description;
+            if (string.IsNullOrWhiteSpace(ttsText))
+                ttsText = translation.Title;
+
+            var audioBytes = await _ttsService.SynthesizeSpeechAsync(ttsText, translation.LanguageCode);
+            if (audioBytes.Length == 0) return;
+
+            var fileName = $"shopitems/{shopItemId}/{translation.LanguageCode}_{Guid.NewGuid():N}.mp3";
+            var audioUrl = await _storageService.UploadAudioAsync(audioBytes, fileName);
+
+            translation.AudioUrl = audioUrl;
+            translation.IsAudioGenerated = true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi khi tạo Audio TTS hoặc Upload lên Supabase cho ShopItem '{ShopItemId}', ngôn ngữ '{Lang}'", shopItemId, translation.LanguageCode);
+            translation.IsAudioGenerated = false;
+        }
+    }
 
 }

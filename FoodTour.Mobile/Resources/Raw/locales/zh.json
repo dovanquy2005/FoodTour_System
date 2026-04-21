@@ -84,5 +84,10 @@
     "Notify_DataUpdateDesc": "家店铺已更新",
     "Notify_PullToRefresh": "下拉检查更新",
     "Notify_SyncComplete": "地图数据已更新至最新版本",
-    "Notify_MobileDataConfirm": "有约 {0} 的新 POI 数据，您要使用移动网络下载吗？"
+    "Notify_MobileDataConfirm": "有约 {0} 的新 POI 数据，您要使用移动网络下载吗？",
+    "Settings_AccountBenefits": "账户与权益",
+    "Settings_PremiumTitle": "FoodTour Premium",
+    "Settings_PremiumDesc": "解锁所有独家内容，无限制收听所有语言的音频。",
+    "Settings_UpgradeBtn": "立即升级",
+    "Settings_Unlocked": "已解锁"
 }

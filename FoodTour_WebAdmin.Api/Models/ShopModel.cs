@@ -23,6 +23,9 @@ public class ShopModel
 
     public ICollection<ShopTranslationModel> ShopTranslations { get; set; } = new List<ShopTranslationModel>();
 
+    /// <summary>Nội dung độc quyền (audio lịch sử, công thức, review) gắn với quán.</summary>
+    public ICollection<ShopItem> ShopItems { get; set; } = new List<ShopItem>();
+
 
     [NotMapped]
     public string QrNavigationUrl => $"https://foodtour-admin-api.onrender.com/foodtour/{Id}";

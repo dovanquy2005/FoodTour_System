@@ -130,6 +130,53 @@ public class AudioPlayerService : IAudioPlayerService, IRecipient<AudioFilesUpda
         }
     }
 
+    public async Task PlayAsync(string audioUrl)
+    {
+        if (string.IsNullOrEmpty(audioUrl)) return;
+
+        IsPlayerVisible = true;
+        _playerStatus = "Đang chuẩn bị audio...";
+        _isPlaying = true;
+        StateChanged?.Invoke();
+
+        try
+        {
+            _player?.Dispose();
+            string resolvedPath = ImagePathHelper.ResolveImageUrl(audioUrl);
+            
+            if (resolvedPath.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            {
+                _playerStatus = "Đang tải audio...";
+                StateChanged?.Invoke();
+
+                using var httpClient = new HttpClient();
+                var bytes = await httpClient.GetByteArrayAsync(resolvedPath);
+                string fileName = Path.GetFileName(new Uri(resolvedPath).LocalPath);
+                resolvedPath = Path.Combine(FileSystem.AppDataDirectory, fileName);
+                await File.WriteAllBytesAsync(resolvedPath, bytes);
+            }
+
+            var audioStream = File.OpenRead(resolvedPath);
+            _player = AudioManager.Current.CreatePlayer(audioStream);
+            _player.PlaybackEnded += OnPlaybackEnded;
+            RequestAudioFocus();
+
+            _player.Play();
+
+            _playerStatus = "Đang phát audio...";
+            _isPlaying = true;
+            StartTimer();
+            StateChanged?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Lỗi phát Audio: {ex.Message}");
+            _playerStatus = "Lỗi phát audio";
+            _isPlaying = false;
+            StateChanged?.Invoke();
+        }
+    }
+
     public async Task PlayPauseAsync()
     {
         if (_player == null) return;

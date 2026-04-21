@@ -18,6 +18,10 @@ public class AppDbContext : DbContext
     // Thêm bảng TrialLogs để kiểm soát 3 lần nghe thử qua IP
     public DbSet<TrialLog> TrialLogs => Set<TrialLog>();
 
+    // Nội dung độc quyền (Premium Items) gắn theo quán ăn
+    public DbSet<ShopItem> ShopItems => Set<ShopItem>();
+    public DbSet<ShopItemTranslation> ShopItemTranslations => Set<ShopItemTranslation>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -103,6 +107,32 @@ public class AppDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.DeviceId);
             entity.HasIndex(e => e.CreatedAt);
+        });
+
+        // ShopItem — Nội dung độc quyền Premium
+        modelBuilder.Entity<ShopItem>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.ShopId);
+
+            // FK: ShopItem → Shop (Cascade — xóa Shop sẽ xóa hết items)
+            entity.HasOne(e => e.Shop)
+                  .WithMany(s => s.ShopItems)
+                  .HasForeignKey(e => e.ShopId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ShopItemTranslation — Đa ngôn ngữ cho ShopItem
+        modelBuilder.Entity<ShopItemTranslation>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.ShopItemId, e.LanguageCode }).IsUnique();
+
+            // FK: ShopItemTranslation → ShopItem (Cascade)
+            entity.HasOne(e => e.ShopItem)
+                  .WithMany(s => s.ShopItemTranslations)
+                  .HasForeignKey(e => e.ShopItemId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
 
 

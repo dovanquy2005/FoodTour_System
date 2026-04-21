@@ -22,8 +22,11 @@ public class AppController : ControllerBase
     [HttpGet("download")]
     public async Task<IActionResult> DownloadApp()
     {
+        // 1. Thu thập thông tin người tải
         var userAgent = Request.Headers.UserAgent.ToString();
-        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
+        var ipAddress = Request.Headers.ContainsKey("X-Forwarded-For") 
+            ? Request.Headers["X-Forwarded-For"].ToString().Split(',')[0] 
+            : HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
 
         // Phân loại thiết bị chuyên nghiệp: Chỉ tập trung vào Mobile
         string deviceType;
@@ -50,6 +53,7 @@ public class AppController : ControllerBase
             // Lấy phiên bản động từ GitHub Service giúp hệ thống luôn chính xác
             VersionDownloaded = await _githubReleaseService.GetLatestVersionAsync(),
             DownloadedAt = DateTime.UtcNow
+           
         };
 
         _context.DownloadLogs.Add(log);

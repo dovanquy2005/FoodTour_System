@@ -48,6 +48,10 @@
                 // Migration V5: Bảng LocalDevice lưu DeviceID bền vững (thay thế Preferences)
                 //await _database.CreateTableAsync<LocalDeviceModel>();
 
+                // Migration V6: Thêm bảng ShopItemModel cho tính năng Truyện nội bộ (Premium)
+                await _database.CreateTableAsync<ShopItemModel>();
+                await _database.CreateTableAsync<ShopItemTranslationModel>();
+
                 _isInitialized = true;
             }
             finally
@@ -181,6 +185,10 @@
                                 .GroupBy(t => t.ShopId)
                                 .ToDictionary(g => g.Key, g => g.ToList());
 
+                            // Lấy shop item translation cũ để xoa cache busting
+                            var existingItemTranslations = await _database.Table<ShopItemTranslationModel>().ToListAsync();
+                            var existingItemTransList = existingItemTranslations.ToList();
+
                             await _database.RunInTransactionAsync(db =>
                             {
                                 foreach (var shop in shops)
@@ -218,6 +226,21 @@
                                             db.InsertOrReplace(trans);
                                         }
                                     }
+                                    
+                                    if (shop.ShopItems != null)
+                                    {
+                                        foreach (var item in shop.ShopItems)
+                                        {
+                                            db.InsertOrReplace(item);
+                                            if (item.ShopItemTranslations != null)
+                                            {
+                                                foreach (var itemTrans in item.ShopItemTranslations)
+                                                {
+                                                    db.InsertOrReplace(itemTrans);
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             });
 
@@ -242,6 +265,22 @@
                                         }
                                     }
                                 }
+
+                                // Xóa audio cũ của ShopItem
+                                if (shop.ShopItems != null)
+                                {
+                                    foreach (var item in shop.ShopItems)
+                                    {
+                                        var oldItemTransList = existingItemTransList.Where(t => t.ShopItemId == item.Id).ToList();
+                                        foreach (var oldTrans in oldItemTransList)
+                                        {
+                                            if (!string.IsNullOrEmpty(oldTrans.AudioUrl))
+                                            {
+                                                DeleteOldCachedFile(oldTrans.AudioUrl);
+                                            }
+                                        }
+                                    }
+                                }
                             }
 
                             // Tải ảnh và audio MỚI về cache (ngoài transaction, vì là I/O network)
@@ -258,6 +297,22 @@
                                         if (!string.IsNullOrEmpty(trans.AudioUrl))
                                         {
                                             await DownloadAndCacheFileAsync(httpClient, apiUrl, trans.AudioUrl);
+                                        }
+                                    }
+                                }
+                                if (shop.ShopItems != null)
+                                {
+                                    foreach (var item in shop.ShopItems)
+                                    {
+                                        if (item.ShopItemTranslations != null)
+                                        {
+                                            foreach (var itemTrans in item.ShopItemTranslations)
+                                            {
+                                                if (!string.IsNullOrEmpty(itemTrans.AudioUrl))
+                                                {
+                                                    await DownloadAndCacheFileAsync(httpClient, apiUrl, itemTrans.AudioUrl);
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -395,6 +450,22 @@
                         shop.Description = trans.Description;
                         shop.AudioUrl = GetLocalPathIfExists(trans.AudioUrl) ?? trans.AudioUrl;
                     }
+                    
+                    var items = await _database.Table<ShopItemModel>().Where(i => i.ShopId == shop.Id).ToListAsync();
+                    foreach (var item in items)
+                    {
+                        var itemTrans = await _database.Table<ShopItemTranslationModel>()
+                            .Where(t => t.ShopItemId == item.Id && t.LanguageCode == langCode)
+                            .FirstOrDefaultAsync();
+
+                        if (itemTrans != null)
+                        {
+                            item.Title = itemTrans.Title;
+                            item.Description = itemTrans.Description;
+                            item.AudioUrl = GetLocalPathIfExists(itemTrans.AudioUrl) ?? itemTrans.AudioUrl;
+                        }
+                    }
+                    shop.ShopItems = items ?? new List<ShopItemModel>();
                 }
                 return shop;
             }
@@ -749,6 +820,20 @@
                                             db.InsertOrReplace(trans);
                                         }
                                     }
+                                    if (shop.ShopItems != null)
+                                    {
+                                        foreach (var item in shop.ShopItems)
+                                        {
+                                            db.InsertOrReplace(item);
+                                            if (item.ShopItemTranslations != null)
+                                            {
+                                                foreach (var itemTrans in item.ShopItemTranslations)
+                                                {
+                                                    db.InsertOrReplace(itemTrans);
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             });
 
@@ -771,6 +856,24 @@
                                         {
                                             DeleteOldCachedFile(trans.AudioUrl);
                                             await DownloadAndCacheFileAsync(httpClient, API_BASE_URL, trans.AudioUrl);
+                                        }
+                                    }
+                                }
+
+                                if (shop.ShopItems != null)
+                                {
+                                    foreach (var item in shop.ShopItems)
+                                    {
+                                        if (item.ShopItemTranslations != null)
+                                        {
+                                            foreach (var itemTrans in item.ShopItemTranslations)
+                                            {
+                                                if (!string.IsNullOrEmpty(itemTrans.AudioUrl))
+                                                {
+                                                    DeleteOldCachedFile(itemTrans.AudioUrl);
+                                                    await DownloadAndCacheFileAsync(httpClient, API_BASE_URL, itemTrans.AudioUrl);
+                                                }
+                                            }
                                         }
                                     }
                                 }

@@ -1,9 +1,10 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using CommunityToolkit.Mvvm.Messaging;
+using System.Collections.ObjectModel;
 using FoodTour.Mobile.Messages;
 using FoodTour.Mobile.Models;
 using FoodTour.Mobile.Services;
+using CommunityToolkit.Mvvm.Messaging;
 
 namespace FoodTour.Mobile.ViewModels
 {
@@ -13,6 +14,9 @@ namespace FoodTour.Mobile.ViewModels
     {
         private readonly DatabaseService _dbService;
         private readonly IAudioPlayerService _audioService;
+#if ANDROID
+        private readonly IHardwareIdService _hardwareIdService;
+#endif
         private ShopModel? shop;
 
         public ShopModel? Shop
@@ -22,10 +26,23 @@ namespace FoodTour.Mobile.ViewModels
             {
                 if (SetProperty(ref shop, value) && value != null)
                 {
+                    ShopItems.Clear();
+                    if (value.ShopItems != null)
+                    {
+                        foreach (var item in value.ShopItems)
+                        {
+                            ShopItems.Add(item);
+                        }
+                    }
+                    OnPropertyChanged(nameof(HasShopItems));
                     RefreshShopDataAsync(value.Id);
                 }
             }
         }
+
+        public ObservableCollection<ShopItemModel> ShopItems { get; } = new ObservableCollection<ShopItemModel>();
+
+        public bool HasShopItems => ShopItems.Count > 0;
 
         // ── Thuộc tính Deep Link: nhận từ Shell Navigation ──
 
@@ -49,6 +66,10 @@ namespace FoodTour.Mobile.ViewModels
         [ObservableProperty]
         private string? hardwareId;
 
+        /// <summary>Trạng thái Premium chung (kiểm tra local/chủ động truy vấn) để mở khóa giao diện Premium.</summary>
+        [ObservableProperty]
+        private bool isDevicePremium;
+
         // ── Thuộc tính giao diện Trial/Premium ──
 
         /// <summary>Hiển thị banner thông báo trial/premium.</summary>
@@ -67,11 +88,38 @@ namespace FoodTour.Mobile.ViewModels
         [ObservableProperty]
         private bool isDeepLinkLoading;
 
+#if ANDROID
+        public ShopDetailViewModel(DatabaseService dbService, IAudioPlayerService audioService, IHardwareIdService hardwareIdService)
+        {
+            _dbService = dbService;
+            _audioService = audioService;
+            _hardwareIdService = hardwareIdService;
+            WeakReferenceMessenger.Default.Register(this);
+            _ = CheckPremiumStatusAsync();
+        }
+#else
         public ShopDetailViewModel(DatabaseService dbService, IAudioPlayerService audioService)
         {
             _dbService = dbService;
             _audioService = audioService;
             WeakReferenceMessenger.Default.Register(this);
+        }
+#endif
+
+        private async Task CheckPremiumStatusAsync()
+        {
+#if ANDROID
+            try
+            {
+                var hId = _hardwareIdService.GetHardwareId();
+                var status = await _dbService.CheckDeviceStatusAsync(hId);
+                if (status != null)
+                {
+                    IsDevicePremium = status.IsPremium;
+                }
+            }
+            catch { }
+#endif
         }
 
         // ═══════ FIX: IQueryAttributable — Bọc try-catch toàn bộ logic nhận tham số ═══════
@@ -267,6 +315,21 @@ namespace FoodTour.Mobile.ViewModels
                 }
             }
             catch { }
+        }
+
+        [RelayCommand]
+        public async Task PlayItemAudio(ShopItemModel item)
+        {
+            if (item.IsPremiumOnly && !IsDevicePremium)
+            {
+                await Application.Current.MainPage.DisplayAlert("Khóa Premium", "Nội dung này dành riêng cho tài khoản Premium. Vui lòng nâng cấp để nghe chi tiết.", "Đóng");
+                return;
+            }
+
+            if (!string.IsNullOrEmpty(item.AudioUrl))
+            {
+                await _audioService.PlayAsync(item.AudioUrl);
+            }
         }
 
         [RelayCommand]

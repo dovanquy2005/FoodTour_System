@@ -84,5 +84,10 @@
     "Notify_DataUpdateDesc": "shops updated",
     "Notify_PullToRefresh": "Pull down to check for updates",
     "Notify_SyncComplete": "Map data has been updated to the latest version",
-    "Notify_MobileDataConfirm": "There is about {0} of new POI data, do you want to use mobile data to download?"
+    "Notify_MobileDataConfirm": "There is about {0} of new POI data, do you want to use mobile data to download?",
+    "Settings_AccountBenefits": "Account & Benefits",
+    "Settings_PremiumTitle": "FoodTour Premium",
+    "Settings_PremiumDesc": "Unlock all exclusive content, listen to unlimited audio in all languages.",
+    "Settings_UpgradeBtn": "Upgrade Now",
+    "Settings_Unlocked": "Unlocked"
 }

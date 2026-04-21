@@ -84,5 +84,10 @@
     "Notify_DataUpdateDesc": "店舗が更新されました",
     "Notify_PullToRefresh": "下に引いて更新を確認",
     "Notify_SyncComplete": "マップデータが最新に更新されました",
-    "Notify_MobileDataConfirm": "約 {0} の新しいPOIデータがあります。モバイルデータを使用してダウンロードしますか？"
+    "Notify_MobileDataConfirm": "約 {0} の新しいPOIデータがあります。モバイルデータを使用してダウンロードしますか？",
+    "Settings_AccountBenefits": "アカウントと特典",
+    "Settings_PremiumTitle": "FoodTour Premium",
+    "Settings_PremiumDesc": "すべての限定コンテンツのロックを解除し、すべての言語で無制限の音声をお楽しみください。",
+    "Settings_UpgradeBtn": "今すぐアップグレード",
+    "Settings_Unlocked": "ロック解除済み"
 }

@@ -7,6 +7,10 @@
              BackgroundColor="{StaticResource Background}"
              Shell.NavBarIsVisible="False">
 
+	<ContentPage.Resources>
+		<ext:InvertedBoolConverter x:Key="InvertedBoolConverter"/>
+	</ContentPage.Resources>
+
 	<ScrollView>
 		<VerticalStackLayout Margin="20, 20, 20, 40" Spacing="22">
 
@@ -17,80 +21,6 @@
 			       FontAttributes="Bold"
 			       Margin="0, 8, 0, 4"/>
 
-			<!-- ═══════ CẤU HÌNH TOUR ═══════ -->
-			<VerticalStackLayout Spacing="8">
-				<Label Text="{ext:Translate Settings_TourConfig}"
-				       TextColor="{StaticResource TextSecondary}"
-				       FontSize="12"
-				       FontAttributes="Bold"
-				       Margin="4,0"
-				       CharacterSpacing="1"/>
-
-				<Border BackgroundColor="{StaticResource Surface}"
-				        StrokeShape="RoundRectangle 16"
-				        Stroke="{StaticResource CardBorder}"
-				        StrokeThickness="1"
-				        Padding="16,4"
-				        Shadow="{Shadow Radius=6, Opacity=0.05, Offset='0,2'}">
-					<!-- Chỉ giữ lại toggle Tự động phát -->
-					<Grid ColumnDefinitions="Auto, *, Auto" Padding="0,10">
-						<Label Grid.Column="0" Text="🎙️" FontSize="20" VerticalOptions="Center"/>
-						<Label Grid.Column="1" Text="{ext:Translate Settings_AutoPlay}"
-						       TextColor="{StaticResource TextPrimary}" FontSize="15"
-						       VerticalOptions="Center" Margin="14,0"/>
-						<Switch Grid.Column="2" IsToggled="{Binding IsAutoPlay}"
-						        OnColor="{StaticResource Primary}" ThumbColor="White"
-						        VerticalOptions="Center"/>
-					</Grid>
-				</Border>
-			</VerticalStackLayout>
-
-			<!-- ═══════ DỮ LIỆU & HÌNH ẢNH ═══════ -->
-			<VerticalStackLayout Spacing="8">
-				<Label Text="{ext:Translate Settings_OfflineData}"
-				       TextColor="{StaticResource TextSecondary}"
-				       FontSize="12"
-				       FontAttributes="Bold"
-				       Margin="4,0"
-				       CharacterSpacing="1"/>
-
-				<Border BackgroundColor="{StaticResource Surface}"
-				        StrokeShape="RoundRectangle 16"
-				        Stroke="{StaticResource CardBorder}"
-				        StrokeThickness="1"
-				        Padding="16,4"
-				        Shadow="{Shadow Radius=6, Opacity=0.05, Offset='0,2'}">
-					<!-- Chỉ giữ lại: Trạng thái lưu trữ + Xóa cache ảnh -->
-					<Grid RowDefinitions="Auto, 1, Auto">
-
-						<!-- Trạng thái lưu trữ -->
-						<Grid Grid.Row="0" ColumnDefinitions="Auto, *, Auto" Padding="0,14">
-							<Label Grid.Column="0" Text="💾" FontSize="20" VerticalOptions="Center"/>
-							<Label Grid.Column="1" Text="{ext:Translate Settings_Status}"
-							       TextColor="{StaticResource TextPrimary}" FontSize="15"
-							       VerticalOptions="Center" Margin="14,0"/>
-							<Label Grid.Column="2" Text="{Binding OfflineStatus}"
-							       TextColor="{StaticResource Success}" FontSize="14"
-							       VerticalOptions="Center"/>
-						</Grid>
-
-						<BoxView Grid.Row="1" Color="{StaticResource Gray100}" HeightRequest="1" HorizontalOptions="Fill"/>
-
-						<!-- Xóa cache ảnh -->
-						<Grid Grid.Row="2" ColumnDefinitions="Auto, *, Auto" Padding="0,14">
-							<Grid.GestureRecognizers>
-								<TapGestureRecognizer Command="{Binding ClearImageCacheCommand}"/>
-							</Grid.GestureRecognizers>
-							<Label Grid.Column="0" Text="🗑️" FontSize="20" VerticalOptions="Center"/>
-							<Label Grid.Column="1" Text="{ext:Translate Settings_ClearImageCache}"
-							       TextColor="{StaticResource Error}" FontSize="15"
-							       VerticalOptions="Center" Margin="14,0"/>
-							<Label Grid.Column="2" Text="❯" TextColor="{StaticResource TextTertiary}"
-							       FontSize="14" VerticalOptions="Center"/>
-						</Grid>
-					</Grid>
-				</Border>
-			</VerticalStackLayout>
 
 			<!-- ═══════ ỨNG DỤNG ═══════ -->
 			<VerticalStackLayout Spacing="8">
@@ -139,6 +69,48 @@
 							       TextColor="{StaticResource TextSecondary}" FontSize="14"
 							       VerticalOptions="Center"/>
 						</Grid>
+					</Grid>
+				</Border>
+			</VerticalStackLayout>
+
+			<!-- ═══════ TÀI KHOẢN PREMIUM ═══════ -->
+			<VerticalStackLayout Spacing="8">
+				<Label Text="{ext:Translate Settings_AccountBenefits}"
+				       TextColor="{StaticResource TextSecondary}"
+				       FontSize="12"
+				       FontAttributes="Bold"
+				       Margin="4,0"
+				       CharacterSpacing="1"/>
+
+				<Border BackgroundColor="#FFFBF0"
+				        StrokeShape="RoundRectangle 16"
+				        Stroke="#FCE4A8"
+				        StrokeThickness="1"
+				        Padding="16,14"
+				        Shadow="{Shadow Radius=6, Opacity=0.08, Offset='0,3', Brush='#F6B100'}">
+					<Grid ColumnDefinitions="Auto, *">
+						<Label Grid.Column="0" Text="💎" FontSize="28" VerticalOptions="Center" Margin="0,0,14,0"/>
+						
+						<VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="4">
+							<Label Text="{ext:Translate Settings_PremiumTitle}" FontAttributes="Bold" FontSize="16" TextColor="#B27D00" />
+							
+							<!-- Trạng thái chưa nâng cấp -->
+							<VerticalStackLayout IsVisible="{Binding IsPremium, Converter={StaticResource InvertedBoolConverter}}" Spacing="6">
+								<Label Text="{ext:Translate Settings_PremiumDesc}" 
+								       FontSize="13" TextColor="#B5A899" MaxLines="2" LineBreakMode="TailTruncation" />
+								<Button Text="{ext:Translate Settings_UpgradeBtn}" 
+								        Command="{Binding UpgradePremiumCommand}"
+								        BackgroundColor="#F6B100" TextColor="White" 
+								        FontAttributes="Bold" CornerRadius="8" HeightRequest="36" Padding="16,0"
+								        HorizontalOptions="Start" />
+							</VerticalStackLayout>
+							
+							<!-- Trạng thái đã nâng cấp -->
+							<HorizontalStackLayout IsVisible="{Binding IsPremium}" Spacing="6" VerticalOptions="Center" Margin="0,4,0,0">
+								<Label Text="{ext:Translate Settings_Unlocked}" FontSize="14" TextColor="#22C55E" FontAttributes="Bold" />
+								<Label Text="✓" FontSize="14" TextColor="#22C55E" FontAttributes="Bold" />
+							</HorizontalStackLayout>
+						</VerticalStackLayout>
 					</Grid>
 				</Border>
 			</VerticalStackLayout>

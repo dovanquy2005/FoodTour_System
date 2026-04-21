@@ -18,6 +18,13 @@ namespace FoodTour.Mobile.Models
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
 
+        // Dùng riêng cho Mobile
+        [Ignore]
+        public string AudioStatusMessage { get; set; } = string.Empty;
+
+        [Ignore]
+        public List<ShopItemModel> ShopItems { get; set; } = new();
+
         [Ignore]
         public Location Location => new Location(Latitude, Longitude);
 

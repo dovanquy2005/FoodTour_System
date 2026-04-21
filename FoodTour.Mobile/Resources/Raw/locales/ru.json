@@ -84,5 +84,10 @@
     "Notify_DataUpdateDesc": "заведений обновлено",
     "Notify_PullToRefresh": "Потяните вниз для проверки обновлений",
     "Notify_SyncComplete": "Данные карты были успешно обновлены",
-    "Notify_MobileDataConfirm": "Доступно около {0} новых данных POI. Вы хотите использовать мобильные данные для загрузки?"
+    "Notify_MobileDataConfirm": "Доступно около {0} новых данных POI. Вы хотите использовать мобильные данные для загрузки?",
+    "Settings_AccountBenefits": "Аккаунт и привилегии",
+    "Settings_PremiumTitle": "FoodTour Premium",
+    "Settings_PremiumDesc": "Разблокируйте весь эксклюзивный контент, слушайте неограниченное количество аудио на всех языках.",
+    "Settings_UpgradeBtn": "Обновить сейчас",
+    "Settings_Unlocked": "Разблокировано"
 }

@@ -26,6 +26,7 @@ public class ShopsController : ControllerBase
         using var _db = await _dbFactory.CreateDbContextAsync();
         var shops = await _db.Shops
             .Include(s => s.ShopTranslations)
+            .Include(s => s.ShopItems).ThenInclude(si => si.ShopItemTranslations)
             .Where(s => s.IsActive)           // ← chỉ gửi quán đang kích hoạt
             .OrderByDescending(s => s.Rating)
             .ToListAsync();
@@ -39,6 +40,7 @@ public class ShopsController : ControllerBase
         using var _db = await _dbFactory.CreateDbContextAsync();
         var ShopModel = await _db.Shops
             .Include(s => s.ShopTranslations)
+            .Include(s => s.ShopItems).ThenInclude(si => si.ShopItemTranslations)
             .FirstOrDefaultAsync(s => s.Id == id);
 
         if (ShopModel is null)
@@ -92,6 +94,49 @@ public class ShopsController : ControllerBase
         return NoContent();
     }
 
+    // ═══════ CRUD CHO SHOP ITEMS (PREMIUM) ═══════
+    [HttpPost("{shopId}/items")]
+    public async Task<ActionResult<ShopItem>> AddShopItem(string shopId, [FromBody] FoodTour_WebAdmin.Api.DTOs.CreateShopItemRequest request)
+    {
+        try
+        {
+            var item = await _manageService.CreateShopItemWithTranslationAsync(shopId, request);
+            return Ok(item);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPut("{shopId}/items/{itemId}")]
+    public async Task<ActionResult> UpdateShopItem(string shopId, Guid itemId, [FromBody] FoodTour_WebAdmin.Api.DTOs.CreateShopItemRequest request)
+    {
+        try
+        {
+            await _manageService.UpdateShopItemWithTranslationAsync(shopId, itemId, request);
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpDelete("{shopId}/items/{itemId}")]
+    public async Task<IActionResult> DeleteShopItem(string shopId, Guid itemId)
+    {
+        try
+        {
+            await _manageService.DeleteShopItemAsync(shopId, itemId);
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     // GET: api/shops/updates?since={ISO 8601 timestamp}
     // Kiểm tra xem có bản cập nhật mới kể từ lần đồng bộ cuối
     [HttpGet("updates")]
@@ -118,6 +163,7 @@ public class ShopsController : ControllerBase
         // Lọc các shop đang kích hoạt và có UpdatedAt > sinceDate
         var updatedShops = await _db.Shops
             .Include(s => s.ShopTranslations)
+            .Include(s => s.ShopItems).ThenInclude(si => si.ShopItemTranslations)
             .Where(s => s.IsActive && s.UpdatedAt > sinceDate)  // ← chỉ thông báo về quán active
             .ToListAsync();
 
@@ -141,6 +187,19 @@ public class ShopsController : ControllerBase
             {
                 if (!string.IsNullOrEmpty(trans.AudioUrl) && trans.IsAudioGenerated)
                     estimatedSize += 500_000;
+            }
+
+            // ShopItems audio files
+            foreach (var item in shop.ShopItems)
+            {
+                if (item.ShopItemTranslations != null)
+                {
+                    foreach (var itemTrans in item.ShopItemTranslations)
+                    {
+                        if (!string.IsNullOrEmpty(itemTrans.AudioUrl) && itemTrans.IsAudioGenerated)
+                            estimatedSize += 500_000;
+                    }
+                }
             }
         }
 

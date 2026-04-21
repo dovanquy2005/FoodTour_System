@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using FoodTour_WebAdmin.Api.Models;
 using FoodTour_WebAdmin.Api.Hubs;
 using ApexCharts;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,6 +26,8 @@ builder.Services.AddScoped<FoodTour_WebAdmin.Api.Services.AuthService>();
 
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient<FoodTour_WebAdmin.Api.Services.GitHubReleaseService>();
+
+
 
 // SignalR — cho phép Server đẩy thông báo cập nhật tới Mobile App theo thời gian thực
 builder.Services.AddSignalR();
@@ -129,7 +132,12 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
     app.UseHttpsRedirection();
 }
-
+// Thêm dòng này để xử lý IP từ Proxy/Load Balancer (như Cloudflare)
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor 
+                     | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto
+});
 
 app.UseStaticFiles();
 app.UseAntiforgery();

@@ -14,6 +14,7 @@ public interface IAudioPlayerService
     double Duration { get; }
 
     Task PlayShopAsync(ShopModel shop);
+    Task PlayAsync(string audioUrl);
     Task PlayPauseAsync();
     void Stop();
     void Seek(double positionInSeconds);

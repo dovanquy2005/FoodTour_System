@@ -165,6 +165,10 @@
                     </MudText>
                 </MudTd>
                 <MudTd Style="text-align: center;">
+                    <MudTooltip Text="Quản lý Nội dung Độc quyền">
+                        <MudIconButton Icon="@Icons.Material.Filled.LibraryMusic" Color="Color.Warning" Size="Size.Small"
+                                       OnClick="@(() => OpenItemsDialog(context))" />
+                    </MudTooltip>
                     <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small"
                                    OnClick="@(() => OpenEditDialog(context))" />
                     <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
@@ -262,6 +266,74 @@
     </DialogActions>
 </MudDialog>
 
+<!-- ═══════ SHOP ITEMS DIALOG ═══════ -->
+<MudDialog @bind-Visible="_itemsDialogVisible" Options="new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true }">
+    <TitleContent>
+        <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.LibraryMusic" Color="Color.Warning" />
+            <MudText Typo="Typo.h6" Style="font-weight: 700;">
+                Kho Audio Độc Quyền (Premium)
+            </MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        @if (_isAddingItem || _isEditingItem)
+        {
+            <MudForm @ref="_itemForm" @bind-IsValid="_itemFormValid">
+                <MudStack Spacing="3" Style="padding-top: 8px;">
+                    <MudTextField @bind-Value="_editItem.Title" Label="Tiêu đề (Tiếng Việt) *" Variant="Variant.Outlined"
+                                  Required="true" RequiredError="Vui lòng nhập tiêu đề" Immediate="true" />
+                    <MudTextField @bind-Value="_editItem.Description" Label="Nội dung thuyết minh (Kịch bản TTS) *" Variant="Variant.Outlined"
+                                  Lines="4" Required="true" RequiredError="Vui lòng nhập nội dung TTS" Immediate="true" />
+                    <MudSwitch @bind-Value="_editItem.IsPremiumOnly" Label="Khóa Premium (Yêu cầu nâng cấp)" Color="Color.Warning" />
+                    
+                    <MudStack Row Justify="Justify.FlexEnd" Spacing="2" Class="mt-2">
+                        <MudButton OnClick="@CancelItemEdit" Variant="Variant.Text">Hủy</MudButton>
+                        <MudButton OnClick="@SaveItem" Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!_itemFormValid || _isSaving)">
+                            @(_isEditingItem ? "Cập nhật" : "Tạo mới")
+                        </MudButton>
+                    </MudStack>
+                </MudStack>
+            </MudForm>
+        }
+        else
+        {
+            <MudButton StartIcon="@Icons.Material.Filled.Add" Color="Color.Warning" Variant="Variant.Outlined" OnClick="BeginAddItem" Class="mb-3">
+                Thêm nội dung mới
+            </MudButton>
+            
+            <MudTable Items="@_currentShopItems" Elevation="0" Outlined="true" Dense="true" Hover="true">
+                <HeaderContent>
+                    <MudTh>Khóa</MudTh>
+                    <MudTh>Tiêu đề</MudTh>
+                    <MudTh Style="text-align: right;">Hành động</MudTh>
+                </HeaderContent>
+                <RowTemplate Context="itemCtx">
+                    <MudTd>
+                        @if (itemCtx.IsPremiumOnly)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Lock" Color="Color.Warning" Size="Size.Small"/>
+                        }
+                    </MudTd>
+                    <MudTd>
+                        @{
+                            var viTrans = itemCtx.ShopItemTranslations?.FirstOrDefault(t => t.LanguageCode == "vi");
+                        }
+                        <MudText>@(viTrans?.Title ?? "[Không có tiêu đề]")</MudText>
+                    </MudTd>
+                    <MudTd Style="text-align: right;">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="@(() => BeginEditItem(itemCtx))"/>
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteItemAsync(itemCtx))"/>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _itemsDialogVisible = false)" Variant="Variant.Text" Color="Color.Default">Đóng</MudButton>
+    </DialogActions>
+</MudDialog>
+
 @code {
     private List<ShopModel> _shops = new();
     private bool _loading = true;
@@ -276,6 +348,17 @@
     private FoodTour_WebAdmin.Api.DTOs.CreateShopRequest _editShop = new();
     private MudForm? _form;
     private bool _formValid;
+
+    // Shop Items Dialog state
+    private bool _itemsDialogVisible;
+    private ShopModel? _currentShopForItems;
+    private List<ShopItem> _currentShopItems = new();
+    private bool _isAddingItem;
+    private bool _isEditingItem;
+    private Guid _editingItemId;
+    private FoodTour_WebAdmin.Api.DTOs.CreateShopItemRequest _editItem = new();
+    private MudForm? _itemForm;
+    private bool _itemFormValid;
 
     private IEnumerable<ShopModel> _filteredShops => _shops.Where(s =>
     {
@@ -298,7 +381,13 @@
         _loading = true;
         StateHasChanged();
         using var Db = await DbFactory.CreateDbContextAsync();
-        _shops = await Db.Shops.Include(s => s.ShopTranslations).AsNoTracking().OrderByDescending(s => s.Rating).ToListAsync();
+        _shops = await Db.Shops
+            .Include(s => s.ShopTranslations)
+            .Include(s => s.ShopItems)
+                .ThenInclude(i => i.ShopItemTranslations)
+            .AsNoTracking()
+            .OrderByDescending(s => s.Rating)
+            .ToListAsync();
         _loading = false;
         StateHasChanged();
     }
@@ -415,4 +504,115 @@
             Snackbar.Add($"Lỗi khi tải ảnh: {ex.Message}", Severity.Error);
         }
     }
+
+    // ═══════ SHOP ITEMS LOGIC ═══════
+
+    private void OpenItemsDialog(ShopModel shop)
+    {
+        _currentShopForItems = shop;
+        _currentShopItems = shop.ShopItems?.ToList() ?? new List<ShopItem>();
+        _isAddingItem = false;
+        _isEditingItem = false;
+        _itemsDialogVisible = true;
+    }
+
+    private void BeginAddItem()
+    {
+        _editItem = new FoodTour_WebAdmin.Api.DTOs.CreateShopItemRequest { IsPremiumOnly = true };
+        _isAddingItem = true;
+        _isEditingItem = false;
+    }
+
+    private void BeginEditItem(ShopItem item)
+    {
+        var viTrans = item.ShopItemTranslations?.FirstOrDefault(t => t.LanguageCode == "vi");
+        _editItem = new FoodTour_WebAdmin.Api.DTOs.CreateShopItemRequest
+        {
+            IsPremiumOnly = item.IsPremiumOnly,
+            Title = viTrans?.Title ?? "",
+            Description = viTrans?.Description ?? ""
+        };
+        _editingItemId = item.Id;
+        _isEditingItem = true;
+        _isAddingItem = false;
+    }
+
+    private void CancelItemEdit()
+    {
+        _isAddingItem = false;
+        _isEditingItem = false;
+    }
+
+    private async Task SaveItem()
+    {
+        if (_currentShopForItems == null) return;
+        _isSaving = true;
+        StateHasChanged();
+
+        try
+        {
+            if (_isAddingItem)
+            {
+                await ManageService.CreateShopItemWithTranslationAsync(_currentShopForItems.Id, _editItem);
+                Snackbar.Add("Đã tạo nội dung mới thành công!", Severity.Success);
+            }
+            else if (_isEditingItem)
+            {
+                await ManageService.UpdateShopItemWithTranslationAsync(_currentShopForItems.Id, _editingItemId, _editItem);
+                Snackbar.Add("Đã cập nhật nội dung thành công!", Severity.Success);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Lỗi: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+            _isAddingItem = false;
+            _isEditingItem = false;
+            await LoadShops(); // Refresh data to get the new items
+            
+            // Reload dialog list
+            var updatedShop = _shops.FirstOrDefault(s => s.Id == _currentShopForItems.Id);
+            if (updatedShop != null)
+            {
+                _currentShopForItems = updatedShop;
+                _currentShopItems = updatedShop.ShopItems?.ToList() ?? new List<ShopItem>();
+            }
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteItemAsync(ShopItem item)
+    {
+        if (_currentShopForItems == null) return;
+        var result = await DialogService.ShowMessageBoxAsync("Xóa", "Bạn có chắc muốn xóa nội dung này?", yesText: "Xóa", cancelText: "Hủy");
+        if (result == true)
+        {
+            _isSaving = true;
+            try
+            {
+                await ManageService.DeleteShopItemAsync(_currentShopForItems.Id, item.Id);
+                Snackbar.Add("Đã xóa nội dung!", Severity.Warning);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Lỗi: {ex.Message}", Severity.Error);
+            }
+            finally
+            {
+                _isSaving = false;
+                await LoadShops();
+                var updatedShop = _shops.FirstOrDefault(s => s.Id == _currentShopForItems.Id);
+                if (updatedShop != null)
+                {
+                    _currentShopForItems = updatedShop;
+                    _currentShopItems = updatedShop.ShopItems?.ToList() ?? new List<ShopItem>();
+                }
+                StateHasChanged();
+            }
+        }
+    }
+
 }

@@ -13,16 +13,13 @@ namespace FoodTour.Mobile.ViewModels
         [ObservableProperty]
         private bool isBusy;
 
-        // Bật/tắt tự động phát audio khi người dùng đến gần quán
-        [ObservableProperty]
-        private bool isAutoPlay = true;
 
-        // Hiển thị dung lượng lưu trữ offline hiện tại
-        [ObservableProperty]
-        private string offlineStatus = "—";
 
         [ObservableProperty]
         private string appVersion = "1.0.0 (Beta)";
+
+        [ObservableProperty]
+        private bool isPremium;
 
         [ObservableProperty]
         private string selectedLanguage = "Tiếng Việt";
@@ -35,11 +32,22 @@ namespace FoodTour.Mobile.ViewModels
 
         private readonly ILocalizationService _localizationService;
         private readonly DatabaseService _dbService;
+#if ANDROID
+        private readonly IHardwareIdService _hardwareIdService;
+#endif
 
-        public SettingsViewModel(ILocalizationService localizationService, DatabaseService dbService)
+        public SettingsViewModel(ILocalizationService localizationService, DatabaseService dbService
+#if ANDROID
+            , IHardwareIdService hardwareIdService
+#endif
+            )
         {
             _localizationService = localizationService;
             _dbService = dbService;
+#if ANDROID
+            _hardwareIdService = hardwareIdService;
+#endif
+            _ = CheckPremiumStatusAsync();
 
             // Khôi phục ngôn ngữ đã lưu trước đó
             var savedLang = Preferences.Default.Get("AppLanguage", "vi");
@@ -112,33 +120,49 @@ namespace FoodTour.Mobile.ViewModels
             await Shell.Current.GoToAsync("..");
         }
 
-        /// <summary>
-        /// Xóa tất cả file ảnh đã cache trên thiết bị.
-        /// Hiển thị cảnh báo xác nhận trước khi xóa.
-        /// </summary>
+
+
         [RelayCommand]
-        public async Task ClearImageCache()
+        public async Task UpgradePremium()
         {
-            // Xác nhận xóa cache ảnh
-            bool confirm = false;
-            if (Shell.Current != null)
-                confirm = await Shell.Current.DisplayAlert(
-                    _localizationService["Settings_ClearConfirmTitle"],
-                    _localizationService["Settings_ClearCacheConfirmMsg"],
-                    _localizationService["Common_Yes"],
-                    _localizationService["Common_No"]);
-
-            if (confirm)
+            if (Connectivity.Current.NetworkAccess != NetworkAccess.Internet)
             {
-                int deleted = await _dbService.ClearImageCacheAsync();
-                OfflineStatus = string.Format(_localizationService["Settings_ClearCacheResult"] ?? "Đã xóa {0} ảnh", deleted);
-
                 if (Shell.Current != null)
+                {
                     await Shell.Current.DisplayAlert(
-                        _localizationService["Common_Success"],
-                        $"{_localizationService["Settings_ClearCacheDone"]} ({deleted})",
-                        _localizationService["Common_OK"]);
+                        "Lỗi kết nối",
+                        "Vui lòng kết nối mạng để thực hiện giao dịch nâng cấp Premium.",
+                        "Đóng");
+                }
+                return;
             }
+
+            // TODO: Tích hợp cổng thanh toán (Payment Gateway) thực tế tại đây
+            System.Diagnostics.Debug.WriteLine("[Settings] Chuyển hướng thanh toán Premium...");
+            
+            if (Shell.Current != null)
+            {
+                await Shell.Current.DisplayAlert(
+                    "Thanh toán",
+                    "Tính năng thanh toán đang được phát triển. Vui lòng thử lại sau.",
+                    "OK");
+            }
+        }
+
+        private async Task CheckPremiumStatusAsync()
+        {
+#if ANDROID
+            try
+            {
+                var hId = _hardwareIdService.GetHardwareId();
+                var status = await _dbService.CheckDeviceStatusAsync(hId);
+                if (status != null)
+                {
+                    IsPremium = status.IsPremium;
+                }
+            }
+            catch { }
+#endif
         }
     }
 }

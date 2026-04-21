@@ -84,5 +84,10 @@
     "Notify_DataUpdateDesc": "quán ăn đã được cập nhật",
     "Notify_PullToRefresh": "Kéo xuống để kiểm tra cập nhật mới",
     "Notify_SyncComplete": "Dữ liệu bản đồ đã được cập nhật mới nhất",
-    "Notify_MobileDataConfirm": "Có dữ liệu POI mới khoảng {0}, bạn có muốn cập nhật bằng mạng di động không?"
+    "Notify_MobileDataConfirm": "Có dữ liệu POI mới khoảng {0}, bạn có muốn cập nhật bằng mạng di động không?",
+    "Settings_AccountBenefits": "Tài khoản & Quyền lợi",
+    "Settings_PremiumTitle": "FoodTour Premium",
+    "Settings_PremiumDesc": "Mở khóa tất cả nội dung độc quyền, nghe audio không giới hạn cho mọi ngôn ngữ.",
+    "Settings_UpgradeBtn": "Nâng cấp ngay",
+    "Settings_Unlocked": "Đã Mở Khóa"
 }

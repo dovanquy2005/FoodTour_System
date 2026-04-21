@@ -5,6 +5,7 @@
              xmlns:ext="clr-namespace:FoodTour.Mobile.Extensions"
              xmlns:controls="clr-namespace:FoodTour.Mobile.Controls"
              x:Class="FoodTour.Mobile.Views.ShopDetailPage"
+             x:Name="detailPage"
              x:DataType="viewmodels:ShopDetailViewModel"
              Title="{ext:Translate ShopDetail_Title}"
              BackgroundColor="{StaticResource Background}"
@@ -13,6 +14,7 @@
 	<!-- Converter giải quyết đường dẫn ảnh: ưu tiên cache cục bộ, fallback về URL API -->
 	<ContentPage.Resources>
 		<ext:ImageUrlConverter x:Key="ImageUrlConverter"/>
+		<ext:InvertedBoolConverter x:Key="InvertedBoolConverter"/>
 	</ContentPage.Resources>
 
 	<Grid>
@@ -98,7 +100,49 @@
 				       TextColor="{StaticResource TextSecondary}"
 				       FontSize="14"/>
 
+				<!-- ── NỘI DUNG ĐỘC QUYỀN (PREMIUM ITEMS) ── -->
+				<Label Text="💎 Nội dung độc quyền"
+				       FontSize="16" FontAttributes="Bold"
+				       TextColor="{StaticResource TextPrimary}"
+				       Margin="0,16,0,4"
+				       IsVisible="{Binding HasShopItems}"/>
 
+				<CollectionView ItemsSource="{Binding ShopItems}"
+				                Margin="0,0,0,16">
+					<CollectionView.ItemTemplate>
+						<DataTemplate x:DataType="models:ShopItemModel">
+							<Border BackgroundColor="{StaticResource Surface}"
+							        StrokeShape="RoundRectangle 12"
+							        Stroke="{StaticResource CardBorder}"
+							        StrokeThickness="1"
+							        Padding="16,12"
+							        Margin="0,4"
+							        Shadow="{Shadow Radius=4, Opacity=0.05, Offset='0,2'}">
+								<Border.GestureRecognizers>
+									<TapGestureRecognizer x:DataType="{x:Null}" 
+									                      Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:ShopDetailViewModel}}, Path=PlayItemAudioCommand}" 
+									                      CommandParameter="{Binding .}"/>
+								</Border.GestureRecognizers>
+								<Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
+									<VerticalStackLayout Grid.Column="0" Spacing="2" VerticalOptions="Center">
+										<Label Text="{Binding Title}"
+										       FontSize="15" FontAttributes="Bold"
+										       TextColor="{StaticResource TextPrimary}" />
+										<Label Text="{Binding Description}"
+										       FontSize="13"
+										       TextColor="{StaticResource TextSecondary}"
+										       MaxLines="2" LineBreakMode="TailTruncation" />
+									</VerticalStackLayout>
+									
+									<Label Grid.Column="1" Text="🔒" FontSize="18" TextColor="#F6B100" VerticalOptions="Center" 
+									       IsVisible="{Binding IsPremiumOnly}"/>
+									<Label Grid.Column="1" Text="▶️" FontSize="18" VerticalOptions="Center" 
+									       IsVisible="{Binding IsPremiumOnly, Converter={StaticResource InvertedBoolConverter}}"/>
+								</Grid>
+							</Border>
+						</DataTemplate>
+					</CollectionView.ItemTemplate>
+				</CollectionView>
 
 			</VerticalStackLayout>
 		</VerticalStackLayout>
