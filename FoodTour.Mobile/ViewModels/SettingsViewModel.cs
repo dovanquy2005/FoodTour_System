@@ -121,7 +121,6 @@ namespace FoodTour.Mobile.ViewModels
         }
 
 
-
         [RelayCommand]
         public async Task UpgradePremium()
         {

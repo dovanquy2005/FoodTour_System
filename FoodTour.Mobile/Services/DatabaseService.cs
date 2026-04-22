@@ -213,6 +213,28 @@
                                     }
                                 }
                             });
+                            
+                            // ──── 2. Dọn dẹp Shop bị xóa/deactivated ────
+                            // Nếu shop không có trong danh sách active từ server, ta xóa khỏi máy khách
+                            var serverShopIds = shops.Select(s => s.Id).ToList();
+                            var shopsToDelete = existingShops.Where(s => !serverShopIds.Contains(s.Id)).ToList();
+                            if (shopsToDelete.Count > 0)
+                            {
+                                await _database.RunInTransactionAsync(db =>
+                                {
+                                    foreach (var shop in shopsToDelete)
+                                    {
+                                        db.Delete(shop);
+                                        // Xóa triệt để các bản dịch và item liên quan để tránh rác DB
+                                        db.Execute("DELETE FROM ShopTranslationModel WHERE ShopId = ?", shop.Id);
+                                        db.Execute("DELETE FROM ShopItemTranslationModel WHERE ShopItemId IN (SELECT Id FROM ShopItemModel WHERE ShopId = ?)", shop.Id);
+                                        db.Execute("DELETE FROM ShopItemModel WHERE ShopId = ?", shop.Id);
+                                        hasChanges = true;
+                                        updatedShopCount++; // Đếm cả lượt xóa để trigger notification
+                                    }
+                                });
+                                System.Diagnostics.Debug.WriteLine($"[SyncData] Đã xóa {shopsToDelete.Count} shop không còn active từ server.");
+                            }
 
                             // Upsert translations (dùng server PK nên InsertOrReplace là đúng)
                             await _database.RunInTransactionAsync(db =>
@@ -798,6 +820,25 @@
                         {
                             // Chỉ cập nhật các shop nằm trong danh sách
                             targetShops = allShops.Where(s => shopIds.Contains(s.Id)).ToList();
+
+                            // ──── 2. Dọn dẹp Shop bị deactivated ────
+                            // Nếu ID có trong thông báo update nhưng không có trong list API active -> nghĩa là đã bị ẩn
+                            var targetShopIds = targetShops.Select(s => s.Id).ToHashSet();
+                            var deletedShopIds = shopIds.Where(id => !targetShopIds.Contains(id)).ToList();
+                            if (deletedShopIds.Count > 0)
+                            {
+                                await _database.RunInTransactionAsync(db =>
+                                {
+                                    foreach (var id in deletedShopIds)
+                                    {
+                                        db.Execute("DELETE FROM ShopModel WHERE Id = ?", id);
+                                        db.Execute("DELETE FROM ShopTranslationModel WHERE ShopId = ?", id);
+                                        db.Execute("DELETE FROM ShopItemTranslationModel WHERE ShopItemId IN (SELECT Id FROM ShopItemModel WHERE ShopId = ?)", id);
+                                        db.Execute("DELETE FROM ShopItemModel WHERE ShopId = ?", id);
+                                    }
+                                });
+                                System.Diagnostics.Debug.WriteLine($"[DownloadUpdate] Đã xóa {deletedShopIds.Count} shop không còn active.");
+                            }
 
                             // Upsert shops
                             await _database.RunInTransactionAsync(db =>

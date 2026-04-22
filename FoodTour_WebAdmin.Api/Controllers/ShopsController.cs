@@ -160,11 +160,11 @@ public class ShopsController : ControllerBase
             }
         }
 
-        // Lọc các shop đang kích hoạt và có UpdatedAt > sinceDate
+        // Lọc các shop có UpdatedAt > sinceDate (bao gồm cả quán mới deactivated để app xóa)
         var updatedShops = await _db.Shops
             .Include(s => s.ShopTranslations)
             .Include(s => s.ShopItems).ThenInclude(si => si.ShopItemTranslations)
-            .Where(s => s.IsActive && s.UpdatedAt > sinceDate)  // ← chỉ thông báo về quán active
+            .Where(s => s.UpdatedAt > sinceDate)
             .ToListAsync();
 
         if (updatedShops.Count == 0)

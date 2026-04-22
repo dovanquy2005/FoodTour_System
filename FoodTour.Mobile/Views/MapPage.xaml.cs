@@ -105,6 +105,8 @@ public partial class MapPage : ContentPage
 
             _walkingSimulationService.ShopEntered -= OnShopEntered;
             _walkingSimulationService.ShopExited -= OnShopExited;
+            
+            _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
             if (_viewModel.Shops != null)
                 _viewModel.Shops.CollectionChanged -= OnShopsCollectionChanged;
 
@@ -123,6 +125,25 @@ public partial class MapPage : ContentPage
         MainThread.BeginInvokeOnMainThread(() => DrawRadiusCircles());
     }
 
+    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(_viewModel.Shops))
+        {
+            if (_viewModel.Shops != null)
+            {
+                // Re-subscribe to the new collection
+                _viewModel.Shops.CollectionChanged -= OnShopsCollectionChanged; // Ensure no duplicate subscription
+                _viewModel.Shops.CollectionChanged += OnShopsCollectionChanged;
+            }
+            
+            // Trigger a full redraw
+            if (_isMapLoaded && MainMap?.Handler != null)
+            {
+                MainThread.BeginInvokeOnMainThread(() => DrawRadiusCircles());
+            }
+        }
+    }
+
     // MAP LOADED
     private async void MainMap_Loaded(object? sender, EventArgs e)
     {
@@ -137,6 +158,9 @@ public partial class MapPage : ContentPage
             // Đăng kí CollectionChanged sau khi có Shops
             if (_viewModel.Shops != null)
                 _viewModel.Shops.CollectionChanged += OnShopsCollectionChanged;
+
+            // Đăng ký PropertyChanged để bắt sự kiện gán mới Shops
+            _viewModel.PropertyChanged += OnViewModelPropertyChanged;
 
             if (MainMap != null)
                 MainMap.IsShowingUser = true;
@@ -466,15 +490,18 @@ public partial class MapPage : ContentPage
         {
             try
             {
+                // Kiểm tra xem quán này có đang active (đang phát audio) không
+                bool isCurrent = _walkingSimulationService.CurrentShop?.Id == shop.Id;
+
                 // Vẽ vòng tròn bán kính động theo database (nếu chưa set thì mặc định 50m)
                 double radius = shop.Radius > 0 ? shop.Radius : 50.0;
                 var circle = new Circle
                 {
                     Center = shop.Location,
                     Radius = Distance.FromMeters(radius),
-                    StrokeColor = Colors.Red,
+                    StrokeColor = isCurrent ? Colors.Green : Colors.Red,
                     StrokeWidth = 2,
-                    FillColor = Colors.Red.WithAlpha(0.25f)
+                    FillColor = isCurrent ? Colors.Green.WithAlpha(0.25f) : Colors.Red.WithAlpha(0.25f)
                 };
                 MainMap.MapElements.Add(circle);
                 _shopCircles[shop.Id] = circle;

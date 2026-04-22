@@ -12,3 +12,4 @@ public class DownloadLog
     // Hardware ID của thiết bị mobile — liên kết lượt tải với thiết bị cụ thể
     public string? DeviceId { get; set; } = string.Empty;
 }
+    

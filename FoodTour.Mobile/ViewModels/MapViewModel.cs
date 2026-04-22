@@ -10,7 +10,7 @@ using FoodTour.Mobile.Views;
 
 namespace FoodTour.Mobile.ViewModels;
 
-public partial class MapViewModel : BaseViewModel, IRecipient<LanguageChangedMessage>, IDisposable
+public partial class MapViewModel : BaseViewModel, IRecipient<LanguageChangedMessage>, IRecipient<DataSyncedMessage>, IRecipient<AudioFilesUpdatedMessage>, IDisposable
 {
     private readonly DatabaseService _dbService;
 
@@ -20,7 +20,7 @@ public partial class MapViewModel : BaseViewModel, IRecipient<LanguageChangedMes
     {
         _dbService = dbService;
         Shops = new ObservableCollection<ShopModel>();
-        WeakReferenceMessenger.Default.Register(this);
+        WeakReferenceMessenger.Default.RegisterAll(this);
     }
 
     // 👇 1. HÀM CHUYỂN TRANG
@@ -51,6 +51,18 @@ public partial class MapViewModel : BaseViewModel, IRecipient<LanguageChangedMes
     {
         // Khi ngôn ngữ thay đổi, tải lại toàn bộ Shops từ DB để bốc được bản dịch mới nhất,
         // từ đó kích hoạt CollectionChanged trên View làm vẽ lại toàn bộ Pin bản đồ (cọc đỏ).
+        await LoadData();
+    }
+
+    public async void Receive(DataSyncedMessage message)
+    {
+        // Khi dữ liệu đồng bộ xong (có thể shop bị xóa hoặc thêm mới), tải lại map
+        await LoadData();
+    }
+
+    public async void Receive(AudioFilesUpdatedMessage message)
+    {
+        // Khi file audio cập nhật, tải lại data (có thể DB thay đổi)
         await LoadData();
     }
 

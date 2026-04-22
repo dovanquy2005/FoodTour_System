@@ -6,11 +6,12 @@ using FoodTour.Mobile.Messages;
 
 namespace FoodTour.Mobile.Services;
 
-public class WalkingSimulationService : IRecipient<LanguageChangedMessage>, IRecipient<AudioFilesUpdatedMessage>, IDisposable
+public class WalkingSimulationService : IRecipient<LanguageChangedMessage>, IRecipient<AudioFilesUpdatedMessage>, IRecipient<DataSyncedMessage>, IDisposable
 {
     private readonly DatabaseService _dbService;
     private readonly IAudioPlayerService _audioService;
     private List<ShopModel> _shops = new();
+    public ShopModel? CurrentShop => _currentShop;
     private ShopModel? _currentShop = null; // Shop đang active (đang phát audio)
     private bool _isRunning = false;
     public Action<Location>? OnLocationUpdate;
@@ -36,7 +37,7 @@ public class WalkingSimulationService : IRecipient<LanguageChangedMessage>, IRec
     private const double HysteresisMultiplier = 1.3;
 
     // ═══════ HÀNG ĐỢI AUDIO TUẦN TỰ (Sequential Priority Queue) ═══════
-    // Danh sách các shop đang chờ phát audio, sắp xếp theo Priority giảm dần
+    // Danh sách các shop đang chờ phát audio, sắp xếp theo Priority tăng dần (số nhỏ = ưu tiên cao)
     private readonly List<ShopModel> _audioQueue = new();
     // Cờ đánh dấu đang xử lý phát audio tuần tự (tránh chạy đồng thời)
     private bool _isProcessingQueue = false;
@@ -47,9 +48,7 @@ public class WalkingSimulationService : IRecipient<LanguageChangedMessage>, IRec
         _audioService = audioService;
 
         // Đăng ký nhận sự kiện đổi ngôn ngữ toàn cục
-        WeakReferenceMessenger.Default.Register<LanguageChangedMessage>(this);
-        // Đăng ký nhận sự kiện khi file audio mới được tải xuống đĩa
-        WeakReferenceMessenger.Default.Register<AudioFilesUpdatedMessage>(this);
+        WeakReferenceMessenger.Default.RegisterAll(this);
 
         // ═══════ ĐĂNG KÝ LẮNG NGHE KHI AUDIO PHÁT XONG ═══════
         // Thay vì dùng StateChanged và phụ thuộc text dịch, ta dùng sự kiện PlaybackEnded chuẩn xác
@@ -184,7 +183,7 @@ public class WalkingSimulationService : IRecipient<LanguageChangedMessage>, IRec
         var candidates = _shops
             .Select(s => (shop: s, dist: MetersTo(s, userLocation), radius: GetActivationRadius(s)))
             .Where(x => x.dist <= x.radius)               // trong vùng kích hoạt
-            .OrderByDescending(x => x.shop.Priority)       // ưu tiên cao trước
+            .OrderBy(x => x.shop.Priority)                 // ưu tiên cao trước (số nhỏ hơn = ưu tiên cao hơn)
             .ThenBy(x => x.dist)                           // gần nhất là tiebreaker
             .ToList();
 
@@ -212,8 +211,8 @@ public class WalkingSimulationService : IRecipient<LanguageChangedMessage>, IRec
                 Console.WriteLine($"[GeoFence] Thêm vào hàng đợi: {candidate.shop.Name} (priority={candidate.shop.Priority})");
             }
 
-            // Sắp xếp lại hàng đợi theo Priority giảm dần
-            _audioQueue.Sort((a, b) => b.Priority.CompareTo(a.Priority));
+            // Sắp xếp lại hàng đợi theo Priority tăng dần (số nhỏ = ưu tiên cao)
+            _audioQueue.Sort((a, b) => a.Priority.CompareTo(b.Priority));
         }
 
         // ── 5. BẮT ĐẦU PHÁT TUẦN TỰ NẾU CHƯA CÓ AUDIO NÀO ĐANG CHẠY ─────
@@ -476,6 +475,28 @@ public class WalkingSimulationService : IRecipient<LanguageChangedMessage>, IRec
         catch (Exception ex)
         {
             Console.WriteLine($"[GeoFence] AudioFilesUpdated reload lỗi: {ex.Message}");
+        }
+    }
+
+    // ═══════ XỬ LÝ SỰ KIỆN ĐỒNG BỘ DỮ LIỆU CHUNG ═══════
+    // Xử lý khi có shop bị xóa/deactivated mà không có thay đổi file audio
+    public async void Receive(DataSyncedMessage message)
+    {
+        try
+        {
+            var refreshedShops = await _dbService.GetShopsAsync();
+            _shops = refreshedShops.ToList();
+            Console.WriteLine($"[GeoFence] DataSynced: reload {_shops.Count} shop, danh sách shop đã thay đổi (thêm/xóa).");
+            
+            // Re-evaluate location immediately with new radius
+            if (_lastKnownLocation != null)
+            {
+                _ = CheckShopAsync(_lastKnownLocation);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[GeoFence] DataSynced reload lỗi: {ex.Message}");
         }
     }
 }
