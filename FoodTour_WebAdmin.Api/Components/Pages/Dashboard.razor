@@ -8,6 +8,7 @@
 @inject IDbContextFactory<AppDbContext> DbFactory
 @inject ILogger<Dashboard> Logger
 @inject FoodTour_WebAdmin.Api.Services.IDataUpdateNotifier DataUpdateNotifier
+@using FoodTour_WebAdmin.Api.Data
 
 <PageTitle>Dashboard — FoodTour Admin</PageTitle>
 
@@ -90,24 +91,18 @@
                             🗺️ Bản đồ nhiệt — Khu vực nghe thuyết minh
                         </MudText>
                         <MudText Typo="Typo.body2" Style="color:#8C7B6B;">
-                            Vị trí các quán được nghe nhiều nhất trong @_heatmapHours giờ qua
+                            Vị trí các quán được nghe nhiều nhất trong @(GetTimeDisplay(_heatmapHours))
                         </MudText>
                     </MudStack>
 
                     <MudStack Row Spacing="2" AlignItems="AlignItems.Center">
-                        <MudToggleGroup T="string" Value="@_heatmapMode" ValueChanged="OnHeatmapModeChanged"
-                                        Size="MudBlazor.Size.Small" Color="MudBlazor.Color.Primary" Variant="Variant.Outlined">
-                            <MudToggleItem Value="@("unique")">Khách duy nhất</MudToggleItem>
-                            <MudToggleItem Value="@("total")">Tổng lượt nghe</MudToggleItem>
-                        </MudToggleGroup>
-
                         <MudSelect T="int" Value="_heatmapHours" ValueChanged="OnHeatmapHoursChanged"
                                    Label="Khoảng thời gian" Variant="Variant.Outlined" Margin="Margin.Dense"
                                    Style="min-width:130px;">
-                            <MudSelectItem T="int" Value="1">1 giờ</MudSelectItem>
-                            <MudSelectItem T="int" Value="6">6 giờ</MudSelectItem>
-                            <MudSelectItem T="int" Value="24">24 giờ</MudSelectItem>
+                            <MudSelectItem T="int" Value="12">12 giờ</MudSelectItem>
+                            <MudSelectItem T="int" Value="24">1 ngày</MudSelectItem>
                             <MudSelectItem T="int" Value="168">7 ngày</MudSelectItem>
+                            <MudSelectItem T="int" Value="720">30 ngày</MudSelectItem>
                         </MudSelect>
                     </MudStack>
                 </MudStack>
@@ -138,19 +133,6 @@
                          style="height:420px; border-radius:12px; border:1px solid #F0E8E0; overflow:hidden; z-index:0;">
                     </div>
                 </div>
-
-                @if (_heatmapPoints.Count > 0)
-                {
-                    <MudStack Row Spacing="3" Class="mt-3" Style="flex-wrap:wrap;">
-                        <MudText Typo="Typo.caption" Style="color:#8C7B6B;">
-                            📍 @_heatmapPoints.Count quán có dữ liệu
-                        </MudText>
-                        <MudText Typo="Typo.caption" Style="color:#8C7B6B;">
-                            🔥 Cao nhất: @(_heatmapPoints.Any() ? _heatmapPoints.Max(p => p.Weight) : 0)
-                            @(_heatmapMode == "unique" ? "khách duy nhất" : "lượt nghe")
-                        </MudText>
-                    </MudStack>
-                }
             </MudPaper>
         </MudItem>
     </MudGrid>
@@ -209,12 +191,12 @@
     private int _onlineDevices;
     private List<ShopModel>? _recentShops;
     private bool _isDisposed = false;
+    private List<object>? _allActiveShops;
     // ── Geographic Heatmap ────────────────────────────────────────────────────
     private record HeatPoint(double Lat, double Lng, int Weight);
 
     private List<HeatPoint> _heatmapPoints = new();
-    private string _heatmapMode = "unique";
-    private int _heatmapHours = 24;
+    private int _heatmapHours = 12;
     private bool _heatmapLoading = false;
     private bool _heatmapReady = false;
 
@@ -230,9 +212,9 @@
         try
         {
             using var db = await DbFactory.CreateDbContextAsync();
+            var vnNow = DateTime.UtcNow.ToVietnamTime();
             var since = DateTime.UtcNow.AddHours(-_heatmapHours);
 
-            // Pull raw join data to memory first — avoids EF translation failure
             var raw = await db.TrialLogs
                 .Where(t => t.CreatedAt >= since
                          && t.ShopId != null
@@ -242,28 +224,29 @@
                       s => s.Id,
                       (t, s) => new
                       {
-                          t.IPAddress,
                           s.Latitude,
                           s.Longitude,
                           ShopId = s.Id
                       })
-                .ToListAsync(); // ← pull to memory HERE
+                .ToListAsync();
+
             Logger.LogInformation("Raw rows: {Count}, sample: {Sample}",
-                    raw.Count,
-                    raw.FirstOrDefault() is { } r ? $"lat={r.Latitude} lng={r.Longitude} shop={r.ShopId}" : "none");
+                raw.Count,
+                raw.FirstOrDefault() is { } r ? $"lat={r.Latitude} lng={r.Longitude} shop={r.ShopId}" : "none");
 
             _heatmapPoints = raw
                 .GroupBy(x => new { x.ShopId, x.Latitude, x.Longitude })
                 .Select(g => new HeatPoint(
                     g.Key.Latitude,
                     g.Key.Longitude,
-                    _heatmapMode == "unique"
-                        ? g.Select(x => x.IPAddress).Distinct().Count()
-                        : g.Count()
+                    g.Count()
                 ))
                 .Where(p => p.Lat != 0 && p.Lng != 0 && p.Weight > 0)
                 .OrderByDescending(p => p.Weight)
                 .ToList();
+
+            Logger.LogInformation("Heatmap Summary: Raw Logs={RawCount} -> Unique Points={PointsCount}",
+                raw.Count, _heatmapPoints.Count);
         }
         catch (Exception ex)
         {
@@ -273,31 +256,28 @@
         finally
         {
             _heatmapLoading = false;
+            StateHasChanged();
         }
     }
 
     private async Task RefreshHeatmapOnUI()
     {
         await LoadHeatmapPoints();
-
         if (!_heatmapReady) return;
 
-        var jsPoints = _heatmapPoints
-        .Select(p => new
+        if (_heatmapPoints != null && _heatmapPoints.Count > 0)
         {
-            lat = p.Lat,
-            lng = p.Lng,
-            weight = p.Weight
-        })
-        .ToArray();
-
-        await JSRuntime.InvokeVoidAsync("heatmap.update", jsPoints);
-    }
-
-    private async Task OnHeatmapModeChanged(string mode)
-    {
-        _heatmapMode = mode;
-        await RefreshHeatmapOnUI();
+            // Có dữ liệu -> Truyền mảng tọa độ sang JS để vẽ
+            var jsPoints = _heatmapPoints
+                .Select(p => new { lat = p.Lat, lng = p.Lng, weight = (double)p.Weight }) // Ép weight về double
+                .ToList();
+            await JSRuntime.InvokeVoidAsync("heatmap.update", (object)jsPoints);
+        }
+        else
+        {
+            // KHÔNG có dữ liệu -> Truyền mảng rỗng để JS xóa mảng nhiệt cũ trên bản đồ
+            await JSRuntime.InvokeVoidAsync("heatmap.update", Array.Empty<object>());
+        }
     }
 
     private async Task OnHeatmapHoursChanged(int hours)
@@ -311,23 +291,21 @@
         DataUpdateNotifier.OnDeviceUpdated += OnDeviceUpdatedHandler;
         DataUpdateNotifier.OnTrialRecorded += OnTrialRecordedHandler;
 
-        // Khởi tạo các Task. Mỗi Task sử dụng một DbContext riêng biệt từ Factory.
-        var heatmapTask = LoadHeatmapPoints();
-
-        var totalShopsTask = Task.Run(async () =>
+        // Định nghĩa các hàm cục bộ để giữ code sạch sẽ và tái sử dụng Factory
+        async Task<int> GetTotalShops()
         {
             using var db = await DbFactory.CreateDbContextAsync();
             return await db.Shops.CountAsync();
-        });
+        }
 
-        var visitsTask = Task.Run(async () =>
+        async Task<int> GetVisits()
         {
             using var db = await DbFactory.CreateDbContextAsync();
             var cutoff = DateTime.UtcNow.AddHours(-24);
             return await db.TrialLogs.CountAsync(t => t.CreatedAt >= cutoff);
-        });
+        }
 
-        var recentShopsTask = Task.Run(async () =>
+        async Task<List<ShopModel>> GetRecentShops()
         {
             using var db = await DbFactory.CreateDbContextAsync();
             return await db.Shops
@@ -335,30 +313,59 @@
                 .OrderByDescending(s => s.CreatedAt)
                 .Take(5)
                 .ToListAsync();
-        });
+        }
 
-        var onlineDevicesTask = Task.Run(async () =>
+        async Task<int> GetOnlineDevices()
         {
             using var db = await DbFactory.CreateDbContextAsync();
-            var cutoff = DateTime.UtcNow.AddMinutes(-15);
+            var cutoff = DateTime.UtcNow.AddSeconds(-10);
             return await db.UserDevices.CountAsync(d => d.LastActive >= cutoff);
-        });
+        }
 
-        // Chờ tất cả các tác vụ hoàn thành đồng thời mà không xung đột
-        await Task.WhenAll(totalShopsTask, recentShopsTask, onlineDevicesTask, heatmapTask, visitsTask);
+        async Task<List<object>> GetActiveShops()
+        {
+            using var db = await DbFactory.CreateDbContextAsync();
+            var shops = await db.Shops
+                .Where(s => s.IsActive && s.Latitude != 0 && s.Longitude != 0)
+                .Select(s => new
+                {
+                    s.Latitude,
+                    s.Longitude,
+                    Translation = s.ShopTranslations.FirstOrDefault(t => t.LanguageCode == "vi")
+                })
+                .ToListAsync();
 
-        // Gán kết quả sau khi tất cả đã xong
-        _totalShops = await totalShopsTask;
-        _visitsLast24h = await visitsTask;
-        _recentShops = await recentShopsTask;
-        _onlineDevices = await onlineDevicesTask;
+            return shops.Select(s => (object)new
+            {
+                lat = s.Latitude,
+                lng = s.Longitude,
+                name = s.Translation?.Name ?? "",
+                address = s.Translation?.Address ?? ""
+            }).ToList();
+        }
+
+        // Thực thi song song tất cả các task
+        var totalShopsTask = GetTotalShops();
+        var visitsTask = GetVisits();
+        var recentShopsTask = GetRecentShops();
+        var onlineDevicesTask = GetOnlineDevices();
+        var activeShopsTask = GetActiveShops();
+        var heatmapTask = LoadHeatmapPoints(); // Giả định hàm này cũng async
+
+        await Task.WhenAll(totalShopsTask, visitsTask, recentShopsTask, onlineDevicesTask, activeShopsTask, heatmapTask);
+
+        // Gán giá trị
+        _totalShops = totalShopsTask.Result;
+        _visitsLast24h = visitsTask.Result;
+        _recentShops = recentShopsTask.Result;
+        _onlineDevices = onlineDevicesTask.Result;
+        _allActiveShops = activeShopsTask.Result;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
 
-        // Init map with empty points first
         await JSRuntime.InvokeVoidAsync(
             "heatmap.init",
             "geo-heatmap",
@@ -369,17 +376,21 @@
 
         _heatmapReady = true;
 
-        // Then push actual data if already loaded
-        if (_heatmapPoints.Count > 0)
+        // Push shop markers
+        if (_allActiveShops != null && _allActiveShops.Any())
         {
-            var jsPoints = _heatmapPoints
-                .Select(p => new { lat = p.Lat, lng = p.Lng, weight = p.Weight })
-                .ToArray();
-
-            await JSRuntime.InvokeVoidAsync("heatmap.update", jsPoints);
+            await JSRuntime.InvokeVoidAsync("heatmap.addShopMarkers", _allActiveShops);
         }
 
-        StateHasChanged();
+        // Vẽ vùng nhiệt nếu có dữ liệu
+        if (_heatmapPoints != null && _heatmapPoints.Any())
+        {
+            var jsPoints = _heatmapPoints
+                .Select(p => new { lat = p.Lat, lng = p.Lng, weight = (double)p.Weight }) // Ép weight về double
+                .ToList(); // Dùng ToList() thay vì ToArray()
+
+            await JSRuntime.InvokeVoidAsync("heatmap.update", (object)jsPoints);
+        }
     }
 
     // Gọi bởi IDataUpdateNotifier khi thiết bị mobile đồng bộ
@@ -390,8 +401,8 @@
             using var db = await DbFactory.CreateDbContextAsync();
             var cutoff24 = DateTime.UtcNow.AddHours(-24);
             _visitsLast24h = await db.TrialLogs.CountAsync(t => t.CreatedAt >= cutoff24);
-            var cutoff15 = DateTime.UtcNow.AddMinutes(-15);
-            _onlineDevices = await db.UserDevices.CountAsync(d => d.LastActive >= cutoff15);
+            var cutoff10 = DateTime.UtcNow.AddSeconds(-10);
+            _onlineDevices = await db.UserDevices.CountAsync(d => d.LastActive >= cutoff10);
             await InvokeAsync(StateHasChanged);
         }
         catch (Exception ex)
@@ -418,6 +429,15 @@
             Logger.LogError(ex, "Heatmap real-time refresh failed.");
         }
     }
+
+    private string GetTimeDisplay(int hours) => hours switch
+    {
+        12 => "12 giờ",
+        24 => "1 ngày",
+        168 => "7 ngày",
+        720 => "30 ngày",
+        _ => $"{hours} giờ"
+    };
 
     public void Dispose()
     {
