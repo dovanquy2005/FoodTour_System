@@ -1092,6 +1092,40 @@
                     return null;
                 }
             }
+
+            /// <summary>
+            /// Ghi log lượt nghe audio vào bảng AudioActivityLogs trên server.
+            /// Fire-and-forget — không chặn luồng phát audio.
+            /// source: "Web", "AppManual", "AppAuto"
+            /// </summary>
+            public async Task RecordAudioLogAsync(string deviceId, string shopId, string languageCode, string source, Guid? shopItemId = null)
+            {
+                if (string.IsNullOrEmpty(deviceId) || string.IsNullOrEmpty(shopId))
+                    return;
+
+                try
+                {
+                    using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+                    var url = $"{API_BASE_URL}/api/audiologs/record";
+
+                    var body = new
+                    {
+                        DeviceId = deviceId,
+                        ShopId = shopId,
+                        ShopItemId = shopItemId,
+                        LanguageCode = languageCode,
+                        Source = source
+                    };
+
+                    var response = await httpClient.PostAsJsonAsync(url, body);
+                    System.Diagnostics.Debug.WriteLine($"[AudioLog] POST {url} → {response.StatusCode} (source={source})");
+                }
+                catch (Exception ex)
+                {
+                    // Im lặng — không được làm gián đoạn trải nghiệm người dùng
+                    System.Diagnostics.Debug.WriteLine($"[AudioLog] Exception: {ex.Message}");
+                }
+            }
         }
 
         // ═══════ DTO cho Deep Link API Response ═══════

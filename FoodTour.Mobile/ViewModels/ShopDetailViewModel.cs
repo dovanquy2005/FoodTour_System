@@ -284,6 +284,14 @@ namespace FoodTour.Mobile.ViewModels
                 {
                     System.Diagnostics.Debug.WriteLine($"[DeepLink] Phát audio: {targetShop.AudioUrl}");
                     await _audioService.PlayShopAsync(targetShop);
+
+                    // ═══ GHI LOG AUDIO ACTIVITY (AppManual — Deep Link) ═══
+                    var deviceId = HardwareId ?? App.DeviceId;
+                    var langCode = Preferences.Default.Get("AppLanguage", "vi");
+                    if (!string.IsNullOrEmpty(deviceId))
+                    {
+                        _ = Task.Run(() => _dbService.RecordAudioLogAsync(deviceId, targetShop.Id, langCode, "AppManual"));
+                    }
                 }
                 else
                 {
@@ -329,6 +337,15 @@ namespace FoodTour.Mobile.ViewModels
             if (!string.IsNullOrEmpty(item.AudioUrl))
             {
                 await _audioService.PlayAsync(item.AudioUrl);
+
+                // ═══ GHI LOG AUDIO ACTIVITY (AppManual — ShopItem) ═══
+                var deviceId = HardwareId ?? App.DeviceId;
+                var langCode = Preferences.Default.Get("AppLanguage", "vi");
+                var shopId = Shop?.Id ?? ShopId ?? string.Empty;
+                if (!string.IsNullOrEmpty(deviceId) && !string.IsNullOrEmpty(shopId))
+                {
+                    _ = Task.Run(() => _dbService.RecordAudioLogAsync(deviceId, shopId, langCode, "AppManual", Guid.TryParse(item.Id, out var gid) ? gid : null));
+                }
             }
         }
 

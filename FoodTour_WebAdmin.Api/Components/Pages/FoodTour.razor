@@ -1,3 +1,4 @@
+@page "/foodtour"
 @page "/foodtour/{Id}"
 @* Trang công khai — khách vãng lai quét QR, không yêu cầu đăng nhập *@
 @attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
@@ -166,6 +167,18 @@
         font-size: 0.75rem;
         color: #B5A899;
     }
+    .ft-card-link {
+        text-decoration: none;
+        color: inherit;
+        display: block;
+    }
+    .ft-card-link .ft-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .ft-card-link:hover .ft-card {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 40px rgba(45,31,20,0.12);
+    }
 </style>
 
 <div class="ft-landing">
@@ -173,6 +186,67 @@
     {
         <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh;">
             <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" StrokeWidth="4" />
+        </div>
+    }
+    else if (_shop == null && string.IsNullOrEmpty(Id) && _allShops.Any())
+    {
+        <!-- Global FoodTour List -->
+        <div class="ft-hero" style="height: 160px;">
+            <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #E8672A, #F4A574); display: flex; flex-direction: column; align-items: center; justify-content: center; color: white;">
+                <span style="font-size: 48px;">🍜</span>
+                <h2 style="font-weight: 800; margin-top: 8px;">FoodTour Vĩnh Khánh</h2>
+            </div>
+            <div class="ft-hero-overlay"></div>
+        </div>
+
+        <div class="ft-content" style="margin-top: -20px;">
+            <div class="ft-card" style="margin-bottom: 24px; text-align: center;">
+                <h3 style="color: #2D1F14; font-weight: 800; margin-bottom: 4px;">Khám phá Ẩm thực</h3>
+                <p style="color: #8C7B6B; font-size: 0.9rem;">Danh sách toàn bộ các quán ăn đặc sắc</p>
+            </div>
+
+            <MudStack Spacing="3">
+                @foreach (var shop in _allShops)
+                {
+                    var translation = shop.ShopTranslations.FirstOrDefault(t => t.LanguageCode == _selectedLang) 
+                                     ?? shop.ShopTranslations.FirstOrDefault(t => t.LanguageCode == "vi")
+                                     ?? shop.ShopTranslations.FirstOrDefault();
+                    
+                    <a href="/foodtour/@shop.Id" class="ft-card-link">
+                        <div class="ft-card" style="padding: 16px; margin-bottom: 0;">
+                            <MudStack Row AlignItems="AlignItems.Center" Spacing="3">
+                                @if (!string.IsNullOrEmpty(shop.ImageUrl))
+                                {
+                                    <div style="width: 80px; height: 80px; border-radius: 16px; overflow: hidden; flex-shrink: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                                        <img src="@shop.ImageUrl" alt="@translation?.Name" style="width: 100%; height: 100%; object-fit: cover;" />
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div style="width: 80px; height: 80px; border-radius: 16px; background: linear-gradient(135deg, #FFF0E6, #FDE0D3); color: #E8672A; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 800; flex-shrink: 0; box-shadow: 0 4px 12px rgba(232,103,42,0.15);">
+                                        @(string.IsNullOrEmpty(translation?.Name) ? "?" : translation.Name[0].ToString().ToUpper())
+                                    </div>
+                                }
+                                
+                                <MudStack Spacing="0" Style="flex-grow: 1; overflow: hidden;">
+                                    <h3 style="font-size: 1.15rem; font-weight: 800; color: #2D1F14; margin: 0 0 6px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@translation?.Name</h3>
+                                    <div style="display: flex; align-items: flex-start; gap: 4px;">
+                                        <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" Style="font-size: 16px; color: #E8672A; flex-shrink: 0; margin-top: 2px;" />
+                                        <p style="font-size: 0.85rem; color: #8C7B6B; margin: 0; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">@translation?.Address</p>
+                                    </div>
+                                </MudStack>
+                                
+                                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Style="color: #B5A899; flex-shrink: 0;" />
+                            </MudStack>
+                        </div>
+                    </a>
+                }
+            </MudStack>
+
+            <!-- Footer -->
+            <div class="ft-footer">
+                FoodTour Vĩnh Khánh — Powered by FoodTour System
+            </div>
         </div>
     }
     else if (_shop == null)
@@ -274,10 +348,10 @@
                 }
 
                 <!-- CTA App Download -->
-                <a href="/api/app/download" class="ft-cta-btn">
+                <button class="ft-cta-btn" @onclick="OpenAppPaymentModal">
                     <MudIcon Icon="@Icons.Material.Filled.InstallMobile" Size="Size.Medium" />
                     @Ui("CtaApp")
-                </a>
+                </button>
             </div>
 
             <!-- Footer -->
@@ -306,12 +380,33 @@
             <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="ConfirmPayment">@Ui("BtnConfirm")</MudButton>
         </DialogActions>
     </MudDialog>
+
+    <!-- App Download Payment Modal -->
+    <MudDialog @bind-Visible="_showAppPaymentModal" Options="_dialogOptions">
+        <TitleContent>
+            <MudText Typo="Typo.h6" Style="font-weight:700;">@Ui("AppPaymentTitle")</MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudStack AlignItems="AlignItems.Center" Spacing="3" Style="padding: 16px 0;">
+                <MudIcon Icon="@Icons.Material.Filled.QrCode2" Style="font-size: 120px; color:#2D1F14;" />
+                <MudText Typo="Typo.h6" Style="font-weight: 800; color:#E8672A;">@Ui("AppPaymentPrice")</MudText>
+                <MudText Typo="Typo.body2" Style="text-align: center; color:#5C4A3D;">
+                    @((MarkupString)Ui("AppPaymentDesc"))
+                </MudText>
+            </MudStack>
+        </DialogContent>
+        <DialogActions>
+            <MudButton Variant="Variant.Text" OnClick="() => _showAppPaymentModal = false">@Ui("BtnCancel")</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="ConfirmAppPayment">@Ui("BtnConfirmApp")</MudButton>
+        </DialogActions>
+    </MudDialog>
 </div>
 
 @code {
     [Parameter] public string Id { get; set; } = "";
 
     private ShopModel? _shop;
+    private List<ShopModel> _allShops = new();
     private ShopTranslationModel? _currentTranslation;
     private string _selectedLang = "en";
     private bool _loading = true;
@@ -364,7 +459,12 @@
             { "BtnCancel", "Hủy" },
             { "BtnConfirm", "Xác nhận đã chuyển (Demo)" },
             { "ToastSuccess", "✅ Kích hoạt thành công Gói 24h!" },
-            { "ToastTrial", "Còn {0} lần nghe thử. Chọn 'Tải App' để nghe không giới hạn!" }
+            { "ToastTrial", "Còn {0} lần nghe thử. Chọn 'Tải App' để nghe không giới hạn!" },
+            { "AppPaymentTitle", "📥 Tải Ứng Dụng FoodTour" },
+            { "AppPaymentPrice", "25.000đ" },
+            { "AppPaymentDesc", "Quét mã thanh toán 25.000đ để tải ứng dụng.<br/>Trải nghiệm toàn bộ tính năng và nghe audio không giới hạn!" },
+            { "BtnConfirmApp", "Xác nhận & Tải App" },
+            { "ToastAppPaymentSuccess", "✅ Thanh toán thành công! Đang tải ứng dụng..." }
         }},
         { "en", new() {
             { "BadgePremium", "24h Premium Active" },
@@ -379,7 +479,12 @@
             { "BtnCancel", "Cancel" },
             { "BtnConfirm", "Confirm Transfer (Demo)" },
             { "ToastSuccess", "✅ 24h Premium successfully activated!" },
-            { "ToastTrial", "{0} free trials left. Download the App for unlimited access!" }
+            { "ToastTrial", "{0} free trials left. Download the App for unlimited access!" },
+            { "AppPaymentTitle", "📥 Download FoodTour App" },
+            { "AppPaymentPrice", "25.000đ" },
+            { "AppPaymentDesc", "Scan QR to pay 25.000đ and download the app.<br/>Experience all features and unlimited audio!" },
+            { "BtnConfirmApp", "Confirm & Download" },
+            { "ToastAppPaymentSuccess", "✅ Payment successful! Downloading app..." }
         }},
         { "ja", new() {
             { "BadgePremium", "24時間プレミアム有効" },
@@ -394,7 +499,12 @@
             { "BtnCancel", "キャンセル" },
             { "BtnConfirm", "送金確認（デモ）" },
             { "ToastSuccess", "✅ 24時間プレミアムが有効化されました！" },
-            { "ToastTrial", "残り{0}回の試聴。アプリをダウンロードして無制限アクセス！" }
+            { "ToastTrial", "残り{0}回の試聴。アプリをダウンロードして無制限アクセス！" },
+            { "AppPaymentTitle", "📥 FoodTourアプリをダウンロード" },
+            { "AppPaymentPrice", "25.000đ" },
+            { "AppPaymentDesc", "QRをスキャンして25.000đを支払い、アプリをダウンロードします。<br/>すべての機能と無制限の音声をお楽しみください！" },
+            { "BtnConfirmApp", "確認してダウンロード" },
+            { "ToastAppPaymentSuccess", "✅ 支払いが完了しました！アプリをダウンロードしています..." }
         }},
         { "zh", new() {
             { "BadgePremium", "24小时高级版已激活" },
@@ -409,7 +519,12 @@
             { "BtnCancel", "取消" },
             { "BtnConfirm", "确认汇款（演示）" },
             { "ToastSuccess", "✅ 24 小时高级版已成功激活！" },
-            { "ToastTrial", "剩余 {0} 次试听。下载应用获取无限访问权限！" }
+            { "ToastTrial", "剩余 {0} 次试听。下载应用获取无限访问权限！" },
+            { "AppPaymentTitle", "📥 下载 FoodTour 应用" },
+            { "AppPaymentPrice", "25.000đ" },
+            { "AppPaymentDesc", "扫描二维码支付25.000đ并下载应用。<br/>体验所有功能和无限语音！" },
+            { "BtnConfirmApp", "确认并下载" },
+            { "ToastAppPaymentSuccess", "✅ 支付成功！正在下载应用..." }
         }},
         { "ru", new() {
             { "BadgePremium", "Активирован премиум на 24ч" },
@@ -424,7 +539,12 @@
             { "BtnCancel", "Отмена" },
             { "BtnConfirm", "Подтвердить перевод (Демо)" },
             { "ToastSuccess", "✅ 24-часовой Premium успешно активирован!" },
-            { "ToastTrial", "Осталось {0} бесплатных попыток. Скачайте приложение!" }
+            { "ToastTrial", "Осталось {0} бесплатных попыток. Скачайте приложение!" },
+            { "AppPaymentTitle", "📥 Скачать приложение FoodTour" },
+            { "AppPaymentPrice", "25.000đ" },
+            { "AppPaymentDesc", "Отсканируйте QR для оплаты 25.000đ и загрузки приложения.<br/>Получите все функции и безлимитное аудио!" },
+            { "BtnConfirmApp", "Подтвердить и скачать" },
+            { "ToastAppPaymentSuccess", "✅ Оплата прошла успешно! Загрузка приложения..." }
         }}
     };
 
@@ -439,12 +559,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        using var Db = await DbFactory.CreateDbContextAsync();
-        _shop = await Db.Shops
-            .Include(s => s.ShopTranslations)
-            .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.Id == Id);
-
         // Auto-Detect: Tự động lấy ngôn ngữ trình duyệt
         try
         {
@@ -456,22 +570,50 @@
             _selectedLang = MapBrowserLanguage(System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
         }
 
-        // Tách biệt việc set nội dung Text
-        SwitchLanguage(_selectedLang);
+        LoadUiStrings(_selectedLang);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        using var Db = await DbFactory.CreateDbContextAsync();
+        
+        if (string.IsNullOrEmpty(Id))
+        {
+            _shop = null;
+            _currentTranslation = null;
+            _allShops = await Db.Shops
+                .Include(s => s.ShopTranslations)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+        else
+        {
+            _allShops = new();
+            _shop = await Db.Shops
+                .Include(s => s.ShopTranslations)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.Id == Id);
+            
+            if (_shop != null)
+            {
+                SwitchLanguage(_selectedLang);
+            }
+        }
 
         _loading = false;
-        
-        // Force Render: Nội dung hiện ra ngay lập tức
         StateHasChanged();
     }
 
     private bool _isPremium = false;
     private int _freeTrialCount = 0;
     private bool _showPaymentModal = false;
+    private bool _showAppPaymentModal = false;
 
     private readonly DialogOptions _dialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
 
     private void OpenPaymentModal() => _showPaymentModal = true;
+    private void OpenAppPaymentModal() => _showAppPaymentModal = true;
 
     private async Task ConfirmPayment()
     {
@@ -481,6 +623,15 @@
         _showPaymentModal = false;
         StateHasChanged();
         Snackbar.Add(Ui("ToastSuccess"), Severity.Success);
+    }
+
+    private async Task ConfirmAppPayment()
+    {
+        _showAppPaymentModal = false;
+        StateHasChanged();
+        Snackbar.Add(Ui("ToastAppPaymentSuccess"), Severity.Success);
+        // Chuyển hướng tải app sau khi thanh toán thành công
+        await JS.InvokeVoidAsync("window.open", "/api/app/download", "_self");
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -539,6 +690,8 @@
             if (_isPremium)
             {
                 await TryPlay("playAudio");
+                // ═══ GHI LOG AUDIO ACTIVITY (Web - Premium) ═══
+                _ = JS.InvokeVoidAsync("recordAudioLog", Id, _selectedLang, null);
             }
             else
             {
@@ -556,6 +709,8 @@
                     
                     Snackbar.Add(Ui("ToastTrial", remaining), Severity.Info);
                     await TryPlay("playAudio");
+                    // ═══ GHI LOG AUDIO ACTIVITY (Web - Trial) ═══
+                    _ = JS.InvokeVoidAsync("recordAudioLog", Id, _selectedLang, null);
                 }
                 else
                 {

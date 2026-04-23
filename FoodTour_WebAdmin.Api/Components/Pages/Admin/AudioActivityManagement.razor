@@ -1,0 +1,393 @@
+@page "/admin/audio-logs"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+@inject IDbContextFactory<AppDbContext> DbFactory
+@using FoodTour_WebAdmin.Api.Models
+@using FoodTour_WebAdmin.Api.Extensions
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Lịch sử nghe Audio — FoodTour Admin</PageTitle>
+
+@* ══ HEADER ══ *@
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px;">
+    <div>
+        <MudText Typo="Typo.h4" Style="font-weight:800; color:#1e293b; margin-bottom:4px;">
+            🎧 Lịch sử nghe Audio
+        </MudText>
+        <MudText Typo="Typo.body2" Style="color:#64748b;">
+            Theo dõi các lượt phát audio thuyết minh từ Website và Ứng dụng Mobile
+        </MudText>
+    </div>
+
+    <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+        <MudChip T="string" Color="MudBlazor.Color.Info" Icon="@Icons.Material.Filled.LibraryMusic" Style="font-weight:700;">
+            @_logs.Count lượt nghe
+        </MudChip>
+        <MudButton StartIcon="@Icons.Material.Filled.Refresh" Variant="Variant.Outlined"
+                   OnClick="@(() => LoadDataAsync(true))" Disabled="_isLoading">
+            Làm mới
+        </MudButton>
+    </MudStack>
+</div>
+
+@* ══ STAT CARDS ══ *@
+<MudGrid Class="mb-4">
+    <MudItem xs="6" md="3">
+        <MudPaper Elevation="0" Style="border-radius:16px; border:1px solid #e2e8f0; padding:20px; text-align:center; background:linear-gradient(135deg, #f8fafc, #f1f5f9);">
+            <MudText Typo="Typo.h4" Style="font-weight:800; color:#1e293b;">@_logs.Count</MudText>
+            <MudText Typo="Typo.caption" Style="color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:1px;">Tổng lượt nghe</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="6" md="3">
+        <MudPaper Elevation="0" Style="border-radius:16px; border:1px solid #dbeafe; padding:20px; text-align:center; background:linear-gradient(135deg, #eff6ff, #dbeafe);">
+            <MudText Typo="Typo.h4" Style="font-weight:800; color:#2563eb;">@_logs.Count(l => l.Source == "Web")</MudText>
+            <MudText Typo="Typo.caption" Style="color:#3b82f6; font-weight:600; text-transform:uppercase; letter-spacing:1px;">🌐 Website</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="6" md="3">
+        <MudPaper Elevation="0" Style="border-radius:16px; border:1px solid #d1fae5; padding:20px; text-align:center; background:linear-gradient(135deg, #ecfdf5, #d1fae5);">
+            <MudText Typo="Typo.h4" Style="font-weight:800; color:#059669;">@_logs.Count(l => l.Source == "AppManual")</MudText>
+            <MudText Typo="Typo.caption" Style="color:#10b981; font-weight:600; text-transform:uppercase; letter-spacing:1px;">📱 App (Thủ công)</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="6" md="3">
+        <MudPaper Elevation="0" Style="border-radius:16px; border:1px solid #fce7f3; padding:20px; text-align:center; background:linear-gradient(135deg, #fdf2f8, #fce7f3);">
+            <MudText Typo="Typo.h4" Style="font-weight:800; color:#db2777;">@_logs.Count(l => l.Source == "AppAuto")</MudText>
+            <MudText Typo="Typo.caption" Style="color:#ec4899; font-weight:600; text-transform:uppercase; letter-spacing:1px;">🤖 App (Tự động)</MudText>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@* ══ FILTER & SEARCH ══ *@
+<MudPaper Elevation="0" Style="border-radius:16px; border:1px solid #f1f5f9; padding:24px; margin-bottom:24px; background:#fff;">
+    @* ── Source Tabs ── *@
+    <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="mb-4">
+        <MudText Typo="Typo.caption" Style="font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:1px; margin-right:8px;">Nguồn:</MudText>
+        @foreach (var tab in _sourceTabs)
+        {
+            var isActive = _selectedSource == tab.Key;
+            <MudButton Size="Size.Small" Variant="@(isActive ? Variant.Filled : Variant.Outlined)"
+                       Color="@(isActive ? tab.Value.Color : MudBlazor.Color.Default)"
+                       StartIcon="@tab.Value.Icon"
+                       OnClick="@(() => _selectedSource = tab.Key)"
+                       Style="@(isActive ? "font-weight:700; border-radius:20px;" : "border-radius:20px; border-color:#e2e8f0; color:#64748b;")">
+                @tab.Value.Label
+            </MudButton>
+        }
+    </MudStack>
+
+    @* ── Search Fields ── *@
+    <MudGrid>
+        <MudItem xs="12" md="4">
+            <MudTextField @bind-Value="_searchIdentifier" Immediate="true" Placeholder="Lọc theo Device ID / Fingerprint..."
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Fingerprint" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudSelect T="string" @bind-Value="_selectedShopId" Placeholder="Chọn quán ăn..." Clearable="true"
+                       Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Store"
+                       Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true">
+                <MudSelectItem T="string" Value="@((string?)null)">Tất cả quán</MudSelectItem>
+                @foreach (var shop in _shopOptions)
+                {
+                    <MudSelectItem T="string" Value="@shop.Id">@shop.Name</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudDateRangePicker @bind-DateRange="_dateRange" PlaceholderStart="Từ ngày" PlaceholderEnd="Đến ngày" 
+                                Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" />
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@* ══ LOADING ══ *@
+@if (_isLoading)
+{
+    <div style="display:flex; gap:16px; align-items:center; padding:48px 0;">
+        <MudProgressCircular Color="MudBlazor.Color.Primary" Indeterminate="true" />
+        <MudText Style="color:#64748b;">Đang tải danh sách lịch sử...</MudText>
+    </div>
+}
+else
+{
+    @* ══ BẢNG LỊCH SỬ ══ *@
+    <MudTable T="AudioActivityLog" Items="@FilteredLogs" Hover="true" Striped="true" Elevation="2"
+              Style="border-radius:16px; overflow:hidden;" Loading="_isLoading">
+        <ColGroup>
+            <col style="width:12%;" />
+            <col style="width:22%;" />
+            <col style="width:22%;" />
+            <col style="width:10%;" />
+            <col style="width:17%;" />
+            <col style="width:17%;" />
+        </ColGroup>
+        <HeaderContent>
+            <MudTh Style="@_thStyle"><MudTableSortLabel SortBy="new Func<AudioActivityLog, object>(x => x.Source)">Nguồn</MudTableSortLabel></MudTh>
+            <MudTh Style="@_thStyle"><MudTableSortLabel SortBy="new Func<AudioActivityLog, object>(x => x.DeviceId)">Định danh thiết bị</MudTableSortLabel></MudTh>
+            <MudTh Style="@_thStyle"><MudTableSortLabel SortBy="new Func<AudioActivityLog, object>(x => x.Shop?.ShopTranslations.FirstOrDefault()?.Name ?? x.ShopId)">Quán Ăn</MudTableSortLabel></MudTh>
+            <MudTh Style="@_thStyle"><MudTableSortLabel SortBy="new Func<AudioActivityLog, object>(x => x.LanguageCode)">Ngôn ngữ</MudTableSortLabel></MudTh>
+            <MudTh Style="@_thStyle">Thông tin thêm</MudTh>
+            <MudTh Style="@_thStyle"><MudTableSortLabel InitialDirection="SortDirection.Descending" SortBy="new Func<AudioActivityLog, object>(x => x.PlayedAt)">Thời điểm phát</MudTableSortLabel></MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            @* ── Nguồn (Source Badge) ── *@
+            <MudTd DataLabel="Nguồn">
+                @{
+                    var sourceInfo = GetSourceInfo(context.Source);
+                }
+                <MudChip T="string" Size="Size.Small" Color="sourceInfo.Color" Icon="@sourceInfo.Icon"
+                         Style="font-weight:700; font-size:0.7rem;">
+                    @sourceInfo.Label
+                </MudChip>
+            </MudTd>
+
+            @* ── Định danh thiết bị ── *@
+            <MudTd DataLabel="Định danh thiết bị">
+                @{
+                    var isWebSource = context.Source == "Web";
+                    var idLabel = isWebSource ? "Fingerprint" : "Device ID";
+                    var displayId = context.DeviceId.Length > 16 ? context.DeviceId[..16] + "…" : context.DeviceId;
+                }
+                <MudStack Spacing="0">
+                    <MudText Typo="Typo.caption" Style="color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; font-size:0.65rem;">
+                        @idLabel
+                    </MudText>
+                    <MudTooltip Text="@context.DeviceId">
+                        <MudText Typo="Typo.body2" Style="font-family:monospace; font-size:0.78rem; color:#1e293b;">
+                            @displayId
+                        </MudText>
+                    </MudTooltip>
+                </MudStack>
+            </MudTd>
+
+            @* ── Quán ăn ── *@
+            <MudTd DataLabel="Quán Ăn">
+                <MudText Typo="Typo.body2" Style="font-weight:600; color:#1e293b;">
+                    @{
+                        var shopName = context.Shop?.ShopTranslations.FirstOrDefault(t => t.LanguageCode == "vi")?.Name 
+                            ?? context.Shop?.ShopTranslations.FirstOrDefault()?.Name 
+                            ?? context.ShopId;
+                    }
+                    @shopName
+                </MudText>
+                @if (context.ShopItemId.HasValue)
+                {
+                    <MudText Typo="Typo.caption" Style="color:#e8672a; font-weight: 600;">
+                        [Premium Item] @context.ShopItemId.Value.ToString()[..8]...
+                    </MudText>
+                }
+            </MudTd>
+
+            @* ── Ngôn ngữ ── *@
+            <MudTd DataLabel="Ngôn ngữ">
+                @{
+                    var langEmoji = context.LanguageCode switch
+                    {
+                        "vi" => "🇻🇳",
+                        "en" => "🇬🇧",
+                        "ja" => "🇯🇵",
+                        "zh" => "🇨🇳",
+                        "ru" => "🇷🇺",
+                        _ => "🌐"
+                    };
+                }
+                <MudChip T="string" Size="Size.Small" Color="Color.Surface" Style="font-weight:600; border:1px solid #e2e8f0;">
+                    @langEmoji @context.LanguageCode.ToUpper()
+                </MudChip>
+            </MudTd>
+
+            @* ── Thông tin thêm (IP + Platform) ── *@
+            <MudTd DataLabel="Thông tin thêm">
+                <MudStack Spacing="1">
+                    @if (!string.IsNullOrEmpty(context.IPAddress))
+                    {
+                        <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
+                            <MudIcon Icon="@Icons.Material.Filled.Router" Size="Size.Small" Style="font-size:14px; color:#94a3b8;" />
+                            <MudText Typo="Typo.caption" Style="color:#64748b; font-family:monospace; font-size:0.75rem;">@context.IPAddress</MudText>
+                        </MudStack>
+                    }
+                    @if (!string.IsNullOrEmpty(context.UserAgent))
+                    {
+                        <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
+                            <MudIcon Icon="@Icons.Material.Filled.Devices" Size="Size.Small" Style="font-size:14px; color:#94a3b8;" />
+                            <MudTooltip Text="@context.UserAgent">
+                                <MudText Typo="Typo.caption" Style="color:#94a3b8; font-size:0.7rem;">@ShortenUserAgent(context.UserAgent)</MudText>
+                            </MudTooltip>
+                        </MudStack>
+                    }
+                    @if (string.IsNullOrEmpty(context.IPAddress) && string.IsNullOrEmpty(context.UserAgent))
+                    {
+                        <MudText Typo="Typo.caption" Style="color:#cbd5e1;">N/A</MudText>
+                    }
+                </MudStack>
+            </MudTd>
+
+            @* ── Thời điểm phát ── *@
+            <MudTd DataLabel="Thời điểm phát">
+                <MudText Typo="Typo.body2" Style="color:#475569;">
+                    @context.PlayedAt.ToVietnamTime().ToString("dd/MM/yyyy")
+                </MudText>
+                <MudText Typo="Typo.caption" Style="color:#94a3b8;">
+                    @context.PlayedAt.ToVietnamTime().ToString("HH:mm:ss")
+                </MudText>
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudStack AlignItems="AlignItems.Center" Style="padding:48px 0;">
+                <MudIcon Icon="@Icons.Material.Filled.MicOff" Style="font-size:64px; color:#cbd5e1;" />
+                <MudText Typo="Typo.h6" Style="font-weight:700; color:#94a3b8;">
+                    Chưa có lịch sử phát Audio
+                </MudText>
+                <MudText Typo="Typo.body2" Style="color:#cbd5e1;">
+                    Dữ liệu sẽ hiển thị khi du khách phát audio thuyết minh
+                </MudText>
+            </MudStack>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new int[]{10, 25, 50}" RowsPerPageString="Số dòng mỗi trang:"
+                           InfoFormat="{first_item}-{last_item} của {all_items}" />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    private bool _isLoading = true;
+    private string _searchIdentifier = string.Empty;
+    private string? _selectedShopId;
+    private string _selectedSource = "All";
+    private MudBlazor.DateRange _dateRange = new MudBlazor.DateRange(null, null);
+    
+    private List<AudioActivityLog> _logs = new();
+    private List<(string Id, string Name)> _shopOptions = new();
+    private const string _thStyle = "background:#f8fafc; font-weight:700; color:#475569;";
+
+    // ── Tab definitions ──
+    private record SourceTabInfo(string Label, string Icon, MudBlazor.Color Color);
+
+    private readonly Dictionary<string, SourceTabInfo> _sourceTabs = new()
+    {
+        { "All", new("Tất cả", Icons.Material.Filled.ViewList, MudBlazor.Color.Primary) },
+        { "Web", new("🌐 Website", Icons.Material.Filled.Language, MudBlazor.Color.Info) },
+        { "AppManual", new("📱 App (Thủ công)", Icons.Material.Filled.TouchApp, MudBlazor.Color.Success) },
+        { "AppAuto", new("🤖 App (Tự động)", Icons.Material.Filled.AutoMode, MudBlazor.Color.Secondary) },
+    };
+
+    // ── Source display info ──
+    private record SourceDisplayInfo(string Label, string Icon, MudBlazor.Color Color);
+
+    private SourceDisplayInfo GetSourceInfo(string source) => source switch
+    {
+        "Web" => new("Website", Icons.Material.Filled.Language, MudBlazor.Color.Info),
+        "AppManual" => new("App", Icons.Material.Filled.TouchApp, MudBlazor.Color.Success),
+        "AppAuto" => new("Auto", Icons.Material.Filled.AutoMode, MudBlazor.Color.Secondary),
+        _ => new(source ?? "N/A", Icons.Material.Filled.HelpOutline, MudBlazor.Color.Default),
+    };
+
+    private IEnumerable<AudioActivityLog> FilteredLogs
+    {
+        get
+        {
+            var result = _logs.AsEnumerable();
+
+            // Filter by source tab
+            if (_selectedSource != "All")
+                result = result.Where(x => x.Source == _selectedSource);
+
+            if (!string.IsNullOrWhiteSpace(_searchIdentifier))
+                result = result.Where(x => x.DeviceId.Contains(_searchIdentifier, StringComparison.OrdinalIgnoreCase)
+                    || (x.BrowserFingerprint ?? "").Contains(_searchIdentifier, StringComparison.OrdinalIgnoreCase));
+
+            if (!string.IsNullOrWhiteSpace(_selectedShopId))
+                result = result.Where(x => x.ShopId == _selectedShopId);
+
+            if (_dateRange?.Start != null)
+                result = result.Where(x => x.PlayedAt.ToVietnamTime().Date >= _dateRange.Start.Value.Date);
+                
+            if (_dateRange?.End != null)
+                result = result.Where(x => x.PlayedAt.ToVietnamTime().Date <= _dateRange.End.Value.Date);
+
+            return result;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync(true);
+    }
+
+    private async Task LoadDataAsync(bool showLoading = true)
+    {
+        if (showLoading)
+        {
+            _isLoading = true;
+            StateHasChanged();
+        }
+
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            _logs = await db.AudioActivityLogs
+                .AsNoTracking()
+                .Include(l => l.Shop)
+                .ThenInclude(s => s.ShopTranslations)
+                .OrderByDescending(l => l.PlayedAt)
+                .ToListAsync();
+
+            // Build shop dropdown options từ dữ liệu thực tế trong bảng logs
+            _shopOptions = _logs
+                .Where(l => l.Shop != null)
+                .Select(l => (
+                    Id: l.ShopId,
+                    Name: l.Shop!.ShopTranslations.FirstOrDefault(t => t.LanguageCode == "vi")?.Name
+                          ?? l.Shop.ShopTranslations.FirstOrDefault()?.Name
+                          ?? l.ShopId
+                ))
+                .DistinctBy(x => x.Id)
+                .OrderBy(x => x.Name)
+                .ToList();
+        }
+        finally
+        {
+            if (showLoading) _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Rút gọn UserAgent thành tên nền tảng dễ đọc.
+    /// VD: "Dalvik/2.1.0 (Linux; U; Android 15; sdk_gphone64...)" → "Android 15"
+    ///     "Mozilla/5.0 (Windows NT 10.0; Win64; x64)..." → "Windows • Chrome"
+    /// </summary>
+    private static string ShortenUserAgent(string ua)
+    {
+        if (string.IsNullOrEmpty(ua)) return "N/A";
+
+        // Android app (Dalvik)
+        if (ua.Contains("Android", StringComparison.OrdinalIgnoreCase))
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(ua, @"Android\s+([\d.]+)");
+            return match.Success ? $"Android {match.Groups[1].Value}" : "Android";
+        }
+
+        // iOS app
+        if (ua.Contains("iPhone", StringComparison.OrdinalIgnoreCase) || ua.Contains("iPad", StringComparison.OrdinalIgnoreCase))
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(ua, @"OS\s+([\d_]+)");
+            var ver = match.Success ? match.Groups[1].Value.Replace('_', '.') : "";
+            return ua.Contains("iPad") ? $"iPad {ver}".Trim() : $"iPhone {ver}".Trim();
+        }
+
+        // Desktop browsers
+        var os = "Desktop";
+        if (ua.Contains("Windows")) os = "Windows";
+        else if (ua.Contains("Macintosh") || ua.Contains("Mac OS")) os = "macOS";
+        else if (ua.Contains("Linux")) os = "Linux";
+
+        var browser = "";
+        if (ua.Contains("Edg/")) browser = "Edge";
+        else if (ua.Contains("Chrome/")) browser = "Chrome";
+        else if (ua.Contains("Firefox/")) browser = "Firefox";
+        else if (ua.Contains("Safari/") && !ua.Contains("Chrome")) browser = "Safari";
+
+        return string.IsNullOrEmpty(browser) ? os : $"{os} • {browser}";
+    }
+}

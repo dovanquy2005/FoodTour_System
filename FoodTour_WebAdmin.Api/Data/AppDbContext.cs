@@ -18,6 +18,8 @@ public class AppDbContext : DbContext
     // Thêm bảng TrialLogs để kiểm soát 3 lần nghe thử qua IP
     public DbSet<TrialLog> TrialLogs => Set<TrialLog>();
 
+    public DbSet<AudioActivityLog> AudioActivityLogs => Set<AudioActivityLog>();
+
     // Nội dung độc quyền (Premium Items) gắn theo quán ăn
     public DbSet<ShopItem> ShopItems => Set<ShopItem>();
     public DbSet<ShopItemTranslation> ShopItemTranslations => Set<ShopItemTranslation>();
@@ -134,6 +136,20 @@ public class AppDbContext : DbContext
             entity.HasOne(e => e.ShopItem)
                   .WithMany(s => s.ShopItemTranslations)
                   .HasForeignKey(e => e.ShopItemId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // AudioActivityLog
+        modelBuilder.Entity<AudioActivityLog>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.ShopId);
+            entity.HasIndex(e => e.PlayedAt);
+            entity.HasIndex(e => e.DeviceId);
+
+            entity.HasOne(e => e.Shop)
+                  .WithMany()
+                  .HasForeignKey(e => e.ShopId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
 

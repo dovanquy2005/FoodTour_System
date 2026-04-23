@@ -299,6 +299,25 @@ public class WalkingSimulationService : IRecipient<LanguageChangedMessage>, IRec
             {
                 await _audioService.PlayShopAsync(nextShop);
 
+                // ═══ GHI LOG AUDIO ACTIVITY (AppAuto) — fire-and-forget ═══
+                var shopForLog = nextShop;
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        var deviceId = App.DeviceId;
+                        if (!string.IsNullOrEmpty(deviceId))
+                        {
+                            var langCode = Preferences.Default.Get("AppLanguage", "vi");
+                            await _dbService.RecordAudioLogAsync(deviceId, shopForLog.Id, langCode, "AppAuto");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[GeoFence] AudioLog error (AppAuto): {ex.Message}");
+                    }
+                });
+
                 // ═══ TRIAL LOG: AppAuto — ghi log nền, không chặn phát nhạc ═══
                 // Dùng HashSet debounce để tránh ghi trùng cho cùng shop trong một phiên
                 if (!_loggedAutoShopIds.Contains(nextShop.Id))

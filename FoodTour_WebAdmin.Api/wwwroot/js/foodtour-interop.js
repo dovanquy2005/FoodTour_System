@@ -198,3 +198,42 @@ window.recordServerTrial = async function (shopId) {
 
     return false; // Chặn nếu có lỗi mạng hoặc lỗi ngầm định
 };
+
+// ═══════ GHI LOG AUDIO ACTIVITY (Tracking) ═══════
+// Gọi API /api/audiologs/record để ghi nhận mỗi lần du khách phát audio trên web
+window.recordAudioLog = async function (shopId, languageCode, shopItemId) {
+    try {
+        const fingerprint = await window.getBrowserFingerprint();
+
+        const body = {
+            deviceId: fingerprint,
+            shopId: shopId,
+            languageCode: languageCode || 'vi',
+            browserFingerprint: fingerprint,
+            source: 'Web'
+        };
+
+        if (shopItemId) {
+            body.shopItemId = shopItemId;
+        }
+
+        fetch('/api/audiologs/record', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(body)
+        }).then(res => {
+            if (res.ok) {
+                console.log('[FoodTour] Audio log ghi thành công.');
+            } else {
+                console.warn('[FoodTour] Audio log lỗi:', res.status);
+            }
+        }).catch(err => {
+            console.warn('[FoodTour] Audio log fetch error:', err);
+        });
+    } catch (err) {
+        console.warn('[FoodTour] recordAudioLog error:', err);
+    }
+};

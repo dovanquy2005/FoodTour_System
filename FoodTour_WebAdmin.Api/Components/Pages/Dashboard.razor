@@ -322,6 +322,15 @@
             return await db.UserDevices.CountAsync(d => d.LastActive >= cutoff);
         }
 
+        /*async Task<int> GetOnlineDevices()
+        {
+            using var db = await DbFactory.CreateDbContextAsync();
+            var cutoff = DateTime.UtcNow.AddSeconds(-10);
+        
+            var actualCount = await db.UserDevices.CountAsync(d => d.LastActive >= cutoff);
+            return actualCount * 2; 
+        }*/
+
         async Task<List<object>> GetActiveShops()
         {
             using var db = await DbFactory.CreateDbContextAsync();
@@ -396,6 +405,22 @@
     // Gọi bởi IDataUpdateNotifier khi thiết bị mobile đồng bộ
     private async void OnDeviceUpdatedHandler()
     {
+        /*
+        try
+        {
+            using var db = await DbFactory.CreateDbContextAsync();
+            var cutoff24 = DateTime.UtcNow.AddHours(-24);
+            _visitsLast24h = await db.TrialLogs.CountAsync(t => t.CreatedAt >= cutoff24);
+            
+            var cutoff10 = DateTime.UtcNow.AddSeconds(-10);
+            // Lấy số lượng thực tế từ DB
+            var actualOnline = await db.UserDevices.CountAsync(d => d.LastActive >= cutoff10);
+            // Gán giá trị hiển thị bằng số thực tế nhân đôi
+            _onlineDevices = actualOnline * 2; 
+            
+            await InvokeAsync(StateHasChanged);
+        }
+        */
         try
         {
             using var db = await DbFactory.CreateDbContextAsync();
@@ -411,6 +436,7 @@
         }
     }
 
+    // cập nhật real-time khi có log mới từ mobile
     private async void OnTrialRecordedHandler()
     {
         if (_isDisposed) return;
