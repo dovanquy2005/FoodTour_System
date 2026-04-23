@@ -6,13 +6,14 @@ using System.Text.RegularExpressions;
 
 namespace FoodTour.Mobile.ViewModels;
 
-public partial class ScanViewModel : BaseViewModel
+public partial class ScanViewModel : BaseViewModel, IDisposable
 {
     private readonly WalkingSimulationService _walkingService;
     private readonly DatabaseService _dbService;
 
     [ObservableProperty]
     private bool isScanning = true;
+
 
     // Regex để trích xuất GUID từ URL hoặc chuỗi thô
     // Hỗ trợ cả URL dạng https://foodtour.vn/shop/{guid} hay https://domain/foodtour/{guid}
@@ -27,17 +28,22 @@ public partial class ScanViewModel : BaseViewModel
         _dbService = dbService;
     }
 
+    // Enum TriggerType constant: AppScan = 1
+    private const int TriggerTypeAppScan = 1;
+
     /// <summary>
     /// Xử lý nội dung QR đa năng (Universal QR):
     /// - Nếu nội dung là URL (VD: https://foodtour.vn/shop/0262009c-...) → trích GUID bằng Regex.
     /// - Nếu nội dung là GUID thuần → dùng trực tiếp.
-    /// - Truy vấn Database theo ID → Phát audio → Đóng trang Scan (Hands-free UX).
+    /// - Kiểm tra quyền Trial/Premium → Phát audio → Chuyển sang tab Bản đồ.
     /// </summary>
     [RelayCommand]
     public async Task ProcessQrCodeAsync(string qrContent)
     {
         // Ngăn quét trùng lặp (debounce tầng ViewModel)
         if (!IsScanning) return;
+
+        string? trialAlertMessage = null;
 
         try
         {
@@ -58,15 +64,50 @@ public partial class ScanViewModel : BaseViewModel
             // ── 2. TRUY VẤN SHOP TỪ DATABASE (đúng ngôn ngữ hiện tại) ──
             var shop = await _dbService.GetShopAsync(shopId);
 
-            if (shop != null)
-            {
-                // ── 3. PHÁT AUDIO NGAY (Bypass Cooldown — ưu tiên QR) ──
-                await _walkingService.PlayShopFromQrAsync(shop);
-                System.Diagnostics.Debug.WriteLine($"[ScanViewModel] Đã kích hoạt audio cho: {shop.Name}");
-            }
-            else
+            if (shop == null)
             {
                 System.Diagnostics.Debug.WriteLine($"[ScanViewModel] Không tìm thấy quán với ID: {shopId}");
+                return;
+            }
+
+            // ── 3. KIỂM TRA QUYỀN TRIAL/PREMIUM TRƯỚC KHI PHÁT ──
+            bool shouldPlay = true;
+            var deviceId = App.DeviceId;
+
+            if (!string.IsNullOrEmpty(deviceId))
+            {
+                try
+                {
+                    // Gọi API ghi log trial với TriggerType = AppScan (1)
+                    // API sẽ tự kiểm tra: nếu đã hết lượt → trả về allowed=false
+                    var trialResult = await _dbService.RecordTrialAsync(deviceId, shop.Id, TriggerTypeAppScan);
+
+                    if (trialResult != null && !trialResult.Allowed)
+                    {
+                        // Đã hết 3 lượt quét QR chủ động → chặn phát audio
+                        shouldPlay = false;
+                        trialAlertMessage = "Bạn đã hết 3 lượt quét mã chủ động trong 24h.\n\n" +
+                            "💡 Hãy nâng cấp Premium để nghe không giới hạn, " +
+                            "hoặc sử dụng tính năng tự động thuyết minh trên tab Bản đồ (miễn phí).";
+                        System.Diagnostics.Debug.WriteLine($"[ScanViewModel] QR Trial limit reached for device: {deviceId}");
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[ScanViewModel] Trial recorded OK. Remaining: {trialResult?.Remaining}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Lỗi mạng → cho phép phát (fail-open) để không làm hỏng UX
+                    System.Diagnostics.Debug.WriteLine($"[ScanViewModel] Trial check error (fail-open): {ex.Message}");
+                }
+            }
+
+            // ── 4. PHÁT AUDIO NẾU ĐƯỢC PHÉP ──
+            if (shouldPlay)
+            {
+                await _walkingService.PlayShopFromQrAsync(shop);
+                System.Diagnostics.Debug.WriteLine($"[ScanViewModel] Đã kích hoạt audio cho: {shop.Name}");
             }
         }
         catch (Exception ex)
@@ -75,14 +116,24 @@ public partial class ScanViewModel : BaseViewModel
         }
         finally
         {
-            // ── 4. CHUYỂN SANG TAB BẢN ĐỒ (MapPage) ──
-            // ScanPage là Root Tab → KHÔNG dùng GoToAsync("..") (sẽ crash).
-            // Dùng route tuyệt đối "///MapPage" để nhảy thẳng sang tab Map.
-            // BẮT BUỘC chạy trên MainThread vì Shell navigation đụng UI thread.
+            // ── 5. HIỂN THỊ THÔNG BÁO (nếu có) rồi CHUYỂN TRANG ──
+            var alertMsg = trialAlertMessage; // Capture for lambda
             MainThread.BeginInvokeOnMainThread(async () =>
             {
                 try
                 {
+                    // Nếu hết lượt trial, hiển thị alert trước khi chuyển trang
+                    if (!string.IsNullOrEmpty(alertMsg))
+                    {
+                        if (Application.Current?.Windows.Count > 0 && Application.Current.Windows[0].Page != null)
+                        {
+                            await Application.Current.Windows[0].Page!.DisplayAlert(
+                                "Hết lượt nghe thử",
+                                alertMsg,
+                                "Đã hiểu");
+                        }
+                    }
+
                     await Shell.Current.GoToAsync("///MapPage");
                 }
                 catch (Exception navEx)
@@ -92,6 +143,7 @@ public partial class ScanViewModel : BaseViewModel
             });
         }
     }
+
 
     /// <summary>
     /// Trích xuất chuỗi GUID (Shop ID) từ nội dung QR.
@@ -106,5 +158,10 @@ public partial class ScanViewModel : BaseViewModel
 
         var match = GuidRegex.Match(qrContent);
         return match.Success ? match.Groups[1].Value : null;
+    }
+
+    public void Dispose()
+    {
+        // Reserved for future cleanup if needed
     }
 }

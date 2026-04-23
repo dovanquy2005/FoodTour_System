@@ -1051,10 +1051,12 @@
             }
 
             /// <summary>
-            /// Ghi log một lượt nghe thử (Trial) cho thiết bị qua API.
-            /// Trả về kết quả cho biết có được phép nghe tiếp hay không.
+            /// Ghi log một lượt nghe (Trial/Analytics) cho thiết bị qua API.
+            /// triggerType: 0 = Web, 1 = AppScan, 2 = AppAuto.
+            /// Giá trị triggerType được truyền qua QUERY PARAMETER (?type=N),
+            /// KHÔNG qua JSON body — tránh hoàn toàn lỗi enum deserialization.
             /// </summary>
-            public async Task<TrialResult?> RecordTrialAsync(string hardwareId, string shopId)
+            public async Task<TrialResult?> RecordTrialAsync(string hardwareId, string shopId, int triggerType = 1)
             {
                 if (string.IsNullOrEmpty(hardwareId))
                     return null;
@@ -1062,26 +1064,31 @@
                 try
                 {
                     using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-                    var url = $"{API_BASE_URL}/api/device/trial";
 
-                    var payload = new { DeviceId = hardwareId, ShopId = shopId };
-                    System.Diagnostics.Debug.WriteLine($"[Trial] Ghi log trial cho device: {hardwareId}, shop: {shopId}");
+                    // ── triggerType truyền qua query string, body chỉ chứa DeviceId + ShopId ──
+                    var url = $"{API_BASE_URL}/api/device/trial?type={triggerType}";
 
-                    var response = await httpClient.PostAsJsonAsync(url, payload);
+                    var response = await httpClient.PostAsJsonAsync(url, new
+                    {
+                        DeviceId = hardwareId,
+                        ShopId = shopId
+                    });
+
+                    System.Diagnostics.Debug.WriteLine($"[Trial] POST {url} → {response.StatusCode}");
 
                     if (response.IsSuccessStatusCode)
                     {
                         var result = await response.Content.ReadFromJsonAsync<TrialResult>();
-                        System.Diagnostics.Debug.WriteLine($"[Trial] Allowed: {result?.Allowed}, Remaining: {result?.Remaining}");
+                        System.Diagnostics.Debug.WriteLine($"[Trial] Allowed={result?.Allowed}, Remaining={result?.Remaining}");
                         return result;
                     }
 
-                    System.Diagnostics.Debug.WriteLine($"[Trial] Server trả về: {response.StatusCode}");
+                    System.Diagnostics.Debug.WriteLine($"[Trial] Server error: {response.StatusCode}");
                     return null;
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[Trial] Lỗi: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"[Trial] Exception: {ex.Message}");
                     return null;
                 }
             }

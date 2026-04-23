@@ -1,8 +1,8 @@
 using Microsoft.Maui.Devices.Sensors;
 using FoodTour.Mobile.Models;
+using FoodTour.Mobile.Messages;
 using System.Collections.Concurrent;
 using CommunityToolkit.Mvvm.Messaging;
-using FoodTour.Mobile.Messages;
 
 namespace FoodTour.Mobile.Services;
 
@@ -42,6 +42,12 @@ public class WalkingSimulationService : IRecipient<LanguageChangedMessage>, IRec
     // Cờ đánh dấu đang xử lý phát audio tuần tự (tránh chạy đồng thời)
     private bool _isProcessingQueue = false;
 
+    // ═══════ TRIAL TRACKING (Debounce ghi log Auto-narrate) ═══════
+    // TriggerType: 0=Web, 1=AppScan, 2=AppAuto
+    private const int TriggerTypeAppAuto = 2;
+    // Tránh ghi trùng log Auto-narrate cho cùng một shop trong một phiên đi bộ
+    private readonly HashSet<string> _loggedAutoShopIds = new();
+
     public WalkingSimulationService(DatabaseService dbService, IAudioPlayerService audioService)
     {
         _dbService = dbService;
@@ -63,6 +69,9 @@ public class WalkingSimulationService : IRecipient<LanguageChangedMessage>, IRec
 
         try
         {
+            // Reset debounce log khi bắt đầu phiên đi bộ mới
+            _loggedAutoShopIds.Clear();
+
             // Reload shops mỗi khi start để cập nhật Priority/Radius mới nhất
             var data = await _dbService.GetShopsAsync();
             _shops = data.ToList();
@@ -104,6 +113,9 @@ public class WalkingSimulationService : IRecipient<LanguageChangedMessage>, IRec
         {
             _audioQueue.Clear();
         }
+
+        // Reset debounce log khi dừng phiên
+        _loggedAutoShopIds.Clear();
 
         try
         {
@@ -286,6 +298,30 @@ public class WalkingSimulationService : IRecipient<LanguageChangedMessage>, IRec
             if (autoPlay)
             {
                 await _audioService.PlayShopAsync(nextShop);
+
+                // ═══ TRIAL LOG: AppAuto — ghi log nền, không chặn phát nhạc ═══
+                // Dùng HashSet debounce để tránh ghi trùng cho cùng shop trong một phiên
+                if (!_loggedAutoShopIds.Contains(nextShop.Id))
+                {
+                    _loggedAutoShopIds.Add(nextShop.Id);
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            var deviceId = App.DeviceId;
+                            if (!string.IsNullOrEmpty(deviceId))
+                            {
+                                await _dbService.RecordTrialAsync(deviceId, nextShop.Id, TriggerTypeAppAuto);
+                                Console.WriteLine($"[GeoFence] Trial log (AppAuto): {nextShop.Name}");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            // Im lặng — không được làm gián đoạn trải nghiệm người dùng
+                            Console.WriteLine($"[GeoFence] Trial log error (AppAuto): {ex.Message}");
+                        }
+                    });
+                }
             }
         }
         catch (Exception ex)
@@ -449,6 +485,9 @@ public class WalkingSimulationService : IRecipient<LanguageChangedMessage>, IRec
         {
             _audioQueue.Clear();
         }
+
+        // Reset debounce log khi dừng thủ công
+        _loggedAutoShopIds.Clear();
     }
 
     // Gỡ bỏ đăng ký để tránh memory leak khi class hủy
