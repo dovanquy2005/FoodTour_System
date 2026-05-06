@@ -29,8 +29,8 @@ public class HeatmapController : ControllerBase
         var since = DateTime.UtcNow.AddHours(-hours);
 
         // Server-side only — no data loaded into memory until ToListAsync
-        var data = await db.TrialLogs
-            .Where(t => t.CreatedAt >= since
+        var data = await db.AudioActivityLogs
+            .Where(t => t.PlayedAt >= since
                      && t.ShopId != null
                      && t.ShopId != string.Empty)
             .Join(db.Shops,
@@ -38,7 +38,7 @@ public class HeatmapController : ControllerBase
                   s => s.Id,
                   (t, s) => new
                   {
-                      t.IPAddress,
+                      t.DeviceId,
                       s.Latitude,
                       s.Longitude,
                       ShopId = s.Id
@@ -49,7 +49,7 @@ public class HeatmapController : ControllerBase
                 lat = g.Key.Latitude,
                 lng = g.Key.Longitude,
                 weight = mode == "unique"
-                    ? g.Select(x => x.IPAddress).Distinct().Count()
+                    ? g.Select(x => x.DeviceId).Distinct().Count()
                     : g.Count()
             })
             .Where(x => x.lat != 0 && x.lng != 0 && x.weight > 0)

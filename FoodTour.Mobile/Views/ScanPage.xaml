@@ -6,103 +6,136 @@
              BackgroundColor="Black"
              Shell.NavBarIsVisible="False">
 
-    <!-- Bố cục toàn màn hình: Camera nền + Overlay đè lên trên -->
+    <ContentPage.Resources>
+        <ext:ImageUrlConverter x:Key="ImageUrlConverter"/>
+    </ContentPage.Resources>
+
     <Grid>
+        <!-- ================= SCANNING STATE (Chờ quét mã) ================= -->
+        <Grid IsVisible="{Binding IsScanning}">
+            <!-- Camera ZXing -->
+            <zxing:CameraBarcodeReaderView
+                x:Name="barcodeReader"
+                IsDetecting="{Binding IsScanning}"
+                IsTorchOn="False"
+                HorizontalOptions="Fill"
+                VerticalOptions="Fill"
+                BarcodesDetected="BarcodeReader_BarcodesDetected" />
 
-        <!-- LỚP 1: Camera ZXing fill toàn màn hình -->
-        <zxing:CameraBarcodeReaderView
-            x:Name="barcodeReader"
-            IsDetecting="True"
-            IsTorchOn="False"
-            HorizontalOptions="Fill"
-            VerticalOptions="Fill"
-            BarcodesDetected="BarcodeReader_BarcodesDetected" />
+            <Grid BackgroundColor="#80000000"
+                  HorizontalOptions="Fill"
+                  VerticalOptions="Fill"
+                  InputTransparent="True" />
 
-        <!-- LỚP 2: Overlay tối mờ xung quanh khung ngắm -->
-        <Grid BackgroundColor="#80000000"
-              HorizontalOptions="Fill"
-              VerticalOptions="Fill"
-              InputTransparent="True" />
+            <Grid RowDefinitions="Auto, *, Auto"
+                  Padding="20, 50, 20, 30">
+                <Grid Grid.Row="0">
+                    <VerticalStackLayout HorizontalOptions="Center" Spacing="4">
+                        <Label Text="{ext:Translate Scan_Title}"
+                               TextColor="White"
+                               FontSize="22"
+                               FontAttributes="Bold"
+                               HorizontalOptions="Center"/>
+                        <Label Text="{ext:Translate Scan_Subtitle}"
+                               TextColor="#B0B0B0"
+                               FontSize="13"
+                               HorizontalOptions="Center"/>
+                    </VerticalStackLayout>
+                    <Border x:Name="torchButton"
+                            HorizontalOptions="End"
+                            VerticalOptions="Start"
+                            WidthRequest="44"
+                            HeightRequest="44"
+                            StrokeShape="RoundRectangle 22"
+                            StrokeThickness="0"
+                            BackgroundColor="#44FFFFFF">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="ToggleTorch_Tapped"/>
+                        </Border.GestureRecognizers>
+                        <Label x:Name="torchIcon"
+                               Text="🔦"
+                               FontSize="20"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center"/>
+                    </Border>
+                </Grid>
 
-        <!-- LỚP 3: Nội dung UI chính đè lên trên -->
-        <Grid RowDefinitions="Auto, *, Auto"
-              Padding="20, 50, 20, 30">
+                <Grid Grid.Row="1"
+                      VerticalOptions="Center"
+                      HorizontalOptions="Center"
+                      WidthRequest="260"
+                      HeightRequest="260">
+                    <Border x:Name="viewfinderBorder"
+                            StrokeShape="RoundRectangle 20"
+                            Stroke="{StaticResource Primary}"
+                            StrokeThickness="3"
+                            BackgroundColor="Transparent"
+                            HorizontalOptions="Fill"
+                            VerticalOptions="Fill"/>
+                    <BoxView x:Name="scanLine"
+                             HeightRequest="2"
+                             WidthRequest="220"
+                             Color="#E8672A"
+                             Opacity="0.85"
+                             HorizontalOptions="Center"
+                             VerticalOptions="Start"
+                             TranslationY="20"/>
+                </Grid>
 
-            <!-- ═══════ HEADER ═══════ -->
-            <Grid Grid.Row="0">
-                <!-- Tiêu đề căn giữa -->
-                <VerticalStackLayout HorizontalOptions="Center" Spacing="4">
-                    <Label Text="{ext:Translate Scan_Title}"
-                           TextColor="White"
-                           FontSize="22"
-                           FontAttributes="Bold"
-                           HorizontalOptions="Center"/>
-                    <Label Text="{ext:Translate Scan_Subtitle}"
-                           TextColor="#B0B0B0"
-                           FontSize="13"
-                           HorizontalOptions="Center"/>
-                </VerticalStackLayout>
-
-                <!-- Nút Flash (đèn pin) — góc phải -->
-                <Border x:Name="torchButton"
-                        HorizontalOptions="End"
-                        VerticalOptions="Start"
-                        WidthRequest="44"
-                        HeightRequest="44"
-                        StrokeShape="RoundRectangle 22"
+                <Border Grid.Row="2"
+                        BackgroundColor="#33FFFFFF"
+                        StrokeShape="RoundRectangle 14"
                         StrokeThickness="0"
-                        BackgroundColor="#44FFFFFF">
-                    <Border.GestureRecognizers>
-                        <TapGestureRecognizer Tapped="ToggleTorch_Tapped"/>
-                    </Border.GestureRecognizers>
-                    <Label x:Name="torchIcon"
-                           Text="🔦"
-                           FontSize="20"
-                           HorizontalOptions="Center"
-                           VerticalOptions="Center"/>
+                        Padding="16,12">
+                    <Label Text="{ext:Translate Scan_FooterInstruction}"
+                           TextColor="#D0D0D0"
+                           FontSize="13"
+                           HorizontalTextAlignment="Center"
+                           LineHeight="1.3"/>
                 </Border>
             </Grid>
-
-            <!-- ═══════ KHUNG NGẮM (Viewfinder) ═══════ -->
-            <Grid Grid.Row="1"
-                  VerticalOptions="Center"
-                  HorizontalOptions="Center"
-                  WidthRequest="260"
-                  HeightRequest="260">
-
-                <!-- Viền khung ngắm với bo góc -->
-                <Border x:Name="viewfinderBorder"
-                        StrokeShape="RoundRectangle 20"
-                        Stroke="{StaticResource Primary}"
-                        StrokeThickness="3"
-                        BackgroundColor="Transparent"
-                        HorizontalOptions="Fill"
-                        VerticalOptions="Fill"/>
-
-                <!-- Đường quét laser di chuyển lên xuống -->
-                <BoxView x:Name="scanLine"
-                         HeightRequest="2"
-                         WidthRequest="220"
-                         Color="#E8672A"
-                         Opacity="0.85"
-                         HorizontalOptions="Center"
-                         VerticalOptions="Start"
-                         TranslationY="20"/>
-            </Grid>
-
-            <!-- ═══════ FOOTER ═══════ -->
-            <Border Grid.Row="2"
-                    BackgroundColor="#33FFFFFF"
-                    StrokeShape="RoundRectangle 14"
-                    StrokeThickness="0"
-                    Padding="16,12">
-                <Label Text="{ext:Translate Scan_FooterInstruction}"
-                       TextColor="#D0D0D0"
-                       FontSize="13"
-                       HorizontalTextAlignment="Center"
-                       LineHeight="1.3"/>
-            </Border>
         </Grid>
 
+        <!-- ================= SUCCESS STATE (Đã quét thành công / Shop List) ================= -->
+        <Grid IsVisible="{Binding IsSuccess}" BackgroundColor="#FBF7F2" RowDefinitions="Auto,*">
+            
+            <!-- Minimalist Header -->
+            <Grid Grid.Row="0" HeightRequest="100">
+                <Grid.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#FF8C00" Offset="0"/> <!-- DarkOrange/Orange Gradient -->
+                        <GradientStop Color="#E8672A" Offset="1"/>
+                    </LinearGradientBrush>
+                </Grid.Background>
+
+                <HorizontalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="10">
+                    <Label Text="🎵" FontSize="28" TextColor="White" VerticalOptions="Center"/> <!-- Modern icon instead of noodle bowl -->
+                    <Label Text="FoodTour Vĩnh Khánh" TextColor="White" FontSize="20" FontAttributes="Bold" VerticalOptions="Center"/>
+                </HorizontalStackLayout>
+                
+                <!-- Back Button -->
+                <ImageButton Source="back.png" 
+                             WidthRequest="24" HeightRequest="24" 
+                             HorizontalOptions="Start" VerticalOptions="Center" 
+                             Margin="16,0,0,0"
+                             Command="{Binding ResetScannerCommand}" />
+            </Grid>
+
+            <!-- Shop List -->
+            <ScrollView Grid.Row="1">
+                <VerticalStackLayout Padding="16" Spacing="16">
+                    
+                    <VerticalStackLayout Spacing="4" HorizontalOptions="Center" Margin="0,0,0,10">
+                        <Label Text="Khám phá Ẩm thực" FontSize="20" FontAttributes="Bold" TextColor="#2D1F14" HorizontalOptions="Center"/>
+                        <Label Text="Danh sách toàn bộ quán ăn đặc sắc" FontSize="14" TextColor="#8C7B6B" HorizontalOptions="Center"/>
+                    </VerticalStackLayout>
+
+                    <ActivityIndicator x:Name="LoadingIndicator" IsRunning="{Binding IsLoadingShops}" Color="#E8672A" HorizontalOptions="Center" Margin="0,20,0,0"/>
+
+                    <VerticalStackLayout x:Name="ShopListContainer" Spacing="16"/>
+
+                </VerticalStackLayout>
+            </ScrollView>
+        </Grid>
     </Grid>
 </ContentPage>

@@ -16,8 +16,8 @@ public class LocationTrackingService
     private readonly HttpClient _httpClient;
     
     private readonly List<MovementPoint> _pointBuffer = new();
-    private readonly int _batchSize = 10;
-    private readonly TimeSpan _trackingInterval = TimeSpan.FromSeconds(30);
+    private readonly int _batchSize = 1; // Gửi ngay lập tức (Real-time) thay vì chờ gom 10 điểm
+    private readonly TimeSpan _trackingInterval = TimeSpan.FromSeconds(5); // Lấy tọa độ mỗi 5 giây (thay vì 30 giây)
     private CancellationTokenSource? _cts;
 
     public LocationTrackingService()
@@ -63,7 +63,8 @@ public class LocationTrackingService
                     }
                 }
 
-                var request = new GeolocationRequest(GeolocationAccuracy.Medium, TimeSpan.FromSeconds(10));
+                // Tăng độ chính xác lên High và rút ngắn Timeout
+                var request = new GeolocationRequest(GeolocationAccuracy.High, TimeSpan.FromSeconds(4));
                 // Dùng Geolocation.Default thay vì inject để tránh crash khi DI không tìm thấy IGeolocation
                 var location = await Geolocation.Default.GetLocationAsync(request, token);
 

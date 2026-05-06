@@ -51,6 +51,7 @@ public static class MauiProgram
         builder.Services.AddTransient<LanguageSelectionPage>();
         builder.Services.AddTransient<OnboardingPage>();
         builder.Services.AddSingleton<DatabaseService>();
+        builder.Services.AddSingleton<LogService>();
         // Đăng ký dịch vụ bản địa hóa — đọc file JSON từ app bundle, không cần HttpClient
         builder.Services.AddSingleton<ILocalizationService, LocalizationService>();
         builder.Services.AddSingleton<IAudioPlayerService, AudioPlayerService>();
