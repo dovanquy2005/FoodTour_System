@@ -19,32 +19,42 @@ public class LangblyTranslateService
     {
         if (string.IsNullOrWhiteSpace(text)) return text;
 
-        var requestBody = new
+        try
         {
-            q = text,
-            target = targetLanguage,
-            source = sourceLanguage,
-            format = "text"
-        };
+            var requestUrl = $"https://translate.googleapis.com/translate_a/single?client=gtx&sl={sourceLanguage}&tl={targetLanguage}&dt=t&q={Uri.EscapeDataString(text)}";
+            var response = await _httpClient.GetAsync(requestUrl);
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                return text;
+            }
 
-        var requestUrl = $"https://api.langbly.com/language/translate/v2?key={_apiKey}";
-        var request = new HttpRequestMessage(HttpMethod.Post, requestUrl)
+            var responseString = await response.Content.ReadAsStringAsync();
+            using var document = JsonDocument.Parse(responseString);
+            
+            var translatedText = "";
+            if (document.RootElement.ValueKind == JsonValueKind.Array && document.RootElement.GetArrayLength() > 0)
+            {
+                var parts = document.RootElement[0];
+                foreach (var part in parts.EnumerateArray())
+                {
+                    if (part.ValueKind == JsonValueKind.Array && part.GetArrayLength() > 0)
+                    {
+                        var str = part[0].GetString();
+                        if (!string.IsNullOrEmpty(str))
+                        {
+                            translatedText += str;
+                        }
+                    }
+                }
+            }
+
+            return !string.IsNullOrWhiteSpace(translatedText) ? translatedText : text;
+        }
+        catch
         {
-            Content = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json")
-        };
-        
-        var response = await _httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-
-        var responseString = await response.Content.ReadAsStringAsync();
-        using var document = JsonDocument.Parse(responseString);
-        
-        var translatedText = document.RootElement
-            .GetProperty("data")
-            .GetProperty("translations")[0]
-            .GetProperty("translatedText")
-            .GetString();
-
-        return translatedText ?? string.Empty;
+            // Trong trường hợp lỗi mạng hoặc JSON parse
+            return text;
+        }
     }
 }
