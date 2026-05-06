@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FoodTour.Mobile.Services;
 using FoodTour.Mobile.Models;
+using FoodTour.Mobile.Views;
 using System.Text.RegularExpressions;
 
 namespace FoodTour.Mobile.ViewModels;
@@ -22,6 +23,11 @@ public partial class ScanViewModel : BaseViewModel, IDisposable
         @"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})",
         RegexOptions.Compiled);
 
+    // Regex để kiểm tra Global QR (/foodtour không có shop ID)
+    private static readonly Regex GlobalQrRegex = new(
+        @"^(https?://[^/]+)?/?foodtour/?$",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
     public ScanViewModel(WalkingSimulationService walkingService, DatabaseService dbService)
     {
         _walkingService = walkingService;
@@ -33,7 +39,8 @@ public partial class ScanViewModel : BaseViewModel, IDisposable
 
     /// <summary>
     /// Xử lý nội dung QR đa năng (Universal QR):
-    /// - Nếu nội dung là URL (VD: https://foodtour.vn/shop/0262009c-...) → trích GUID bằng Regex.
+    /// - Nếu nội dung là Global QR (/foodtour) → hiển thị danh sách tất cả quán.
+    /// - Nếu nội dung là URL shop (VD: https://foodtour.vn/shop/0262009c-...) → trích GUID bằng Regex.
     /// - Nếu nội dung là GUID thuần → dùng trực tiếp.
     /// - Kiểm tra quyền Trial/Premium → Phát audio → Chuyển sang tab Bản đồ.
     /// </summary>
@@ -44,11 +51,21 @@ public partial class ScanViewModel : BaseViewModel, IDisposable
         if (!IsScanning) return;
 
         string? trialAlertMessage = null;
+        bool isGlobalQr = false;
 
         try
         {
             // Tạm dừng cờ quét — chặn barcode callback chạy thêm lần nữa
             IsScanning = false;
+
+            // ── 0. KIỂM TRA GLOBAL QR ──
+            if (IsGlobalQr(qrContent))
+            {
+                isGlobalQr = true;
+                System.Diagnostics.Debug.WriteLine($"[ScanViewModel] Global QR detected: {qrContent}");
+                await NavigateToGlobalShopList();
+                return;
+            }
 
             // ── 1. TRÍCH XUẤT SHOP ID TỪ NỘI DUNG QR ──
             string? shopId = ExtractShopId(qrContent);
@@ -116,31 +133,63 @@ public partial class ScanViewModel : BaseViewModel, IDisposable
         }
         finally
         {
-            // ── 5. HIỂN THỊ THÔNG BÁO (nếu có) rồi CHUYỂN TRANG ──
-            var alertMsg = trialAlertMessage; // Capture for lambda
-            MainThread.BeginInvokeOnMainThread(async () =>
+            if (!isGlobalQr)
             {
-                try
+                // ── 5. HIỂN THỊ THÔNG BÁO (nếu có) rồi CHUYỂN TRANG ──
+                var alertMsg = trialAlertMessage; // Capture for lambda
+                MainThread.BeginInvokeOnMainThread(async () =>
                 {
-                    // Nếu hết lượt trial, hiển thị alert trước khi chuyển trang
-                    if (!string.IsNullOrEmpty(alertMsg))
+                    try
                     {
-                        if (Application.Current?.Windows.Count > 0 && Application.Current.Windows[0].Page != null)
+                        // Nếu hết lượt trial, hiển thị alert trước khi chuyển trang
+                        if (!string.IsNullOrEmpty(alertMsg))
                         {
-                            await Application.Current.Windows[0].Page!.DisplayAlert(
-                                "Hết lượt nghe thử",
-                                alertMsg,
-                                "Đã hiểu");
+                            if (Application.Current?.Windows.Count > 0 && Application.Current.Windows[0].Page != null)
+                            {
+                                await Application.Current.Windows[0].Page!.DisplayAlert(
+                                    "Hết lượt nghe thử",
+                                    alertMsg,
+                                    "Đã hiểu");
+                            }
                         }
-                    }
 
-                    await Shell.Current.GoToAsync("///MapPage");
-                }
-                catch (Exception navEx)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[ScanViewModel] Lỗi điều hướng: {navEx.Message}");
-                }
-            });
+                        await Shell.Current.GoToAsync("///MapPage");
+                    }
+                    catch (Exception navEx)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[ScanViewModel] Lỗi điều hướng: {navEx.Message}");
+                    }
+                });
+            }
+        }
+    }
+
+
+    /// <summary>
+    /// Kiểm tra xem nội dung QR có phải là Global QR hay không.
+    /// Global QR: /foodtour, /foodtour/, https://domain/foodtour, https://domain/foodtour/
+    /// </summary>
+    private static bool IsGlobalQr(string qrContent)
+    {
+        if (string.IsNullOrWhiteSpace(qrContent))
+            return false;
+
+        return GlobalQrRegex.IsMatch(qrContent.Trim());
+    }
+
+
+    /// <summary>
+    /// Điều hướng sang trang danh sách quán toàn cục (Global QR).
+    /// </summary>
+    private async Task NavigateToGlobalShopList()
+    {
+        try
+        {
+            await Shell.Current.GoToAsync(nameof(GlobalShopListPage));
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ScanViewModel] Lỗi điều hướng Global QR: {ex.Message}");
         }
     }
 

@@ -29,6 +29,7 @@ public partial class AppShell : Shell
         // Đăng ký route cho trang chi tiết
         Routing.RegisterRoute(nameof(Views.ShopDetailPage), typeof(Views.ShopDetailPage));
         Routing.RegisterRoute(nameof(Views.LanguageSelectionPage), typeof(Views.LanguageSelectionPage));
+        Routing.RegisterRoute(nameof(Views.GlobalShopListPage), typeof(Views.GlobalShopListPage));
 
         // Đăng ký sự kiện lắng nghe kết nối mạng
         Connectivity.ConnectivityChanged += Connectivity_ConnectivityChanged;

@@ -35,6 +35,8 @@ public static class MauiProgram
         // Đăng ký cho tab Scan/QR (Quét mã)
         builder.Services.AddTransient<ScanPage>();
         builder.Services.AddTransient<ScanViewModel>();
+        builder.Services.AddTransient<GlobalShopListPage>();
+        builder.Services.AddTransient<GlobalShopListViewModel>();
         // Đăng ký cho tab Alerts (Thông báo)
         builder.Services.AddTransient<AlertsPage>();
         builder.Services.AddTransient<AlertsViewModel>();

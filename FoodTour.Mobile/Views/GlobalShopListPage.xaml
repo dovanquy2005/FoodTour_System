@@ -1,0 +1,60 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:FoodTour.Mobile.Models"
+             xmlns:viewmodels="clr-namespace:FoodTour.Mobile.ViewModels"
+             xmlns:ext="clr-namespace:FoodTour.Mobile.Extensions"
+             x:Class="FoodTour.Mobile.Views.GlobalShopListPage"
+             x:DataType="viewmodels:GlobalShopListViewModel"
+             BackgroundColor="#FBF7F2"
+             Shell.NavBarIsVisible="True"
+             Title="FoodTour">
+
+    <ContentPage.Resources>
+        <ext:ImageUrlConverter x:Key="ImageUrlConverter"/>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- Hero Header -->
+        <Grid Grid.Row="0" HeightRequest="160">
+            <Grid.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Color="#E8672A" Offset="0"/>
+                    <GradientStop Color="#F4A574" Offset="1"/>
+                </LinearGradientBrush>
+            </Grid.Background>
+
+            <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="4">
+                <Label Text="🍜" FontSize="48" HorizontalOptions="Center"/>
+                <Label Text="FoodTour Vĩnh Khánh" TextColor="White" FontSize="22" FontAttributes="Bold" HorizontalOptions="Center"/>
+            </VerticalStackLayout>
+        </Grid>
+
+        <!-- Shop List -->
+        <ScrollView Grid.Row="1" Margin="0,-20,0,0">
+            <VerticalStackLayout Padding="16" Spacing="12">
+                <!-- Header Card -->
+                <Border BackgroundColor="White"
+                       StrokeShape="RoundRectangle 16"
+                       StrokeThickness="0"
+                       Padding="16">
+                    <Border.Shadow>
+                        <Shadow Radius="6" Opacity="0.08" Offset="0,2"/>
+                    </Border.Shadow>
+                    <VerticalStackLayout Spacing="4" HorizontalOptions="Center">
+                        <Label Text="Khám phá Ẩm thực" FontSize="18" FontAttributes="Bold" TextColor="#2D1F14" HorizontalOptions="Center"/>
+                        <Label Text="Danh sách toàn bộ các quán ăn đặc sắc" FontSize="13" TextColor="#8C7B6B" HorizontalOptions="Center"/>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Loading Indicator -->
+                <ActivityIndicator x:Name="LoadingIndicator" IsRunning="{Binding IsLoading}" Color="#E8672A" HorizontalOptions="Center" Margin="0,20,0,0"/>
+
+                <!-- Shop Cards Container -->
+                <VerticalStackLayout x:Name="ShopListContainer" Spacing="12"/>
+
+                <!-- Empty State -->
+                <Label x:Name="EmptyStateLabel" Text="Không có quán ăn nào" FontSize="16" TextColor="#8C7B6B" HorizontalOptions="Center" Margin="0,40,0,0" IsVisible="False"/>
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>
