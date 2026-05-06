@@ -3,6 +3,7 @@ using System;
 using FoodTour_WebAdmin.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FoodTour_WebAdmin.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260425172800_AddMovementLogs")]
+    partial class AddMovementLogs
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -483,18 +486,6 @@ namespace FoodTour_WebAdmin.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Shop");
-                });
-
-            modelBuilder.Entity("FoodTour_WebAdmin.Api.Models.MovementLog", b =>
-                {
-                    b.HasOne("FoodTour_WebAdmin.Api.Models.UserDeviceModel", "Device")
-                        .WithMany()
-                        .HasForeignKey("DeviceId")
-                        .HasPrincipalKey("DeviceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Device");
                 });
 
             modelBuilder.Entity("FoodTour_WebAdmin.Api.Models.ShopItem", b =>

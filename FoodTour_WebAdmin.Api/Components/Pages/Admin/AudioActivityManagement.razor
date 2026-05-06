@@ -338,7 +338,7 @@ else
                 .Select(l => (
                     Id: l.ShopId,
                     Name: l.Shop!.ShopTranslations.FirstOrDefault(t => t.LanguageCode == "vi")?.Name
-                          ?? l.Shop.ShopTranslations.FirstOrDefault()?.Name
+                          ?? l.Shop!.ShopTranslations.FirstOrDefault()?.Name
                           ?? l.ShopId
                 ))
                 .DistinctBy(x => x.Id)

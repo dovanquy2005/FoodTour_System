@@ -1,0 +1,621 @@
+@page "/admin/movement"
+@using FoodTour_WebAdmin.Api.Data
+@using FoodTour_WebAdmin.Api.Models
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<AppDbContext> DbFactory
+@inject IJSRuntime JS
+
+<PageTitle>Nhật ký di chuyển — FoodTour Admin</PageTitle>
+
+<style>
+    .movement-root {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 64px);
+        background: #F5F1EE;
+        overflow: hidden;
+    }
+
+    /* ─── Top Bar ─── */
+    .movement-topbar {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 12px 20px;
+        background: #fff;
+        border-bottom: 1px solid #EAE2D8;
+        flex-shrink: 0;
+        flex-wrap: wrap;
+    }
+
+    .movement-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #2D1F14;
+        white-space: nowrap;
+    }
+
+    /* ─── Stat Chips in topbar ─── */
+    .stat-chip {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .stat-chip.green  { background: #DCFCE7; color: #15803D; }
+    .stat-chip.blue   { background: #DBEAFE; color: #1D4ED8; }
+    .stat-chip.orange { background: #FEF3C7; color: #B45309; }
+    .stat-chip.purple { background: #EDE9FE; color: #6D28D9; }
+
+    /* ─── Main Body ─── */
+    .movement-body {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+    }
+
+    /* ─── Left Panel ─── */
+    .movement-panel {
+        width: 340px;
+        min-width: 340px;
+        background: #fff;
+        border-right: 1px solid #EAE2D8;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        transition: width .3s ease, min-width .3s ease;
+    }
+    .movement-panel.collapsed {
+        width: 0;
+        min-width: 0;
+    }
+
+    .panel-section {
+        padding: 16px;
+        border-bottom: 1px solid #F0E8E0;
+    }
+    .panel-section-title {
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 1.2px;
+        color: #A89080;
+        text-transform: uppercase;
+        margin-bottom: 12px;
+    }
+
+    .panel-scroll {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    /* ─── Stats Grid ─── */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+    .stat-card {
+        background: #F8F5F2;
+        border-radius: 12px;
+        padding: 12px;
+        border: 1px solid #EAE2D8;
+    }
+    .stat-card .val {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: #2D1F14;
+        line-height: 1.1;
+    }
+    .stat-card .lbl {
+        font-size: 0.68rem;
+        color: #8C7B6B;
+        margin-top: 3px;
+    }
+
+    /* ─── Timeline ─── */
+    .timeline-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 10px 0;
+        position: relative;
+    }
+    .timeline-item:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        left: 11px;
+        top: 32px;
+        bottom: -10px;
+        width: 2px;
+        background: #E8D5C8;
+    }
+    .timeline-dot {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: 10px;
+        font-weight: 700;
+        color: #fff;
+        margin-top: 2px;
+    }
+    .timeline-dot.start  { background: #22C55E; }
+    .timeline-dot.end    { background: #EF4444; }
+    .timeline-dot.mid    { background: #E8672A; }
+    .timeline-info .time { font-size: 0.75rem; font-weight: 700; color: #2D1F14; }
+    .timeline-info .coord { font-size: 0.68rem; color: #8C7B6B; font-family: monospace; }
+
+    /* ─── Map container ─── */
+    .movement-map-wrap {
+        flex: 1;
+        position: relative;
+        overflow: hidden;
+    }
+    #movement-map {
+        height: 100%;
+        width: 100%;
+    }
+
+    /* ─── Toggle panel button ─── */
+    .panel-toggle {
+        position: absolute;
+        top: 16px;
+        left: 16px;
+        z-index: 1000;
+        background: #fff;
+        border: 1px solid #EAE2D8;
+        border-radius: 10px;
+        padding: 6px 10px;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0,0,0,.12);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #5C4B3C;
+    }
+    .panel-toggle:hover { background: #F8F5F2; }
+
+    /* ─── Map empty state overlay ─── */
+    .map-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(255,255,255,.75);
+        backdrop-filter: blur(4px);
+        z-index: 500;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+    }
+    .map-overlay-icon { font-size: 64px; color: #D1C7BD; }
+    .map-overlay-text { font-size: 1rem; font-weight: 600; color: #8C7B6B; margin-top: 12px; }
+
+    /* No-data alert inside panel */
+    .no-data-panel {
+        margin: 16px;
+        padding: 14px;
+        background: #FEF3C7;
+        border-radius: 12px;
+        border: 1px solid #FDE68A;
+        font-size: 0.82rem;
+        color: #92400E;
+    }
+
+    /* Loading dots */
+    .loading-state {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 20px 16px;
+        font-size: 0.85rem;
+        color: #8C7B6B;
+    }
+</style>
+
+<div class="movement-root">
+    <!-- ══ TOP BAR ══ -->
+    <div class="movement-topbar">
+        <span class="movement-title">📍 Nhật ký di chuyển</span>
+
+        <!-- Device Selector -->
+        <div style="min-width:260px; max-width:320px; flex:1;">
+            <MudAutocomplete T="DeviceItem"
+                             Value="SelectedDevice"
+                             ValueChanged="OnDeviceSelected"
+                             SearchFunc="@SearchDevice"
+                             ToStringFunc="@(d => d == null ? null : $"{d.Name}")"
+                             Label="Chọn thiết bị"
+                             Placeholder="Tìm tên hoặc Device ID..."
+                             Variant="Variant.Outlined"
+                             Margin="Margin.Dense"
+                             AdornmentIcon="@Icons.Material.Filled.PhoneAndroid"
+                             AdornmentColor="Color.Primary"
+                             Clearable="true"
+                             MaxItems="50" />
+        </div>
+
+        <!-- Date Range -->
+        <MudDateRangePicker DateRange="DateRange"
+                            PlaceholderStart="Từ ngày"
+                            PlaceholderEnd="Đến ngày"
+                            Variant="Variant.Outlined"
+                            Margin="Margin.Dense"
+                            Style="width: 280px; flex-shrink: 0;"
+                            Clearable="true"
+                            DateRangeChanged="OnDateRangeChanged" />
+
+        <!-- Quick filters -->
+        <MudButtonGroup Variant="Variant.Outlined" Size="Size.Small">
+            <MudButton OnClick="@(() => SetQuickRange(1))">Hôm nay</MudButton>
+            <MudButton OnClick="@(() => SetQuickRange(7))">7 ngày</MudButton>
+            <MudButton OnClick="@(() => SetQuickRange(30))">30 ngày</MudButton>
+        </MudButtonGroup>
+
+        <div style="flex:1;"></div>
+
+        <!-- Summary Chips (visible after data loads) -->
+        @if (MovementPoints.Any())
+        {
+            <span class="stat-chip green"><span>⏱</span>@GetDurationString()</span>
+            <span class="stat-chip blue"><span>📏</span>@GetDistanceString()</span>
+            <span class="stat-chip orange"><span>📍</span>@MovementPoints.Count điểm</span>
+        }
+    </div>
+
+    <!-- ══ BODY ══ -->
+    <div class="movement-body">
+        <!-- ── Left Panel ── -->
+        <div class="movement-panel @(PanelCollapsed ? "collapsed" : "")">
+            <div class="panel-scroll">
+                @if (IsLoading)
+                {
+                    <div class="loading-state">
+                        <MudProgressCircular Size="Size.Small" Color="Color.Primary" Indeterminate="true" />
+                        Đang tải hành trình...
+                    </div>
+                }
+                else if (SelectedDevice != null && !MovementPoints.Any())
+                {
+                    <div class="no-data-panel">
+                        ⚠️ Không có dữ liệu di chuyển cho thiết bị này trong khoảng thời gian đã chọn.
+                    </div>
+                }
+                else if (MovementPoints.Any())
+                {
+                    <!-- Device Info -->
+                    <div class="panel-section">
+                        <div class="panel-section-title">Thiết bị</div>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <MudAvatar Color="Color.Primary" Size="Size.Medium">
+                                <MudIcon Icon="@Icons.Material.Filled.PhoneAndroid" />
+                            </MudAvatar>
+                            <div>
+                                <div style="font-weight:700; color:#2D1F14; font-size:.9rem;">@SelectedDevice!.Name</div>
+                                <div style="font-family:monospace; font-size:.7rem; color:#8C7B6B;">@SelectedDevice.Id</div>
+                                @if (SelectedDevice.Platform != null)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Style="margin:0; height:20px; font-size:.65rem; margin-top:4px;">@SelectedDevice.Platform</MudChip>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stats Cards -->
+                    <div class="panel-section">
+                        <div class="panel-section-title">Tổng quan hành trình</div>
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="val">@GetDistanceString()</div>
+                                <div class="lbl">📏 Quãng đường</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="val">@GetDurationString()</div>
+                                <div class="lbl">⏱ Thời gian</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="val">@MovementPoints.Count</div>
+                                <div class="lbl">📍 Điểm ghi nhận</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="val">@GetAvgSpeedString()</div>
+                                <div class="lbl">⚡ Tốc độ TB</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Timeline -->
+                    <div class="panel-section">
+                        <div class="panel-section-title">Mốc hành trình</div>
+                        @foreach (var (point, idx) in GetTimelinePoints())
+                        {
+                            <div class="timeline-item">
+                                <div class="timeline-dot @(idx == 0 ? "start" : idx == GetTimelinePoints().Count - 1 ? "end" : "mid")">
+                                    @(idx == 0 ? "S" : idx == GetTimelinePoints().Count - 1 ? "E" : (idx).ToString())
+                                </div>
+                                <div class="timeline-info" style="cursor:pointer;" @onclick="@(() => FlyToPoint(point))">
+                                    <div class="time">
+                                        @point.Timestamp.ToLocalTime().ToString("dd/MM HH:mm:ss")
+                                        @if (SelectedDevice?.Id == "ALL") { <span style="font-weight:normal; color:#8C7B6B; font-size:0.7rem; margin-left:4px;">- @point.DeviceName</span> }
+                                    </div>
+                                    <div class="coord">@point.Lat.ToString("F5"), @point.Lng.ToString("F5")</div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- ── Map Area ── -->
+        <div class="movement-map-wrap">
+            <!-- Toggle panel button -->
+            <button class="panel-toggle" @onclick="() => PanelCollapsed = !PanelCollapsed">
+                <MudIcon Icon="@(PanelCollapsed ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ChevronLeft)" Style="font-size:16px;" />
+                @(PanelCollapsed ? "Mở panel" : "Ẩn panel")
+            </button>
+
+            <!-- Empty state overlay -->
+            @if (SelectedDevice == null && !IsLoading)
+            {
+                <div class="map-overlay">
+                    <span class="map-overlay-icon">🗺️</span>
+                    <span class="map-overlay-text">Chọn thiết bị ở thanh trên để xem hành trình</span>
+                </div>
+            }
+
+            <div id="movement-map"></div>
+        </div>
+    </div>
+</div>
+
+@code {
+    // ── State ──────────────────────────────────────────────────────────────────
+    private List<DeviceItem> AllDevices = new();
+    private DeviceItem? SelectedDevice;
+    private List<MovementPointDto> MovementPoints = new();
+    private bool IsLoading = false;
+    private bool PanelCollapsed = false;
+    private double TotalDistanceKm = 0;
+    private MudBlazor.DateRange DateRange = new(DateTime.Today.AddDays(-29), DateTime.Today);
+
+    // ── Init ───────────────────────────────────────────────────────────────────
+    protected override async Task OnInitializedAsync()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+
+        var list = await db.UserDevices
+            .Select(d => new DeviceItem
+            {
+                Id = d.DeviceId,
+                Name = d.DeviceName,
+                Platform = d.Platform,
+                LastActive = d.LastActive
+            })
+            .OrderByDescending(d => d.LastActive)
+            .ToListAsync();
+            
+        AllDevices = new List<DeviceItem> 
+        { 
+            new DeviceItem { Id = "ALL", Name = "Tất cả thiết bị", Platform = "Toàn hệ thống", LastActive = DateTime.Now } 
+        };
+        AllDevices.AddRange(list);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("initMovementMap", "movement-map");
+            
+            // Auto-load "All Devices" data on first load
+            SelectedDevice = AllDevices.FirstOrDefault(d => d.Id == "ALL");
+            await LoadMovementData();
+            StateHasChanged();
+        }
+    }
+
+    // ── Search ─────────────────────────────────────────────────────────────────
+    private Task<IEnumerable<DeviceItem>> SearchDevice(string value, CancellationToken token)
+    {
+        var list = string.IsNullOrWhiteSpace(value)
+            ? AllDevices
+            : AllDevices.Where(x =>
+                x.Name.Contains(value, StringComparison.OrdinalIgnoreCase) ||
+                x.Id.Contains(value, StringComparison.OrdinalIgnoreCase));
+        return Task.FromResult(list.AsEnumerable());
+    }
+
+    // ── Load data ──────────────────────────────────────────────────────────────
+    private async Task OnDeviceSelected(DeviceItem? selected)
+    {
+        SelectedDevice = selected;
+        await LoadMovementData();
+    }
+
+    private async Task OnDateRangeChanged(MudBlazor.DateRange range)
+    {
+        DateRange = range;
+        if (SelectedDevice != null)
+            await LoadMovementData();
+    }
+
+    private async Task SetQuickRange(int days)
+    {
+        DateRange = new MudBlazor.DateRange(DateTime.Today.AddDays(-days + 1), DateTime.Today);
+        if (SelectedDevice != null)
+            await LoadMovementData();
+    }
+
+    private async Task LoadMovementData()
+    {
+        MovementPoints.Clear();
+        TotalDistanceKm = 0;
+
+        if (SelectedDevice == null)
+        {
+            await JS.InvokeVoidAsync("clearMovementPath");
+            return;
+        }
+
+        IsLoading = true;
+        StateHasChanged();
+
+        using var db = await DbFactory.CreateDbContextAsync();
+
+        var from = (DateRange?.Start ?? DateTime.Today.AddDays(-7)).ToUniversalTime();
+        var to   = (DateRange?.End   ?? DateTime.Today).AddDays(1).ToUniversalTime();
+
+        var query = db.MovementLogs.Where(m => m.Timestamp >= from && m.Timestamp < to);
+        if (SelectedDevice.Id != "ALL")
+        {
+            query = query.Where(m => m.DeviceId == SelectedDevice.Id);
+        }
+
+        MovementPoints = await query
+            .OrderBy(m => m.Timestamp)
+            .Select(m => new MovementPointDto
+            {
+                Lat       = m.Latitude,
+                Lng       = m.Longitude,
+                Speed     = m.Speed,
+                Timestamp = m.Timestamp,
+                DeviceId  = m.DeviceId
+            })
+            .ToListAsync();
+
+        var deviceDict = AllDevices.ToDictionary(d => d.Id, d => d.Name);
+        foreach (var p in MovementPoints)
+        {
+            if (deviceDict.TryGetValue(p.DeviceId, out var name))
+                p.DeviceName = name;
+            else
+                p.DeviceName = p.DeviceId;
+        }
+
+        CalculateStats();
+        IsLoading = false;
+        StateHasChanged();
+
+        if (MovementPoints.Any())
+        {
+            bool isAllDevices = SelectedDevice != null && SelectedDevice.Id == "ALL";
+            await JS.InvokeVoidAsync("drawMovementPath", MovementPoints, isAllDevices);
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("clearMovementPath");
+        }
+    }
+
+    // ── Stats ──────────────────────────────────────────────────────────────────
+    private void CalculateStats()
+    {
+        TotalDistanceKm = 0;
+        var grouped = MovementPoints.GroupBy(p => p.DeviceId);
+        foreach (var group in grouped)
+        {
+            var pts = group.ToList();
+            if (pts.Count < 2) continue;
+            for (int i = 0; i < pts.Count - 1; i++)
+                TotalDistanceKm += CalculateDistance(pts[i].Lat, pts[i].Lng, pts[i + 1].Lat, pts[i + 1].Lng);
+        }
+    }
+
+    private string GetDurationString()
+    {
+        if (MovementPoints.Count < 2) return "—";
+        var grouped = MovementPoints.GroupBy(p => p.DeviceId);
+        TimeSpan total = TimeSpan.Zero;
+        foreach (var group in grouped)
+        {
+            var pts = group.ToList();
+            if (pts.Count >= 2)
+            {
+                total += pts.Last().Timestamp - pts.First().Timestamp;
+            }
+        }
+        return total.TotalHours >= 1 ? $"{(int)total.TotalHours}g {total.Minutes}p" : $"{total.Minutes}p {total.Seconds}s";
+    }
+
+    private string GetDistanceString()
+    {
+        if (TotalDistanceKm == 0) return "—";
+        return TotalDistanceKm < 1 ? $"{(int)(TotalDistanceKm * 1000)} m" : $"{TotalDistanceKm:F2} km";
+    }
+
+    private string GetAvgSpeedString()
+    {
+        var validSpeeds = MovementPoints.Where(p => p.Speed.HasValue && p.Speed > 0).Select(p => p.Speed!.Value).ToList();
+        if (!validSpeeds.Any()) return "—";
+        var avgKmh = validSpeeds.Average() * 3.6;
+        return $"{avgKmh:F1} km/h";
+    }
+
+    // ── Timeline: lấy tối đa 8 mốc (đầu, cuối, và đều nhau ở giữa) ───────────
+    private List<(MovementPointDto point, int idx)> GetTimelinePoints()
+    {
+        if (!MovementPoints.Any()) return new();
+        if (MovementPoints.Count <= 8)
+            return MovementPoints.Select((p, i) => (p, i)).ToList();
+
+        var result = new List<(MovementPointDto, int)>();
+        result.Add((MovementPoints.First(), 0));
+        var step = (MovementPoints.Count - 2) / 6;
+        for (int i = 1; i <= 6; i++)
+            result.Add((MovementPoints[i * step], i));
+        result.Add((MovementPoints.Last(), 7));
+        return result;
+    }
+
+    private async Task FlyToPoint(MovementPointDto p)
+    {
+        await JS.InvokeVoidAsync("flyToPoint", p.Lat, p.Lng);
+    }
+
+    // ── Haversine ─────────────────────────────────────────────────────────────
+    private double CalculateDistance(double lat1, double lon1, double lat2, double lon2)
+    {
+        const double R = 6371;
+        var dLat = Deg2Rad(lat2 - lat1);
+        var dLon = Deg2Rad(lon2 - lon1);
+        var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2)
+              + Math.Cos(Deg2Rad(lat1)) * Math.Cos(Deg2Rad(lat2))
+              * Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+        return R * 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+    }
+    private double Deg2Rad(double d) => d * Math.PI / 180;
+
+    // ── DTOs ──────────────────────────────────────────────────────────────────
+    public class DeviceItem
+    {
+        public string Id       { get; set; } = string.Empty;
+        public string Name     { get; set; } = string.Empty;
+        public string Platform { get; set; } = string.Empty;
+        public DateTime LastActive { get; set; }
+
+        public override bool Equals(object? o) => o is DeviceItem d && d.Id == Id;
+        public override int GetHashCode()       => Id.GetHashCode();
+    }
+
+    public class MovementPointDto
+    {
+        public double   Lat       { get; set; }
+        public double   Lng       { get; set; }
+        public double?  Speed     { get; set; }
+        public DateTime Timestamp { get; set; }
+        public string   DeviceId  { get; set; } = string.Empty;
+        public string   DeviceName{ get; set; } = string.Empty;
+    }
+}

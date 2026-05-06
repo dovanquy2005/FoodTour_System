@@ -20,9 +20,15 @@ public class AppDbContext : DbContext
 
     public DbSet<AudioActivityLog> AudioActivityLogs => Set<AudioActivityLog>();
 
+    // Thanh toán / License Codes
+    public DbSet<PaymentLog> PaymentLogs => Set<PaymentLog>();
+
     // Nội dung độc quyền (Premium Items) gắn theo quán ăn
     public DbSet<ShopItem> ShopItems => Set<ShopItem>();
     public DbSet<ShopItemTranslation> ShopItemTranslations => Set<ShopItemTranslation>();
+
+    // Nhật ký di chuyển
+    public DbSet<MovementLog> MovementLogs => Set<MovementLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -151,6 +157,30 @@ public class AppDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(e => e.ShopId)
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // MovementLog - Đánh index để tối ưu truy vấn vẽ bản đồ
+        modelBuilder.Entity<MovementLog>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.DeviceId);
+            entity.HasIndex(e => e.Timestamp);
+            // Index kết hợp để lọc theo DeviceId và khoảng thời gian siêu nhanh
+            entity.HasIndex(e => new { e.DeviceId, e.Timestamp });
+
+            entity.HasOne(e => e.Device)
+                  .WithMany()
+                  .HasForeignKey(e => e.DeviceId)
+                  .HasPrincipalKey(e => e.DeviceId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // PaymentLog
+        modelBuilder.Entity<PaymentLog>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.CreatedAt);
+            entity.HasIndex(e => e.DeviceId);
         });
 
 

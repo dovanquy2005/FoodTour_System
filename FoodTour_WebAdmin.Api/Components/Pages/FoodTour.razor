@@ -8,7 +8,9 @@
 @inject IJSRuntime JS
 @inject IWebHostEnvironment Env
 @inject ISnackbar Snackbar
+@inject FoodTour_WebAdmin.Api.Services.IDataUpdateNotifier Notifier
 @using System.Text.Json
+@implements IDisposable
 
 <PageTitle>FoodTour — Vĩnh Khánh Street Eats</PageTitle>
 
@@ -321,14 +323,7 @@
             <div class="ft-card">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                     <p class="ft-section-title" style="margin:0;">🎧 @Ui("Landing_AudioGuideTitle")</p>
-                    @if (_isPremium)
-                    {
-                        <MudChip T="string" Color="Color.Warning" Size="Size.Small" Icon="@Icons.Material.Filled.WorkspacePremium">@Ui("BadgePremium")</MudChip>
-                    }
-                    else
-                    {
-                        <MudChip T="string" Color="Color.Info" Size="Size.Small" Icon="@Icons.Material.Filled.Headphones">@Ui("BadgeTrial")</MudChip>
-                    }
+                    <MudChip T="string" Color="Color.Info" Size="Size.Small" Icon="@Icons.Material.Filled.Headphones">@Ui("BadgeTrial")</MudChip>
                 </div>
                 
                 @if (!string.IsNullOrEmpty(_currentTranslation?.AudioUrl) && _currentTranslation.IsAudioGenerated)
@@ -361,25 +356,7 @@
         </div>
     }
 
-    <!-- Payment Modal -->
-    <MudDialog @bind-Visible="_showPaymentModal" Options="_dialogOptions">
-        <TitleContent>
-            <MudText Typo="Typo.h6" Style="font-weight:700;">@Ui("PaymentTitle")</MudText>
-        </TitleContent>
-        <DialogContent>
-            <MudStack AlignItems="AlignItems.Center" Spacing="3" Style="padding: 16px 0;">
-                <MudIcon Icon="@Icons.Material.Filled.QrCode2" Style="font-size: 120px; color:#2D1F14;" />
-                <MudText Typo="Typo.h6" Style="font-weight: 800; color:#E8672A;">@Ui("PaymentPrice")</MudText>
-                <MudText Typo="Typo.body2" Style="text-align: center; color:#5C4A3D;">
-                    @((MarkupString)Ui("PaymentDesc"))
-                </MudText>
-            </MudStack>
-        </DialogContent>
-        <DialogActions>
-            <MudButton Variant="Variant.Text" OnClick="() => _showPaymentModal = false">@Ui("BtnCancel")</MudButton>
-            <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="ConfirmPayment">@Ui("BtnConfirm")</MudButton>
-        </DialogActions>
-    </MudDialog>
+
 
     <!-- App Download Payment Modal -->
     <MudDialog @bind-Visible="_showAppPaymentModal" Options="_dialogOptions">
@@ -571,11 +548,33 @@
         }
 
         LoadUiStrings(_selectedLang);
+        
+        Notifier.OnShopUpdated += OnShopUpdated;
+    }
+
+    private void OnShopUpdated()
+    {
+        InvokeAsync(async () =>
+        {
+            await LoadDataAsync();
+        });
+    }
+
+    public void Dispose()
+    {
+        Notifier.OnShopUpdated -= OnShopUpdated;
     }
 
     protected override async Task OnParametersSetAsync()
     {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
         _loading = true;
+        StateHasChanged();
+        
         using var Db = await DbFactory.CreateDbContextAsync();
         
         if (string.IsNullOrEmpty(Id))
@@ -583,6 +582,7 @@
             _shop = null;
             _currentTranslation = null;
             _allShops = await Db.Shops
+                .Where(s => s.IsActive)
                 .Include(s => s.ShopTranslations)
                 .AsNoTracking()
                 .ToListAsync();
@@ -591,6 +591,7 @@
         {
             _allShops = new();
             _shop = await Db.Shops
+                .Where(s => s.IsActive)
                 .Include(s => s.ShopTranslations)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.Id == Id);
@@ -605,25 +606,12 @@
         StateHasChanged();
     }
 
-    private bool _isPremium = false;
     private int _freeTrialCount = 0;
-    private bool _showPaymentModal = false;
     private bool _showAppPaymentModal = false;
 
     private readonly DialogOptions _dialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
 
-    private void OpenPaymentModal() => _showPaymentModal = true;
     private void OpenAppPaymentModal() => _showAppPaymentModal = true;
-
-    private async Task ConfirmPayment()
-    {
-        var expiry = DateTime.UtcNow.AddHours(24);
-        await JS.InvokeVoidAsync("localStorage.setItem", "foodtour_premiumExpiry", expiry.ToString("O"));
-        _isPremium = true;
-        _showPaymentModal = false;
-        StateHasChanged();
-        Snackbar.Add(Ui("ToastSuccess"), Severity.Success);
-    }
 
     private async Task ConfirmAppPayment()
     {
@@ -640,12 +628,7 @@
         {
             try
             {
-                // Retrieve Premium Status
-                var expiryStr = await JS.InvokeAsync<string>("localStorage.getItem", "foodtour_premiumExpiry");
-                if (DateTime.TryParse(expiryStr, out var expiry) && expiry.ToUniversalTime() > DateTime.UtcNow)
-                {
-                    _isPremium = true;
-                }
+
 
                 // Retrieve Trial Count
                 var trialStr = await JS.InvokeAsync<string>("localStorage.getItem", "foodtour_freeTrialCount");
@@ -687,36 +670,27 @@
     {
         if (!_isPlaying)
         {
-            if (_isPremium)
+            // Kiểm tra bằng quyền lực tuyệt đối của Server (theo IP)
+            // Chặn Incognito / F5 Loophole
+            bool isAllowedFromServer = await JS.InvokeAsync<bool>("recordServerTrial", Id);
+
+            if (isAllowedFromServer)
             {
+                _freeTrialCount++;
+                try { await JS.InvokeVoidAsync("localStorage.setItem", "foodtour_freeTrialCount", _freeTrialCount.ToString()); } catch {}
+                
+                int remaining = 3 - _freeTrialCount;
+                if (remaining < 0) remaining = 0; // fallback UI an toàn
+                
+                Snackbar.Add(Ui("ToastTrial", remaining), Severity.Info);
                 await TryPlay("playAudio");
-                // ═══ GHI LOG AUDIO ACTIVITY (Web - Premium) ═══
+                // ═══ GHI LOG AUDIO ACTIVITY (Web - Trial) ═══
                 _ = JS.InvokeVoidAsync("recordAudioLog", Id, _selectedLang, null);
             }
             else
             {
-                // Kiểm tra bằng quyền lực tuyệt đối của Server (theo IP)
-                // Chặn Incognito / F5 Loophole
-                bool isAllowedFromServer = await JS.InvokeAsync<bool>("recordServerTrial", Id);
-
-                if (isAllowedFromServer)
-                {
-                    _freeTrialCount++;
-                    try { await JS.InvokeVoidAsync("localStorage.setItem", "foodtour_freeTrialCount", _freeTrialCount.ToString()); } catch {}
-                    
-                    int remaining = 3 - _freeTrialCount;
-                    if (remaining < 0) remaining = 0; // fallback UI an toàn
-                    
-                    Snackbar.Add(Ui("ToastTrial", remaining), Severity.Info);
-                    await TryPlay("playAudio");
-                    // ═══ GHI LOG AUDIO ACTIVITY (Web - Trial) ═══
-                    _ = JS.InvokeVoidAsync("recordAudioLog", Id, _selectedLang, null);
-                }
-                else
-                {
-                    _showPaymentModal = true;
-                    StateHasChanged(); // Đảm bảo đồng bộ ngay lập tức popup modal
-                }
+                _showAppPaymentModal = true;
+                StateHasChanged(); // Đảm bảo đồng bộ ngay lập tức popup modal
             }
         }
         else

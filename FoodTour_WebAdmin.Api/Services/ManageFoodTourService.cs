@@ -16,6 +16,7 @@ public class ManageFoodTourService
     private readonly ILogger<ManageFoodTourService> _logger;
     // SignalR Hub — dùng để đẩy thông báo cập nhật tới Mobile App
     private readonly IHubContext<UpdateHub> _hubContext;
+    private readonly IDataUpdateNotifier _notifier;
     
     // Cấu hình ngôn ngữ đích
     private readonly string[] _targetLanguages = { "en", "ja", "ru", "zh" };
@@ -28,7 +29,8 @@ public class ManageFoodTourService
         ITtsService ttsService,
         ISupabaseStorageService storageService,
         ILogger<ManageFoodTourService> logger,
-        IHubContext<UpdateHub> hubContext)
+        IHubContext<UpdateHub> hubContext,
+        IDataUpdateNotifier notifier)
     {
         _contextFactory = contextFactory;
         _translateService = translateService;
@@ -36,6 +38,7 @@ public class ManageFoodTourService
         _storageService = storageService;
         _logger = logger;
         _hubContext = hubContext;
+        _notifier = notifier;
     }
 
     public async Task<ShopModel> CreateShopWithTranslationAsync(CreateShopRequest request)
@@ -113,6 +116,7 @@ public class ManageFoodTourService
 
             // Thông báo tới tất cả Mobile App đang kết nối: có Shop mới được tạo
             await _hubContext.Clients.All.SendAsync("ReceiveUpdate", shop.Id);
+            _notifier.NotifyShopUpdated();
 
             return shop;
         }
@@ -211,6 +215,7 @@ public class ManageFoodTourService
 
             // Thông báo tới tất cả Mobile App: Shop vừa được cập nhật (audio, radius, text...)
             await _hubContext.Clients.All.SendAsync("ReceiveUpdate", shopId);
+            _notifier.NotifyShopUpdated();
         }
         catch (Exception)
         {

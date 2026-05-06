@@ -53,6 +53,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<ILocalizationService, LocalizationService>();
         builder.Services.AddSingleton<IAudioPlayerService, AudioPlayerService>();
         builder.Services.AddSingleton<WalkingSimulationService>();
+        builder.Services.AddSingleton<LocationTrackingService>();
         builder.Services.AddSingleton<PlayerViewModel>();
 
         // Đăng ký dịch vụ lấy Hardware ID (Android-specific: AndroidId)

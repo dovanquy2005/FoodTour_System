@@ -9,15 +9,19 @@ public interface IDataUpdateNotifier
 {
     event Action? OnDeviceUpdated;
     event Action? OnTrialRecorded;
+    event Action? OnShopUpdated;
     void NotifyDeviceUpdated();
     void NotifyTrialRecorded();
+    void NotifyShopUpdated();
 }
 
 public class DataUpdateNotifier : IDataUpdateNotifier
 {
     public event Action? OnDeviceUpdated;
     public event Action? OnTrialRecorded;
+    public event Action? OnShopUpdated;
 
     public void NotifyDeviceUpdated() => OnDeviceUpdated?.Invoke();
     public void NotifyTrialRecorded() => OnTrialRecorded?.Invoke();
+    public void NotifyShopUpdated() => OnShopUpdated?.Invoke();
 }

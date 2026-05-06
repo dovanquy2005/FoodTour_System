@@ -3,7 +3,7 @@ namespace FoodTour.Mobile
     public static class AppConfig
     {
         // Chuyển đổi giữa môi trường Local và Production
-        public static bool IsLocalEnvironment = false;
+        public static bool IsLocalEnvironment = true;
         
         // Cờ đánh dấu tự động fallback sang localhost nếu cloud web server (Render) bị lỗi (như 521)
         public static bool UseLocalFallback = false;

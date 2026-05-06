@@ -24,6 +24,7 @@ public partial class App : Application
 
     private readonly ViewModels.PlayerViewModel _playerVm;
     private readonly Services.WalkingSimulationService _locationService;
+    private readonly Services.LocationTrackingService _trackingService;
     private Services.ILocalizationService? _localizationService;
 
     // ── Deep Link: Lưu URI chờ xử lý khi app chưa khởi tạo xong ──
@@ -40,12 +41,14 @@ public partial class App : Application
         Services.DatabaseService databaseService, 
         ViewModels.PlayerViewModel playerVm, 
         Services.WalkingSimulationService locationService, 
+        Services.LocationTrackingService trackingService,
         Services.IHardwareIdService hardwareIdService)
     {
         InitializeComponent();
         _playerVm = playerVm;
         _locationService = locationService; 
         _localizationService = localizationService;
+        _trackingService = trackingService;
 
         // Gán ngay DeviceId bằng HardwareId thay vì chờ DB
         DeviceId = hardwareIdService.GetHardwareId();
@@ -265,9 +268,17 @@ public partial class App : Application
     {
         var window = new Window(_initialPage);
 
-        // Đăng ký sự kiện Vòng đời của Window để quản lý Heartbeat
-        window.Activated += (s, e) => StartHeartbeat();
-        window.Deactivated += (s, e) => StopHeartbeat();
+        // Đăng ký sự kiện Vòng đời của Window để quản lý Heartbeat và GPS Tracking
+        window.Activated += (s, e) => 
+        {
+            StartHeartbeat();
+            _trackingService.StartTracking();
+        };
+        window.Deactivated += (s, e) => 
+        {
+            StopHeartbeat();
+            _trackingService.StopTracking();
+        };
 
         return window;
     }

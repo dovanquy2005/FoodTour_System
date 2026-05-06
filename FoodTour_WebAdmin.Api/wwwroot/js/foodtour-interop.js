@@ -237,3 +237,83 @@ window.recordAudioLog = async function (shopId, languageCode, shopItemId) {
         console.warn('[FoodTour] recordAudioLog error:', err);
     }
 };
+
+// ═══════ MOVEMENT TRACKING MAP (Leaflet) ═══════
+window._movementMap      = null;
+window._movementLayers   = [];   // tất cả layer vẽ lên map
+
+window.initMovementMap = function (elementId) {
+    var container = document.getElementById(elementId);
+    if (!container) return;
+
+    if (window._movementMap) {
+        window._movementMap.remove();
+        window._movementMap = null;
+    }
+
+    window._movementMap = L.map(elementId, { zoomControl: false }).setView([10.7593, 106.7082], 16);
+
+    // Tile layer sạch không có màu nhạt
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap',
+        maxZoom: 19
+    }).addTo(window._movementMap);
+
+    // Zoom control ở góc phải trên
+    L.control.zoom({ position: 'topright' }).addTo(window._movementMap);
+
+    // Xử lý lỗi tràn viền (xám) khi resize container (vd: đóng/mở panel)
+    if (window.ResizeObserver) {
+        new ResizeObserver(function () {
+            if (window._movementMap) {
+                window._movementMap.invalidateSize();
+            }
+        }).observe(container);
+    }
+};
+
+window.clearMovementPath = function () {
+    if (!window._movementMap) return;
+    window._movementLayers.forEach(l => window._movementMap.removeLayer(l));
+    window._movementLayers = [];
+};
+
+window.drawMovementPath = function (points, isAllDevices) {
+    if (!window._movementMap || !points || points.length === 0) return;
+
+    window.clearMovementPath();
+
+    var heatData = points.map(p => [p.lat, p.lng, 1.0]);
+
+    if (typeof L.heatLayer !== 'undefined') {
+        var heatLayer = L.heatLayer(heatData, {
+            radius: 30,
+            blur: 20,
+            maxZoom: 17,
+            max: 1.0,
+            minOpacity: 0.5,
+            gradient: { 0.0: 'blue', 0.5: 'lime', 1: 'red' }
+        }).addTo(window._movementMap);
+        window._movementLayers.push(heatLayer);
+    } else {
+        console.warn('[FoodTour] leaflet-heat is not loaded!');
+    }
+
+    var latLngs = points.map(p => [p.lat, p.lng]);
+    if (latLngs.length > 0) {
+        var bounds = L.latLngBounds(latLngs);
+        window._movementMap.fitBounds(bounds, { padding: [60, 60], maxZoom: 17 });
+    }
+
+    // Ensure map displays correctly after bounds change
+    setTimeout(function () {
+        if (window._movementMap) window._movementMap.invalidateSize();
+    }, 100);
+};
+
+window.flyToPoint = function (lat, lng) {
+    if (!window._movementMap) return;
+    window._movementMap.flyTo([lat, lng], 18, { animate: true, duration: 1 });
+};
+
+
