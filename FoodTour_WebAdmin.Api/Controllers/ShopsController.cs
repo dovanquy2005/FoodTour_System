@@ -227,4 +227,67 @@ public class ShopsController : ControllerBase
             topShopName = topShop?.Name ?? "N/A"
         });
     }
+
+    // ═══════ API TEST JMETER (MÔ PHỎNG LOGIC ĐI BỘ TRÊN MOBILE) ═══════
+    // POST: api/shops/nearby
+    // Dành cho JMeter test Logic Priority & Distance tại các vùng giao thoa
+    [HttpPost("nearby")]
+    public async Task<ActionResult> GetNearbyShops([FromBody] FoodTour_WebAdmin.Api.DTOs.NearbyRequest request)
+    {
+        using var _db = await _dbFactory.CreateDbContextAsync();
+        
+        // 1. Lấy tất cả quán đang kích hoạt
+        var activeShops = await _db.Shops
+            .Include(s => s.ShopTranslations)
+            .Where(s => s.IsActive)
+            .ToListAsync();
+
+        // 2. Tính toán khoảng cách và lọc quán nằm trong bán kính
+        var nearbyShops = activeShops
+            .Select(s => new 
+            {
+                Shop = s,
+                DistanceMeters = CalculateDistance(request.Lat, request.Lng, s.Latitude, s.Longitude),
+                ActivationRadius = s.Radius > 0 ? s.Radius : 50.0 // Mặc định 50m nếu quán chưa set
+            })
+            .Where(x => x.DistanceMeters <= x.ActivationRadius)
+            // 3. LOGIC ƯU TIÊN: Ưu tiên Priority (số nhỏ hơn) -> Ưu tiên khoảng cách (gần hơn)
+            .OrderBy(x => x.Shop.Priority) 
+            .ThenBy(x => x.DistanceMeters) 
+            .Select(x => new 
+            {
+                Id = x.Shop.Id,
+                Name = x.Shop.Name,
+                Priority = x.Shop.Priority,
+                DistanceMeters = Math.Round(x.DistanceMeters, 2),
+                Radius = x.ActivationRadius,
+                Latitude = x.Shop.Latitude,
+                Longitude = x.Shop.Longitude
+            })
+            .ToList();
+
+        return Ok(new
+        {
+            UserLocation = new { request.Lat, request.Lng },
+            TotalFound = nearbyShops.Count,
+            // Kết quả trả về sẽ xếp Quán ưu tiên cao nhất (hoặc gần nhất nếu cùng Priority) lên đầu tiên [0]
+            Results = nearbyShops
+        });
+    }
+
+    // Helper: Tính khoảng cách (mét) giữa 2 tọa độ GPS (Công thức Haversine - tương đương Location.CalculateDistance trên Mobile)
+    private static double CalculateDistance(double lat1, double lon1, double lat2, double lon2)
+    {
+        var dLat = (lat2 - lat1) * Math.PI / 180.0;
+        var dLon = (lon2 - lon1) * Math.PI / 180.0;
+
+        var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                Math.Cos(lat1 * Math.PI / 180.0) * Math.Cos(lat2 * Math.PI / 180.0) *
+                Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+
+        var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+
+        // Bán kính trái đất ~6371km = 6371000m
+        return 6371000 * c;
+    }
 }
