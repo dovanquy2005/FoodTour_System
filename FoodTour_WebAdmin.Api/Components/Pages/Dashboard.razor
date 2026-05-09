@@ -47,23 +47,6 @@
             </MudPaper>
         </MudItem>
 
-
-        <MudItem xs="12" sm="6" md="3">
-            <MudPaper Class="stat-card" Elevation="0"
-                      Style="padding: 24px; border-radius: 16px; border: 1px solid #F0E8E0; background: linear-gradient(135deg, #FFFFFF, #F0FFF4);">
-                <MudStack Spacing="2">
-                    <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                        <MudAvatar Size="MudBlazor.Size.Medium"
-                                   Style="background: linear-gradient(135deg, #5DAA68, #7BC87F);">
-                            <MudIcon Icon="@Icons.Material.Filled.People" Style="color: white;" />
-                        </MudAvatar>
-                    </MudStack>
-                    <MudText Typo="Typo.h4" Style="font-weight: 800; color: #2D1F14;">@_visitsLast24h</MudText>
-                    <MudText Typo="Typo.body2" Style="color: #8C7B6B;">Lượt truy cập 24h qua</MudText>
-                </MudStack>
-            </MudPaper>
-        </MudItem>
-
         <MudItem xs="12" sm="6" md="3">
             <MudPaper Class="stat-card" Elevation="0"
                       Style="padding: 24px; border-radius: 16px; border: 1px solid #F0E8E0; background: linear-gradient(135deg, #FFFFFF, #FFFBF0);">
@@ -187,7 +170,6 @@
 
 @code {
     private int _totalShops;
-    private int _visitsLast24h;
     private int _onlineDevices;
     private List<ShopModel>? _recentShops;
     private bool _isDisposed = false;
@@ -298,13 +280,6 @@
             return await db.Shops.CountAsync();
         }
 
-        async Task<int> GetVisits()
-        {
-            using var db = await DbFactory.CreateDbContextAsync();
-            var cutoff = DateTime.UtcNow.AddHours(-24);
-            return await db.TrialLogs.CountAsync(t => t.CreatedAt >= cutoff);
-        }
-
         async Task<List<ShopModel>> GetRecentShops()
         {
             using var db = await DbFactory.CreateDbContextAsync();
@@ -328,7 +303,7 @@
             var cutoff = DateTime.UtcNow.AddSeconds(-10);
         
             var actualCount = await db.UserDevices.CountAsync(d => d.LastActive >= cutoff);
-            return actualCount * 2; 
+            return actualCount * 2;
         }*/
 
         async Task<List<object>> GetActiveShops()
@@ -355,17 +330,15 @@
 
         // Thực thi song song tất cả các task
         var totalShopsTask = GetTotalShops();
-        var visitsTask = GetVisits();
         var recentShopsTask = GetRecentShops();
         var onlineDevicesTask = GetOnlineDevices();
         var activeShopsTask = GetActiveShops();
         var heatmapTask = LoadHeatmapPoints(); // Giả định hàm này cũng async
 
-        await Task.WhenAll(totalShopsTask, visitsTask, recentShopsTask, onlineDevicesTask, activeShopsTask, heatmapTask);
+        await Task.WhenAll(totalShopsTask, recentShopsTask, onlineDevicesTask, activeShopsTask, heatmapTask);
 
         // Gán giá trị
         _totalShops = totalShopsTask.Result;
-        _visitsLast24h = visitsTask.Result;
         _recentShops = recentShopsTask.Result;
         _onlineDevices = onlineDevicesTask.Result;
         _allActiveShops = activeShopsTask.Result;
@@ -409,14 +382,11 @@
         try
         {
             using var db = await DbFactory.CreateDbContextAsync();
-            var cutoff24 = DateTime.UtcNow.AddHours(-24);
-            _visitsLast24h = await db.TrialLogs.CountAsync(t => t.CreatedAt >= cutoff24);
-            
             var cutoff10 = DateTime.UtcNow.AddSeconds(-10);
             // Lấy số lượng thực tế từ DB
             var actualOnline = await db.UserDevices.CountAsync(d => d.LastActive >= cutoff10);
             // Gán giá trị hiển thị bằng số thực tế nhân đôi
-            _onlineDevices = actualOnline * 2; 
+            _onlineDevices = actualOnline * 2;
             
             await InvokeAsync(StateHasChanged);
         }
@@ -424,8 +394,6 @@
         try
         {
             using var db = await DbFactory.CreateDbContextAsync();
-            var cutoff24 = DateTime.UtcNow.AddHours(-24);
-            _visitsLast24h = await db.TrialLogs.CountAsync(t => t.CreatedAt >= cutoff24);
             var cutoff10 = DateTime.UtcNow.AddSeconds(-10);
             _onlineDevices = await db.UserDevices.CountAsync(d => d.LastActive >= cutoff10);
             await InvokeAsync(StateHasChanged);
