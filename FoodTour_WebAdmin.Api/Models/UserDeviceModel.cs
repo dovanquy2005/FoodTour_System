@@ -26,7 +26,4 @@ public class UserDeviceModel
     /// <summary>Thời điểm hết hạn Premium (null = chưa mua hoặc vĩnh viễn).</summary>
     public DateTime? PremiumExpiry { get; set; }
 
-    // ── Quan hệ 1-nhiều với UserModel (nullable — thiết bị có thể chưa đăng nhập) ──
-    public string? UserId { get; set; }
-    public UserModel? User { get; set; }
 }

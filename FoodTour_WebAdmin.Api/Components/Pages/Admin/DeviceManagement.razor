@@ -125,12 +125,7 @@ else
                          Style="font-family:monospace; font-size:0.78rem; color:#1e293b; word-break:break-all;">
                     @context.DeviceId
                 </MudText>
-                @if (context.UserId != null)
-                {
-                    <MudText Typo="Typo.caption" Style="color:#94a3b8;">
-                        User: @context.UserId[..8]...
-                    </MudText>
-                }
+
             </MudTd>
 
             @* ── Tên thiết bị ── *@

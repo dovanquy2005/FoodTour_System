@@ -90,11 +90,6 @@ public class AppDbContext : DbContext
             entity.Property(e => e.DeviceId).HasMaxLength(36).IsRequired();
             entity.Property(e => e.DeviceName).HasMaxLength(200);
 
-            // FK: Device → User (SetNull — xóa User không mất lịch sử thiết bị)
-            entity.HasOne(e => e.User)
-                  .WithMany()
-                  .HasForeignKey(e => e.UserId)
-                  .OnDelete(DeleteBehavior.SetNull);
         });
 
         // DownloadLog

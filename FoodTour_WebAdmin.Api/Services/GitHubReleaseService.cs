@@ -28,6 +28,7 @@ public class GitHubReleaseService
 
         try
         {
+            // 1. Thử gọi qua GitHub API trước
             var response = await _httpClient.GetAsync("repos/dovanquy2005/FoodTour_System/releases/latest");
             if (response.IsSuccessStatusCode)
             {
@@ -35,9 +36,27 @@ public class GitHubReleaseService
                 using var json = JsonDocument.Parse(content);
                 var version = json.RootElement.GetProperty("tag_name").GetString() ?? "v1.0";
                 
-                // Cache for 10 minutes to avoid hitting GitHub API limits
                 _cache.Set(CacheKey, version, TimeSpan.FromMinutes(10));
                 return version;
+            }
+            
+            // 2. Nếu API bị chặn (403 Forbidden - do Render dùng chung IP nên dễ bị dính Rate Limit)
+            // -> Chuyển sang đọc Location Header từ HTTP 302 Redirect của Web GitHub
+            using var handler = new HttpClientHandler { AllowAutoRedirect = false };
+            using var webClient = new HttpClient(handler);
+            var webResponse = await webClient.GetAsync("https://github.com/dovanquy2005/FoodTour_System/releases/latest");
+            
+            if (webResponse.StatusCode == System.Net.HttpStatusCode.Found) // HTTP 302
+            {
+                var location = webResponse.Headers.Location?.ToString();
+                if (!string.IsNullOrEmpty(location))
+                {
+                    // location thường có dạng: https://github.com/dovanquy2005/FoodTour_System/releases/tag/v1.5
+                    var version = location.Split('/').Last();
+                    
+                    _cache.Set(CacheKey, version, TimeSpan.FromMinutes(10));
+                    return version;
+                }
             }
         }
         catch (Exception ex)

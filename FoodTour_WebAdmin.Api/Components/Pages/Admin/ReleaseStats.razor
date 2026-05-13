@@ -6,7 +6,7 @@
 @using MudBlazor
 @using FoodTour_WebAdmin.Api.Services
 @using FoodTour_WebAdmin.Api.Extensions
-@inject AppDbContext DbContext
+@inject IDbContextFactory<AppDbContext> DbContextFactory
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 @inject GitHubReleaseService GitHubReleaseService
@@ -172,7 +172,7 @@
     protected override async Task OnInitializedAsync()
     {
         latestVersion = await GitHubReleaseService.GetLatestVersionAsync();
-        downloadUrl = NavigationManager.BaseUri + "api/app/download";
+        downloadUrl = NavigationManager.BaseUri + "api/app/download?v=2";
         GenerateStaticQrCode();
         await LoadAnalyticsData();
     }
@@ -188,6 +188,7 @@
 
     private async Task LoadAnalyticsData()
     {
+        using var DbContext = await DbContextFactory.CreateDbContextAsync();
         totalDownloads = await DbContext.DownloadLogs.CountAsync();
         
         var today = DateTime.UtcNow.Date;

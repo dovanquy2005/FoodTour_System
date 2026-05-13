@@ -20,6 +20,7 @@ public class AppController : ControllerBase
     }
 
     [HttpGet("download")]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
     public async Task<IActionResult> DownloadApp()
     {
         // 1. Thu thập thông tin người tải
