@@ -84,6 +84,7 @@
                     <MudTh Style="@_thStyle">Thời gian</MudTh>
                     <MudTh Style="@_thStyle">Loại thiết bị</MudTh>
                     <MudTh Style="@_thStyle">Cấu hình</MudTh>
+                    <MudTh Style="@_thStyle">Trạng thái</MudTh>
                     <MudTh Style="@_thStyle">Phiên bản</MudTh>
                 </HeaderContent>
                 <RowTemplate>
@@ -104,8 +105,29 @@
                             <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Filled" Style="font-weight:600;">Yếu</MudChip>
                         }
                     </MudTd>
+                    <MudTd DataLabel="Trạng thái">
+                        @if (context.DevicePerformanceType == 1)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Text" Style="font-weight:600;">Không thể tải</MudChip>
+                        }
+                        else if (context.VersionDownloaded == "Quét QR")
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Text" Style="font-weight:600;">Chưa tải</MudChip>
+                        }
+                        else
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text" Style="font-weight:600;">Đã tải</MudChip>
+                        }
+                    </MudTd>
                     <MudTd DataLabel="Phiên bản">
-                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Text" Style="font-weight:600;">@context.VersionDownloaded</MudChip>
+                        @if (context.VersionDownloaded == "Quét QR")
+                        {
+                            <span style="color:#94a3b8; font-weight:600; padding-left: 8px;">-</span>
+                        }
+                        else
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Text" Style="font-weight:600;">@context.VersionDownloaded</MudChip>
+                        }
                     </MudTd>
                 </RowTemplate>
                 <NoRecordsContent>
@@ -189,11 +211,14 @@
     private async Task LoadAnalyticsData()
     {
         using var DbContext = await DbContextFactory.CreateDbContextAsync();
-        totalDownloads = await DbContext.DownloadLogs.CountAsync();
+        
+        // Chỉ đếm những lượt tải thực sự (không phải lượt mới Quét QR)
+        totalDownloads = await DbContext.DownloadLogs.CountAsync(x => x.VersionDownloaded != "Quét QR");
         
         var today = DateTime.UtcNow.Date;
-        todayDownloads = await DbContext.DownloadLogs.CountAsync(x => x.DownloadedAt >= today);
+        todayDownloads = await DbContext.DownloadLogs.CountAsync(x => x.DownloadedAt >= today && x.VersionDownloaded != "Quét QR");
 
+        // Nhật ký thì hiển thị tất cả (bao gồm cả Quét QR để xem thiết bị Mạnh/Yếu)
         recentDownloads = await DbContext.DownloadLogs
             .OrderByDescending(x => x.DownloadedAt)
             .Take(10)
@@ -201,7 +226,7 @@
 
         var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
         var stats = await DbContext.DownloadLogs
-            .Where(x => x.DownloadedAt >= thirtyDaysAgo)
+            .Where(x => x.DownloadedAt >= thirtyDaysAgo && x.VersionDownloaded != "Quét QR")
             .GroupBy(x => x.DownloadedAt.Date)
             .Select(g => new { Date = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.Date, x => x.Count);

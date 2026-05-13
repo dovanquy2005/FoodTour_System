@@ -49,8 +49,20 @@ public class AppController : ControllerBase
         var random = new Random();
         int performanceScore = random.Next(0, 2); // random 0 hoặc 1
 
-        // Không lưu vào DB lúc này, chỉ hiển thị trang đánh giá
-        // Lưu DB sẽ được thực hiện khi người dùng bấm nút "Tải xuống"
+        // Lưu vào DB ngay khi quét QR với trạng thái "Quét QR"
+        // Để Nhật ký vẫn ghi nhận được máy Mạnh/Yếu
+        var log = new DownloadLog
+        {
+            UserAgent = userAgent,
+            IPAddress = ipAddress,
+            DeviceType = deviceType,
+            VersionDownloaded = "Quét QR", 
+            DownloadedAt = DateTime.UtcNow,
+            DevicePerformanceType = performanceScore
+        };
+
+        _context.DownloadLogs.Add(log);
+        await _context.SaveChangesAsync();
 
         string htmlTemplate = $@"
 <!DOCTYPE html>
@@ -109,7 +121,7 @@ public class AppController : ControllerBase
             </div>
 
             {(performanceScore == 0 ? 
-                $"<a href='/api/app/confirm-download?score={performanceScore}' class='btn btn-primary'><svg width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/><polyline points='7 10 12 15 17 10'/><line x1='12' y1='15' x2='12' y2='3'/></svg> Tải xuống ứng dụng</a>" : 
+                $"<a href='/api/app/confirm-download?logId={log.Id}' class='btn btn-primary'><svg width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/><polyline points='7 10 12 15 17 10'/><line x1='12' y1='15' x2='12' y2='3'/></svg> Tải xuống ứng dụng</a>" : 
                 "<button class='btn btn-disabled' disabled><svg width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><line x1='4.93' y1='4.93' x2='19.07' y2='19.07'/></svg> Từ chối tải xuống</button>")}
         </div>
     </div>
@@ -129,37 +141,17 @@ public class AppController : ControllerBase
 
     [HttpGet("confirm-download")]
     [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-    public async Task<IActionResult> ConfirmDownload([FromQuery] int score = 0)
+    public async Task<IActionResult> ConfirmDownload([FromQuery] int logId)
     {
-        // 1. Thu thập thông tin khi click nút tải
-        var userAgent = Request.Headers.UserAgent.ToString();
-        var ipAddress = Request.Headers.ContainsKey("X-Forwarded-For") 
-            ? Request.Headers["X-Forwarded-For"].ToString().Split(',')[0] 
-            : HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
-
-        string deviceType;
-        if (userAgent.Contains("Android", StringComparison.OrdinalIgnoreCase))
-            deviceType = "Android";
-        else if (userAgent.Contains("iPhone") || userAgent.Contains("iPad") || userAgent.Contains("iPod"))
-            deviceType = "iOS";
-        else
-            deviceType = "Máy tính"; 
-
-        // 2. Ghi nhận lượt tải thực sự vào Database
-        var log = new DownloadLog
+        var log = await _context.DownloadLogs.FindAsync(logId);
+        if (log != null)
         {
-            UserAgent = userAgent,
-            IPAddress = ipAddress,
-            DeviceType = deviceType,
-            VersionDownloaded = await _githubReleaseService.GetLatestVersionAsync(),
-            DownloadedAt = DateTime.UtcNow,
-            DevicePerformanceType = score
-        };
+            // Cập nhật lại Version thực sự khi bấm tải
+            log.VersionDownloaded = await _githubReleaseService.GetLatestVersionAsync();
+            await _context.SaveChangesAsync();
+        }
 
-        _context.DownloadLogs.Add(log);
-        await _context.SaveChangesAsync();
-
-        // 3. Chuyển hướng tải file APK từ GitHub
+        // Chuyển hướng tải file APK từ GitHub
         return Redirect("https://github.com/dovanquy2005/FoodTour_System/releases/latest/download/foodtour.apk");
     }
 }

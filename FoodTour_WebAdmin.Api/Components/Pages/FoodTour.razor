@@ -343,10 +343,10 @@
                 }
 
                 <!-- CTA App Download -->
-                <button class="ft-cta-btn" @onclick="OpenAppPaymentModal">
+                <a href="/api/app/download" class="ft-cta-btn">
                     <MudIcon Icon="@Icons.Material.Filled.InstallMobile" Size="Size.Medium" />
                     @Ui("CtaApp")
-                </button>
+                </a>
             </div>
 
             <!-- Footer -->
@@ -358,23 +358,22 @@
 
 
 
-    <!-- App Download Payment Modal -->
-    <MudDialog @bind-Visible="_showAppPaymentModal" Options="_dialogOptions">
+    <!-- App Download Modal -->
+    <MudDialog @bind-Visible="_showAppDownloadModal" Options="_dialogOptions">
         <TitleContent>
             <MudText Typo="Typo.h6" Style="font-weight:700;">@Ui("AppPaymentTitle")</MudText>
         </TitleContent>
         <DialogContent>
             <MudStack AlignItems="AlignItems.Center" Spacing="3" Style="padding: 16px 0;">
-                <MudIcon Icon="@Icons.Material.Filled.QrCode2" Style="font-size: 120px; color:#2D1F14;" />
-                <MudText Typo="Typo.h6" Style="font-weight: 800; color:#E8672A;">@Ui("AppPaymentPrice")</MudText>
-                <MudText Typo="Typo.body2" Style="text-align: center; color:#5C4A3D;">
-                    @((MarkupString)Ui("AppPaymentDesc"))
+                <MudIcon Icon="@Icons.Material.Filled.InstallMobile" Style="font-size: 80px; color:#3b82f6;" />
+                <MudText Typo="Typo.body1" Style="text-align: center; color:#5C4A3D; font-weight: 500;">
+                    Vui lòng tải ứng dụng FoodTour về điện thoại của bạn để có thể nghe thuyết minh không giới hạn và trải nghiệm toàn bộ tính năng hoàn toàn miễn phí!
                 </MudText>
             </MudStack>
         </DialogContent>
         <DialogActions>
-            <MudButton Variant="Variant.Text" OnClick="() => _showAppPaymentModal = false">@Ui("BtnCancel")</MudButton>
-            <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="ConfirmAppPayment">@Ui("BtnConfirmApp")</MudButton>
+            <MudButton Variant="Variant.Text" OnClick="() => _showAppDownloadModal = false">@Ui("BtnCancel")</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/api/app/download">Tải App Ngay</MudButton>
         </DialogActions>
     </MudDialog>
 </div>
@@ -607,20 +606,9 @@
     }
 
     private int _freeTrialCount = 0;
-    private bool _showAppPaymentModal = false;
+    private bool _showAppDownloadModal = false;
 
     private readonly DialogOptions _dialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
-
-    private void OpenAppPaymentModal() => _showAppPaymentModal = true;
-
-    private async Task ConfirmAppPayment()
-    {
-        _showAppPaymentModal = false;
-        StateHasChanged();
-        Snackbar.Add(Ui("ToastAppPaymentSuccess"), Severity.Success);
-        // Chuyển hướng tải app sau khi thanh toán thành công
-        await JS.InvokeVoidAsync("window.open", "/api/app/download", "_self");
-    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -689,7 +677,7 @@
             }
             else
             {
-                _showAppPaymentModal = true;
+                _showAppDownloadModal = true;
                 StateHasChanged(); // Đảm bảo đồng bộ ngay lập tức popup modal
             }
         }
