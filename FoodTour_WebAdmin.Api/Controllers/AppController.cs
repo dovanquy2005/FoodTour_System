@@ -45,6 +45,9 @@ public class AppController : ControllerBase
             deviceType = "Máy tính"; 
         }
 
+        var random = new Random();
+        int performanceScore = random.Next(0, 2); // random 0 hoặc 1
+
         var log = new DownloadLog
         {
             UserAgent = userAgent,
@@ -52,14 +55,85 @@ public class AppController : ControllerBase
             DeviceType = deviceType,
             // Lấy phiên bản động từ GitHub Service giúp hệ thống luôn chính xác
             VersionDownloaded = await _githubReleaseService.GetLatestVersionAsync(),
-            DownloadedAt = DateTime.UtcNow
-           
+            DownloadedAt = DateTime.UtcNow,
+            DevicePerformanceType = performanceScore
         };
 
         _context.DownloadLogs.Add(log);
         await _context.SaveChangesAsync();
 
-        // Sử dụng smartUrl để đảm bảo khách luôn nhận được bản mới nhất
-        return Redirect("https://github.com/dovanquy2005/FoodTour_System/releases/latest/download/foodtour.apk");
+        string htmlTemplate = $@"
+<!DOCTYPE html>
+<html lang='vi'>
+<head>
+    <meta charset='utf-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>Tải ứng dụng FoodTour</title>
+    <link href='https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap' rel='stylesheet'>
+    <style>
+        body {{ font-family: 'Inter', sans-serif; background-color: #f8fafc; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: #1e293b; }}
+        .card {{ background: white; padding: 40px 32px; border-radius: 24px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; max-width: 380px; text-align: center; width: 100%; box-sizing: border-box; }}
+        .logo {{ font-size: 24px; font-weight: 800; color: #3b82f6; margin-bottom: 24px; display: flex; align-items: center; justify-content: center; gap: 8px; letter-spacing: -0.5px; }}
+        .icon-container {{ width: 72px; height: 72px; border-radius: 50%; display: flex; justify-content: center; align-items: center; margin: 0 auto 24px; font-size: 32px; }}
+        .success {{ background-color: #dcfce3; color: #16a34a; }}
+        .error {{ background-color: #fee2e2; color: #dc2626; }}
+        h2 {{ color: #0f172a; margin-top: 0; font-size: 22px; font-weight: 700; margin-bottom: 12px; letter-spacing: -0.5px; }}
+        p {{ color: #64748b; font-size: 15px; line-height: 1.6; margin-bottom: 32px; }}
+        .btn {{ display: flex; justify-content: center; align-items: center; gap: 8px; width: 100%; padding: 14px 20px; border-radius: 12px; font-size: 15px; font-weight: 600; text-decoration: none; border: none; cursor: pointer; transition: all 0.2s ease; box-sizing: border-box; }}
+        .btn-primary {{ background-color: #3b82f6; color: white; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }}
+        .btn-primary:hover {{ background-color: #2563eb; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4); }}
+        .btn-disabled {{ background-color: #f1f5f9; color: #94a3b8; cursor: not-allowed; }}
+        .device-info {{ background: #f8fafc; padding: 16px; border-radius: 12px; font-size: 14px; color: #475569; margin-bottom: 24px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }}
+        .score {{ font-weight: 700; font-size: 15px; padding: 4px 10px; border-radius: 6px; }}
+        .score-success {{ background: #dcfce3; color: #16a34a; }}
+        .score-error {{ background: #fee2e2; color: #dc2626; }}
+        
+        /* Loading animation */
+        #loading {{ display: block; }}
+        #result {{ display: none; }}
+        .spinner {{ width: 48px; height: 48px; border: 4px solid #e2e8f0; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 24px; }}
+        @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
+    </style>
+</head>
+<body>
+    <div class='card'>
+        <div class='logo'>
+            <svg width='28' height='28' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2'/><path d='M7 2v20'/><path d='M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7'/></svg>
+            FoodTour
+        </div>
+
+        <div id='loading'>
+            <div class='spinner'></div>
+            <h2>Đang phân tích cấu hình...</h2>
+            <p>Hệ thống đang kiểm tra tính tương thích của thiết bị với ứng dụng FoodTour.</p>
+        </div>
+
+        <div id='result'>
+            {(performanceScore == 0 ? 
+                "<div class='icon-container success'><svg width='32' height='32' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'></polyline></svg></div><h2>Thiết bị đạt yêu cầu</h2><p>Điện thoại của bạn có hiệu năng tốt, đáp ứng đầy đủ yêu cầu để chạy ứng dụng mượt mà.</p>" : 
+                "<div class='icon-container error'><svg width='32' height='32' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><line x1='12' y1='8' x2='12' y2='12'></line><line x1='12' y1='16' x2='12.01' y2='16'></line></svg></div><h2>Thiết bị không đạt yêu cầu</h2><p>Cấu hình điện thoại của bạn quá yếu, không thể cài đặt và sử dụng ứng dụng này.</p>")}
+            
+            <div class='device-info'>
+                <span>Đánh giá hiệu năng:</span>
+                <span class='score {(performanceScore == 0 ? "score-success" : "score-error")}'>{(performanceScore == 0 ? "Mạnh" : "Yếu")}</span>
+            </div>
+
+            {(performanceScore == 0 ? 
+                "<a href='https://github.com/dovanquy2005/FoodTour_System/releases/latest/download/foodtour.apk' class='btn btn-primary'><svg width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/><polyline points='7 10 12 15 17 10'/><line x1='12' y1='15' x2='12' y2='3'/></svg> Tải xuống ứng dụng</a>" : 
+                "<button class='btn btn-disabled' disabled><svg width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><line x1='4.93' y1='4.93' x2='19.07' y2='19.07'/></svg> Từ chối tải xuống</button>")}
+        </div>
+    </div>
+
+    <script>
+        // Simulate scanning process to make it look professional
+        setTimeout(function() {{
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('result').style.display = 'block';
+        }}, 1500);
+    </script>
+</body>
+</html>";
+
+        return Content(htmlTemplate, "text/html");
     }
 }

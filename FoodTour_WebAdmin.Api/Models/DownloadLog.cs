@@ -11,5 +11,8 @@ public class DownloadLog
 
     // Hardware ID của thiết bị mobile — liên kết lượt tải với thiết bị cụ thể
     public string? DeviceId { get; set; } = string.Empty;
+
+    // Đánh giá cấu hình máy: 0 (Mạnh - Cho phép tải), 1 (Yếu - Chặn tải)
+    public int DevicePerformanceType { get; set; } = 0;
 }
     

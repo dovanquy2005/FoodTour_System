@@ -83,6 +83,7 @@
                 <HeaderContent>
                     <MudTh Style="@_thStyle">Thời gian</MudTh>
                     <MudTh Style="@_thStyle">Loại thiết bị</MudTh>
+                    <MudTh Style="@_thStyle">Cấu hình</MudTh>
                     <MudTh Style="@_thStyle">Phiên bản</MudTh>
                 </HeaderContent>
                 <RowTemplate>
@@ -92,6 +93,16 @@
                     </MudTd>
                     <MudTd DataLabel="Loại thiết bị">
                         <MudText Typo="Typo.body2" Style="color:#475569;">@context.DeviceType</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Cấu hình">
+                        @if (context.DevicePerformanceType == 0)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled" Style="font-weight:600;">Mạnh</MudChip>
+                        }
+                        else
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Filled" Style="font-weight:600;">Yếu</MudChip>
+                        }
                     </MudTd>
                     <MudTd DataLabel="Phiên bản">
                         <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Text" Style="font-weight:600;">@context.VersionDownloaded</MudChip>

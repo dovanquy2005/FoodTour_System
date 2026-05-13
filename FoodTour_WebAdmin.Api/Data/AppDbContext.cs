@@ -20,9 +20,6 @@ public class AppDbContext : DbContext
 
     public DbSet<AudioActivityLog> AudioActivityLogs => Set<AudioActivityLog>();
 
-    // Thanh toán / License Codes
-    public DbSet<PaymentLog> PaymentLogs => Set<PaymentLog>();
-
     // Nội dung độc quyền (Premium Items) gắn theo quán ăn
     public DbSet<ShopItem> ShopItems => Set<ShopItem>();
     public DbSet<ShopItemTranslation> ShopItemTranslations => Set<ShopItemTranslation>();
@@ -174,16 +171,6 @@ public class AppDbContext : DbContext
                   .HasPrincipalKey(e => e.DeviceId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
-
-        // PaymentLog
-        modelBuilder.Entity<PaymentLog>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.HasIndex(e => e.CreatedAt);
-            entity.HasIndex(e => e.DeviceId);
-        });
-
-
 
         /*
         // ═══════ SEED DATA — Vinh Khanh Food Street ═══════
