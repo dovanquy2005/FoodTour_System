@@ -46,8 +46,8 @@ public class AppController : ControllerBase
             deviceType = "Máy tính"; 
         }
 
-        var random = new Random();
-        int performanceScore = random.Next(0, 2); // random 0 hoặc 1
+        // Gọi hàm kiểm tra để đánh giá hiệu năng
+        int performanceScore = EvaluateDevicePerformance(userAgent);
 
         // Lưu vào DB ngay khi quét QR với trạng thái "Quét QR"
         // Để Nhật ký vẫn ghi nhận được máy Mạnh/Yếu
@@ -63,6 +63,21 @@ public class AppController : ControllerBase
 
         _context.DownloadLogs.Add(log);
         await _context.SaveChangesAsync();
+
+        // Sử dụng hàm check để xem có được phép tải hay không
+        bool isAllowed = IsAllowedToDownload(performanceScore);
+
+        // Tách riêng logic giao diện dựa trên kết quả kiểm tra để code HTML phía dưới sạch sẽ hơn
+        string statusIconAndMessage = isAllowed 
+            ? "<div class='icon-container success'><svg width='32' height='32' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'></polyline></svg></div><h2>Thiết bị đạt yêu cầu</h2><p>Điện thoại của bạn có hiệu năng tốt, đáp ứng đầy đủ yêu cầu để chạy ứng dụng mượt mà.</p>" 
+            : "<div class='icon-container error'><svg width='32' height='32' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><line x1='12' y1='8' x2='12' y2='12'></line><line x1='12' y1='16' x2='12.01' y2='16'></line></svg></div><h2>Thiết bị không đạt yêu cầu</h2><p>Cấu hình điện thoại của bạn quá yếu, không thể cài đặt và sử dụng ứng dụng này.</p>";
+
+        string scoreClass = isAllowed ? "score-success" : "score-error";
+        string scoreLabel = isAllowed ? "Mạnh" : "Yếu";
+
+        string actionButton = isAllowed 
+            ? $"<a href='/api/app/confirm-download?logId={log.Id}' class='btn btn-primary'><svg width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/><polyline points='7 10 12 15 17 10'/><line x1='12' y1='15' x2='12' y2='3'/></svg> Tải xuống ứng dụng</a>" 
+            : "<button class='btn btn-disabled' disabled><svg width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><line x1='4.93' y1='4.93' x2='19.07' y2='19.07'/></svg> Từ chối tải xuống</button>";
 
         string htmlTemplate = $@"
 <!DOCTYPE html>
@@ -111,18 +126,14 @@ public class AppController : ControllerBase
         </div>
 
         <div id='result'>
-            {(performanceScore == 0 ? 
-                "<div class='icon-container success'><svg width='32' height='32' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'></polyline></svg></div><h2>Thiết bị đạt yêu cầu</h2><p>Điện thoại của bạn có hiệu năng tốt, đáp ứng đầy đủ yêu cầu để chạy ứng dụng mượt mà.</p>" : 
-                "<div class='icon-container error'><svg width='32' height='32' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><line x1='12' y1='8' x2='12' y2='12'></line><line x1='12' y1='16' x2='12.01' y2='16'></line></svg></div><h2>Thiết bị không đạt yêu cầu</h2><p>Cấu hình điện thoại của bạn quá yếu, không thể cài đặt và sử dụng ứng dụng này.</p>")}
+            {statusIconAndMessage}
             
             <div class='device-info'>
                 <span>Đánh giá hiệu năng:</span>
-                <span class='score {(performanceScore == 0 ? "score-success" : "score-error")}'>{(performanceScore == 0 ? "Mạnh" : "Yếu")}</span>
+                <span class='score {scoreClass}'>{scoreLabel}</span>
             </div>
 
-            {(performanceScore == 0 ? 
-                $"<a href='/api/app/confirm-download?logId={log.Id}' class='btn btn-primary'><svg width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/><polyline points='7 10 12 15 17 10'/><line x1='12' y1='15' x2='12' y2='3'/></svg> Tải xuống ứng dụng</a>" : 
-                "<button class='btn btn-disabled' disabled><svg width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><line x1='4.93' y1='4.93' x2='19.07' y2='19.07'/></svg> Từ chối tải xuống</button>")}
+            {actionButton}
         </div>
     </div>
 
@@ -146,12 +157,45 @@ public class AppController : ControllerBase
         var log = await _context.DownloadLogs.FindAsync(logId);
         if (log != null)
         {
+            // Chặn ở backend: Nếu máy yếu, tuyệt đối không cho tải qua API (ngăn chặn bypass HTML)
+            if (!IsAllowedToDownload(log.DevicePerformanceType))
+            {
+                return BadRequest("Thiết bị của bạn không đủ cấu hình để tải ứng dụng này.");
+            }
+
             // Cập nhật lại Version thực sự khi bấm tải
             log.VersionDownloaded = await _githubReleaseService.GetLatestVersionAsync();
             await _context.SaveChangesAsync();
         }
+        else
+        {
+            return NotFound("Không tìm thấy thông tin lượt quét QR.");
+        }
 
         // Chuyển hướng tải file APK từ GitHub
         return Redirect("https://github.com/dovanquy2005/FoodTour_System/releases/latest/download/foodtour.apk");
+    }
+
+    /// <summary>
+    /// Hàm kiểm tra cấu hình thiết bị (Mạnh hay Yếu).
+    /// Trả về 0 (Mạnh - cho tải), hoặc 1 (Yếu - từ chối).
+    /// </summary>
+    private int EvaluateDevicePerformance(string userAgent)
+    {
+        // TODO: Tương lai có thể mở rộng phân tích dựa trên chuỗi User-Agent
+        // Ví dụ: return userAgent.Contains("Android 6") ? 1 : 0;
+
+        // Hiện tại dùng random để giả lập
+        var random = new Random();
+        return random.Next(0, 2);
+    }
+
+    /// <summary>
+    /// Hàm kiểm tra logic chung: điểm nào thì cho phép tải.
+    /// (0: Mạnh -> Cho tải, 1: Yếu -> Cấm tải)
+    /// </summary>
+    private bool IsAllowedToDownload(int performanceScore)
+    {
+        return performanceScore == 0;
     }
 }
