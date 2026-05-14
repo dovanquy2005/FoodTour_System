@@ -10,6 +10,7 @@
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 @inject GitHubReleaseService GitHubReleaseService
+@inject ISnackbar Snackbar
 
 <PageTitle>Thống kê phát hành — FoodTour Admin</PageTitle>
 
@@ -210,42 +211,50 @@
 
     private async Task LoadAnalyticsData()
     {
-        using var DbContext = await DbContextFactory.CreateDbContextAsync();
-        
-        // Chỉ đếm những lượt tải thực sự (không phải lượt mới Quét QR)
-        totalDownloads = await DbContext.DownloadLogs.CountAsync(x => x.VersionDownloaded != "Quét QR");
-        
-        var today = DateTime.UtcNow.Date;
-        todayDownloads = await DbContext.DownloadLogs.CountAsync(x => x.DownloadedAt >= today && x.VersionDownloaded != "Quét QR");
-
-        // Nhật ký thì hiển thị tất cả (bao gồm cả Quét QR để xem thiết bị Mạnh/Yếu)
-        recentDownloads = await DbContext.DownloadLogs
-            .OrderByDescending(x => x.DownloadedAt)
-            .Take(10)
-            .ToListAsync();
-
-        var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
-        var stats = await DbContext.DownloadLogs
-            .Where(x => x.DownloadedAt >= thirtyDaysAgo && x.VersionDownloaded != "Quét QR")
-            .GroupBy(x => x.DownloadedAt.Date)
-            .Select(g => new { Date = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(x => x.Date, x => x.Count);
-
-        var data = new List<double>();
-        var labels = new List<string>();
-
-        for (int i = 29; i >= 0; i--)
+        try
         {
-            var day = DateTime.UtcNow.Date.AddDays(-i);
-            labels.Add(day.ToString("dd/MM"));
-            data.Add(stats.ContainsKey(day) ? stats[day] : 0);
+            using var DbContext = await DbContextFactory.CreateDbContextAsync();
+            
+            // Chỉ đếm những lượt tải thực sự (không phải lượt mới Quét QR)
+            totalDownloads = await DbContext.DownloadLogs.CountAsync(x => x.VersionDownloaded != "Quét QR");
+            
+            var today = DateTime.UtcNow.Date;
+            todayDownloads = await DbContext.DownloadLogs.CountAsync(x => x.DownloadedAt >= today && x.VersionDownloaded != "Quét QR");
+
+            // Nhật ký thì hiển thị tất cả (bao gồm cả Quét QR để xem thiết bị Mạnh/Yếu)
+            recentDownloads = await DbContext.DownloadLogs
+                .OrderByDescending(x => x.DownloadedAt)
+                .Take(10)
+                .ToListAsync();
+
+            var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
+            var stats = await DbContext.DownloadLogs
+                .Where(x => x.DownloadedAt >= thirtyDaysAgo && x.VersionDownloaded != "Quét QR")
+                .GroupBy(x => x.DownloadedAt.Date)
+                .Select(g => new { Date = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.Date, x => x.Count);
+
+            var data = new List<double>();
+            var labels = new List<string>();
+
+            for (int i = 29; i >= 0; i--)
+            {
+                var day = DateTime.UtcNow.Date.AddDays(-i);
+                labels.Add(day.ToString("dd/MM"));
+                data.Add(stats.ContainsKey(day) ? stats[day] : 0);
+            }
+
+            xAxisLabels = labels.ToArray();
+            chartSeries = new List<ChartSeries<double>>
+            {
+                new ChartSeries<double> { Name = "Lượt tải", Data = data.ToArray() }
+            };
         }
-
-        xAxisLabels = labels.ToArray();
-        chartSeries = new List<ChartSeries<double>>
+        catch (Exception ex)
         {
-            new ChartSeries<double> { Name = "Lượt tải", Data = data.ToArray() }
-        };
+            Console.WriteLine($"[FoodTour] Lỗi LoadAnalyticsData: {ex}");
+            Snackbar.Add($"Lỗi tải dữ liệu: {ex.Message}", Severity.Error);
+        }
     }
 
     private async Task CopyLink()

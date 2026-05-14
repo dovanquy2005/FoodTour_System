@@ -225,7 +225,7 @@ public class ManageFoodTourService
     }
 
 
-    // ═══════ HELPER: TTS + Upload cho Shop ═══════
+    // ═══════ Hàm tổng hợp Audio và tải lên (TTS & Upload) ═══════
     private async Task GenerateAndUploadShopAudioAsync(ShopTranslationModel translation, string shopId)
     {
         try

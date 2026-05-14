@@ -97,8 +97,6 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.DownloadedAt);
-            // Index theo DeviceId để truy vấn lịch sử tải theo thiết bị
-            entity.HasIndex(e => e.DeviceId);
         });
 
         // TrialLog — Index theo DeviceId + TriggerType để kiểm tra giới hạn trial nhanh
